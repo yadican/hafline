@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../../storage/framework/views/*.php";
+@source "../views/admin/**/*.blade.php";
+
+@theme {
+    --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --color-soil: #6a4e36;
+    --color-soil-dark: #523b28;
+    --color-soil-hover: #7a5a3e;
+    --color-ochre: #c4892e;
+    --color-ochre-deep: #b0782a;
+    --color-ochre-dark: #8c5f20;
+    --color-ochre-soft: #f3ebe0;
+    --color-paper: #f5efe4;
+    --color-canvas: #f6f4f1;
+    --color-steel: #0e1114;
+    --color-ink: #2a2e32;
+    --color-soil-ink: #6b4515;
+    --color-line: #d4cfc7;
+    --color-side: #ebe8e4;
+}
+
+[x-cloak] {
+    display: none !important;
+}

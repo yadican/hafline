@@ -1,0 +1,102 @@
+name: hafline
+
+networks:
+  hafline:
+    name: hafline
+
+services:
+  app:
+    build:
+      context: ./docker/php
+    container_name: hafline-app
+    networks: [hafline]
+    volumes:
+      - ./htdocs:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    image: nginx:1.28-alpine
+    container_name: hafline-web
+    networks: [hafline]
+    ports:
+      - "8010:80"
+    volumes:
+      - ./htdocs:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:latest
+    container_name: hafline-postgres
+    networks: [hafline]
+    environment:
+      POSTGRES_DB: hafline
+      POSTGRES_USER: hafline
+      POSTGRES_PASSWORD: hafline
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hafline -d hafline"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: hafline-redis
+    networks: [hafline]
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./data/redis:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: hafline-rabbitmq
+    networks: [hafline]
+    environment:
+      RABBITMQ_DEFAULT_USER: hafline
+      RABBITMQ_DEFAULT_PASS: hafline
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: hafline-kafka
+    networks: [hafline]
+    ports:
+      - "9093:9094"
+    environment:
+      CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9095
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9095
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - ./data/kafka:/var/lib/kafka/data
+    restart: unless-stopped
