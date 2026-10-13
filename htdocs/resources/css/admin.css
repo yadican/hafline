@@ -102,8 +102,16 @@ button.panel-btn {
 
 .panel-list th,
 .panel-list td {
+    overflow: hidden;
     text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
+.panel-list .is-phone { width: 112px; }
+.panel-list .is-date { width: 88px; }
+.panel-list .is-status { width: 84px; }
+.panel-list .is-shift { width: 72px; }
 
 .panel-list th.is-center,
 .panel-list td.panel-actions-cell {
@@ -206,6 +214,16 @@ button.panel-btn {
 
     .panel-body {
         overflow-x: auto;
+    }
+
+    .panel-list-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .panel-list {
+        width: 780px;
+        min-width: 780px;
     }
 
     .panel-form-grid,

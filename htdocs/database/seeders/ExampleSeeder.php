@@ -2,6 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ExampleChannel;
+use App\Enums\ExampleShift;
+use App\Enums\ExampleStatus;
+use App\Enums\ExampleTag;
 use App\Models\Example;
 use Illuminate\Database\Seeder;
 
@@ -9,8 +13,8 @@ class ExampleSeeder extends Seeder
 {
     public function run(): void
     {
-        $statuses = ['aktif', 'taslak', 'kapali'];
-        $shifts = ['gunduz', 'gece'];
+        $statuses = ExampleStatus::cases();
+        $shifts = ExampleShift::cases();
         $titles = ['34 HL 1042'];
 
         for ($number = 1001; count($titles) < 15; $number++) {
@@ -41,8 +45,8 @@ class ExampleSeeder extends Seeder
                     'level' => 20 + ($index * 5),
                     'status' => $statuses[$index % 3],
                     'shift' => $shifts[$index % 2],
-                    'tags' => ['sefer'],
-                    'channels' => ['panel'],
+                    'tags' => [ExampleTag::Trip],
+                    'channels' => [ExampleChannel::Panel],
                     'active' => $index % 4 !== 3,
                     'source' => 'panel',
                 ],

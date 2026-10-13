@@ -2,8 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\ExampleChannel;
+use App\Enums\ExampleShift;
+use App\Enums\ExampleStatus;
+use App\Enums\ExampleTag;
 use Database\Factories\ExampleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -49,8 +54,10 @@ class Example extends Model
             'event_date' => 'date',
             'starts_at' => 'datetime',
             'level' => 'integer',
-            'tags' => 'array',
-            'channels' => 'array',
+            'status' => ExampleStatus::class,
+            'shift' => ExampleShift::class,
+            'tags' => AsEnumCollection::of(ExampleTag::class),
+            'channels' => AsEnumCollection::of(ExampleChannel::class),
             'active' => 'boolean',
         ];
     }

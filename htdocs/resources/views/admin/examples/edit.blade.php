@@ -1,17 +1,11 @@
-@extends('admin.layouts.page')
+@extends('admin.layouts.app')
 
-@section('page')
+@section('content')
     <div class="panel-wrap">
         <div class="panel">
-            <div class="panel-title">
-                <span>Örnek kaydı düzenle</span>
-                <span class="panel-meta">Örnek</span>
-            </div>
+            @include('admin.layouts.partials.panel-heading', ['heading' => 'Örnek kaydı düzenle', 'meta' => 'Örnek'])
             <div class="panel-body">
-                <form method="POST" action="{{ route('admin.examples.update', $example) }}" enctype="multipart/form-data">
-                    @method('PUT')
-                    @include('admin.examples._form', ['submitLabel' => 'Güncelle'])
-                </form>
+                @include('admin.examples.partials.edit.form')
             </div>
         </div>
     </div>

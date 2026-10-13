@@ -21,7 +21,7 @@
             @include('admin.layouts.sidebar')
         </aside>
         <div class="app-main-cell">
-            @include('admin.layouts.alerts')
+            @include('admin.layouts.partials.alerts')
             @yield('content')
         </div>
     </div>

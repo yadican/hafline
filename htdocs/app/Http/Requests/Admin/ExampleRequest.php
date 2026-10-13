@@ -2,8 +2,13 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\ExampleChannel;
+use App\Enums\ExampleShift;
+use App\Enums\ExampleStatus;
+use App\Enums\ExampleTag;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ExampleRequest extends FormRequest
 {
@@ -16,6 +21,8 @@ class ExampleRequest extends FormRequest
     {
         $this->merge([
             'active' => $this->boolean('active'),
+            'status' => $this->input('status') ?: null,
+            'shift' => $this->input('shift') ?: null,
             'tags' => $this->input('tags', []),
             'channels' => $this->input('channels', []),
             'source' => $this->input('source', 'panel'),
@@ -44,12 +51,12 @@ class ExampleRequest extends FormRequest
             'event_week' => ['nullable', 'string', 'max:8'],
             'color' => ['nullable', 'string', 'max:7'],
             'level' => ['nullable', 'integer', 'between:0,100'],
-            'status' => ['nullable', 'in:taslak,aktif,kapali'],
-            'shift' => ['nullable', 'in:gunduz,gece'],
+            'status' => ['nullable', Rule::enum(ExampleStatus::class)],
+            'shift' => ['nullable', Rule::enum(ExampleShift::class)],
             'tags' => ['array'],
-            'tags.*' => ['string', 'in:nakit,sefer,santiye'],
+            'tags.*' => [Rule::enum(ExampleTag::class)],
             'channels' => ['array'],
-            'channels.*' => ['string', 'in:panel,saha,rapor'],
+            'channels.*' => [Rule::enum(ExampleChannel::class)],
             'active' => ['boolean'],
             'attachment' => ['nullable', 'file', 'max:4096'],
             'source' => ['nullable', 'string', 'max:40'],

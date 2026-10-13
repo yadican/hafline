@@ -2,6 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\ExampleChannel;
+use App\Enums\ExampleShift;
+use App\Enums\ExampleStatus;
+use App\Enums\ExampleTag;
 use App\Models\Example;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -34,10 +38,10 @@ class ExampleFactory extends Factory
             'event_week' => fake()->optional()->date('o-\WW'),
             'color' => fake()->optional()->hexColor(),
             'level' => fake()->numberBetween(0, 100),
-            'status' => fake()->randomElement(['taslak', 'aktif', 'kapali']),
-            'shift' => fake()->randomElement(['gunduz', 'gece']),
-            'tags' => fake()->randomElements(['nakit', 'sefer', 'santiye'], 2),
-            'channels' => fake()->randomElements(['panel', 'saha', 'rapor'], 2),
+            'status' => fake()->randomElement(ExampleStatus::cases()),
+            'shift' => fake()->randomElement(ExampleShift::cases()),
+            'tags' => fake()->randomElements(ExampleTag::cases(), 2),
+            'channels' => fake()->randomElements(ExampleChannel::cases(), 2),
             'active' => fake()->boolean(),
             'source' => 'panel',
         ];
