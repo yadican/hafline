@@ -13,5 +13,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Hafline Yönetici',
             'email' => 'admin@hafline.test',
         ]);
+
+        $this->call(ExampleSeeder::class);
     }
 }

@@ -1,13 +1,32 @@
-@extends('admin.layouts.app')
+@extends('admin.layouts.page')
 
-@section('content')
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        @foreach ($modules as $module)
-            <section class="border border-line border-t-[3px] border-t-ochre bg-white p-5">
-                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-ochre-deep">{{ $module['hint'] }}</p>
-                <h2 class="mt-2 text-lg font-semibold text-soil">{{ $module['label'] }}</h2>
-                <p class="mt-3 text-sm text-[#6a6560]">Henüz kayıt yok.</p>
-            </section>
-        @endforeach
+@section('page')
+    <div class="panel-wrap">
+        <div class="panel">
+            <div class="panel-title">
+                <span>Gösterge paneli</span>
+                <span class="panel-meta">Hafriyat</span>
+            </div>
+            <div class="panel-body">
+                <table class="panel-table">
+                    <thead>
+                        <tr>
+                            <th>Modül</th>
+                            <th>Alan</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($modules as $module)
+                            <tr>
+                                <td>{{ $module['label'] }}</td>
+                                <td>{{ $module['hint'] }}</td>
+                                <td><span class="panel-badge panel-badge-pasif"><i class="fa-solid fa-minus" aria-hidden="true"></i> Henüz kayıt yok</span></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 @endsection
