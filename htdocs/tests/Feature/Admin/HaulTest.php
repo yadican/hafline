@@ -126,7 +126,7 @@ class HaulTest extends TestCase
             ->delete(route('admin.hauls.destroy', $haul))
             ->assertRedirect(route('admin.hauls.index'));
 
-        $this->assertModelMissing($haul);
+        $this->assertSoftDeleted($haul);
     }
 
     public function test_list_shows_recent_hauls_by_default_and_filters_on_search(): void

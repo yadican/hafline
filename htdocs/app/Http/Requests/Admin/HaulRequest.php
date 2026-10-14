@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\HaulShift;
+use App\Enums\Shift;
 use App\Models\DumpSite;
 use App\Models\Haul;
 use App\Models\HaulRoute;
@@ -44,10 +44,10 @@ class HaulRequest extends FormRequest
             }],
             'trips' => [Rule::excludeIf($this->haul() !== null), 'required', 'integer', 'between:1,50'],
             'hauled_at' => ['required', 'date'],
-            'site_id' => ['required', 'integer', Rule::exists(Site::class, 'id')],
-            'dump_site_id' => ['required', 'integer', Rule::exists(DumpSite::class, 'id')],
+            'site_id' => ['required', 'uuid', Rule::exists(Site::class, 'id')->withoutTrashed()],
+            'dump_site_id' => ['required', 'uuid', Rule::exists(DumpSite::class, 'id')->withoutTrashed()],
             'tonnage' => ['required', 'integer', 'between:0,1000'],
-            'shift' => ['required', Rule::enum(HaulShift::class)],
+            'shift' => ['required', Rule::enum(Shift::class)],
         ];
     }
 
@@ -62,7 +62,7 @@ class HaulRequest extends FormRequest
                     return;
                 }
 
-                if (! HaulRoute::between($this->integer('site_id'), $this->integer('dump_site_id'))) {
+                if (! HaulRoute::between($this->string('site_id')->value(), $this->string('dump_site_id')->value())) {
                     $validator->errors()->add('dump_site_id', 'Bu şantiye ile döküm yeri arasında tanımlı güzergah yok.');
                 }
             },

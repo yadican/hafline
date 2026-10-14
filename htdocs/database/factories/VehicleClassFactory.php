@@ -18,7 +18,7 @@ class VehicleClassFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->randomElement(['TIR', 'KAMYON', 'DAMPERLİ', 'KIRKAYAK']),
+            'name' => fake()->randomElement(['TIR', 'KAMYON', 'DAMPERLİ', 'KIRKAYAK']).' '.fake()->unique()->numberBetween(1, 9999),
             'active' => true,
         ];
     }

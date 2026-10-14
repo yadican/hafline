@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\HaulShift;
+use App\Enums\Shift;
 use App\Models\Haul;
 use App\Models\HaulRoute;
 use App\Models\Vehicle;
@@ -31,7 +31,7 @@ class HaulFactory extends Factory
             'tonnage' => fake()->numberBetween(8, 30),
             'price' => fake()->randomFloat(2, 1500, 5000),
             'dump_price' => fake()->randomFloat(2, 200, 900),
-            'shift' => fake()->randomElement(HaulShift::cases()),
+            'shift' => fake()->randomElement(Shift::cases()),
             'hauled_at' => fake()->dateTimeBetween('-3 days'),
         ];
     }

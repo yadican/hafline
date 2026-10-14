@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,7 +24,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ];
     }
@@ -32,11 +33,13 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $credentials = User::credentials($this->string('login')->value(), $this->string('password')->value());
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => 'Bu bilgilerle giriş yapılamadı.',
+                'login' => 'Bu bilgilerle giriş yapılamadı.',
             ]);
         }
 
@@ -54,12 +57,12 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => "Çok fazla deneme. {$seconds} saniye sonra tekrar dene.",
+            'login' => "Çok fazla deneme. {$seconds} saniye sonra tekrar dene.",
         ]);
     }
 
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('login')->trim()).'|'.$this->ip());
     }
 }

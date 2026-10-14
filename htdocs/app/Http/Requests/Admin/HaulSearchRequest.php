@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\HaulShift;
+use App\Enums\Shift;
 use App\Repositories\HaulRepository;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -27,16 +27,16 @@ class HaulSearchRequest extends FormRequest
     {
         return [
             'f' => ['nullable', 'array'],
-            'f.site' => ['nullable', 'integer'],
-            'f.dump_site' => ['nullable', 'integer'],
+            'f.site' => ['nullable', 'uuid'],
+            'f.dump_site' => ['nullable', 'uuid'],
             'f.hauled_from' => ['nullable', 'date'],
             'f.hauled_to' => ['nullable', 'date'],
             'f.entered_from' => ['nullable', 'date'],
             'f.entered_to' => ['nullable', 'date'],
-            'f.owner' => ['nullable', 'integer'],
+            'f.owner' => ['nullable', 'uuid'],
             'f.plate' => ['nullable', 'string', 'max:20'],
-            'f.shift' => ['nullable', Rule::enum(HaulShift::class)],
-            'f.class' => ['nullable', 'integer'],
+            'f.shift' => ['nullable', Rule::enum(Shift::class)],
+            'f.class' => ['nullable', 'uuid'],
             'f.ticket' => ['nullable', 'string', 'max:20'],
             'f.creator' => ['nullable', 'uuid'],
             'sort' => ['nullable', Rule::in(HaulRepository::SORTS)],

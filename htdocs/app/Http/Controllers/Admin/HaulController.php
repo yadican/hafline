@@ -30,7 +30,7 @@ class HaulController extends AdminController
     {
         return view('admin.hauls.create', [
             'title' => 'Yeni taşıma fişi',
-            'options' => $this->hauls->formOptions((int) old('site_id') ?: null),
+            'options' => $this->hauls->formOptions(old('site_id') ?: null),
         ]);
     }
 
@@ -50,7 +50,7 @@ class HaulController extends AdminController
         return view('admin.hauls.edit', [
             'title' => 'Taşıma fişini düzenle',
             'haul' => $haul->load('vehicle'),
-            'options' => $this->hauls->formOptions((int) old('site_id', $haul->site_id), $haul),
+            'options' => $this->hauls->formOptions(old('site_id', $haul->site_id), $haul),
         ]);
     }
 

@@ -10,13 +10,14 @@ use App\Models\VehicleClass;
 use App\Models\VehicleOwner;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 class HaulLookupRepository
 {
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    public function sites(bool $activeOnly = false, ?int $include = null): array
+    public function sites(bool $activeOnly = false, ?string $include = null): array
     {
         return Site::query()
             ->when($activeOnly, fn (Builder $query) => $query->where(
@@ -28,7 +29,7 @@ class HaulLookupRepository
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
     public function dumpSites(): array
     {
@@ -36,11 +37,11 @@ class HaulLookupRepository
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    public function dumpSitesForSite(?int $siteId): array
+    public function dumpSitesForSite(?string $siteId): array
     {
-        if (! $siteId) {
+        if (! $siteId || ! Str::isUuid($siteId)) {
             return [];
         }
 
@@ -53,7 +54,7 @@ class HaulLookupRepository
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
     public function owners(): array
     {
@@ -66,7 +67,7 @@ class HaulLookupRepository
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
     public function vehicleClasses(): array
     {
@@ -74,7 +75,7 @@ class HaulLookupRepository
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string>
      */
     public function creators(): array
     {

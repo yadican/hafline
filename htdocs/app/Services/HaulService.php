@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\HaulShift;
+use App\Enums\Shift;
 use App\Exceptions\OperationException;
 use App\Models\Haul;
 use App\Models\HaulRoute;
@@ -38,7 +38,7 @@ class HaulService extends Service
     }
 
     /**
-     * @return array<string, array<int|string, string>>
+     * @return array<string, array<string, string>>
      */
     public function searchOptions(): array
     {
@@ -48,19 +48,19 @@ class HaulService extends Service
             'owners' => $this->lookups->owners(),
             'classes' => $this->lookups->vehicleClasses(),
             'creators' => $this->lookups->creators(),
-            'shifts' => HaulShift::options(),
+            'shifts' => Shift::options(),
         ];
     }
 
     /**
-     * @return array<string, array<int|string, string>>
+     * @return array<string, array<string, string>>
      */
-    public function formOptions(?int $siteId, ?Haul $haul = null): array
+    public function formOptions(?string $siteId, ?Haul $haul = null): array
     {
         return [
             'sites' => $this->lookups->sites(activeOnly: true, include: $haul?->site_id),
             'dumpSites' => $this->lookups->dumpSitesForSite($siteId),
-            'shifts' => HaulShift::options(),
+            'shifts' => Shift::options(),
         ];
     }
 
@@ -128,7 +128,7 @@ class HaulService extends Service
     private function resolve(array $data): array
     {
         $vehicle = Vehicle::findByPlate((string) $data['plate']);
-        $route = HaulRoute::between((int) $data['site_id'], (int) $data['dump_site_id']);
+        $route = HaulRoute::between((string) $data['site_id'], (string) $data['dump_site_id']);
 
         if (! $vehicle || ! $route) {
             throw new OperationException('Plaka veya güzergah bulunamadı.');

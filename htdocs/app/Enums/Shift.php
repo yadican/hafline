@@ -4,7 +4,7 @@ namespace App\Enums;
 
 use App\Enums\Concerns\HasLabel;
 
-enum HaulShift: string
+enum Shift: string
 {
     use HasLabel;
 

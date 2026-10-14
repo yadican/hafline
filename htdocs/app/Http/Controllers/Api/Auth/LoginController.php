@@ -8,18 +8,20 @@ use App\Http\Resources\Api\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
     public function store(LoginRequest $request): JsonResponse
     {
-        $user = User::query()->where('email', $request->string('email'))->first();
+        $credentials = User::credentials($request->string('login')->value(), $request->string('password')->value());
+        $provider = Auth::guard('web')->getProvider();
+        $user = $provider->retrieveByCredentials($credentials);
 
-        if (! $user || ! Hash::check($request->string('password'), $user->password)) {
+        if (! $user || ! $provider->validateCredentials($user, $credentials)) {
             throw ValidationException::withMessages([
-                'email' => 'Bu bilgilerle giriş yapılamadı.',
+                'login' => 'Bu bilgilerle giriş yapılamadı.',
             ]);
         }
 

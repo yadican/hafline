@@ -4,18 +4,20 @@ namespace App\Models;
 
 use Database\Factories\HaulRouteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['site_id', 'dump_site_id', 'active'])]
+#[Fillable(['site_id', 'dump_site_id', 'price', 'bonus', 'active'])]
 class HaulRoute extends Model
 {
     /** @use HasFactory<HaulRouteFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids, SoftDeletes;
 
-    public static function between(int $siteId, int $dumpSiteId): ?self
+    public static function between(string $siteId, string $dumpSiteId): ?self
     {
         return self::query()
             ->where('site_id', $siteId)
@@ -62,6 +64,8 @@ class HaulRoute extends Model
     protected function casts(): array
     {
         return [
+            'price' => 'decimal:2',
+            'bonus' => 'decimal:2',
             'active' => 'boolean',
         ];
     }

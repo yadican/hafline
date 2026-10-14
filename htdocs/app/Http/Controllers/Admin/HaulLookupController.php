@@ -14,8 +14,8 @@ class HaulLookupController extends Controller
 
     public function dumpSites(Request $request): JsonResponse
     {
-        $dumpSites = collect($this->lookups->dumpSitesForSite($request->integer('site') ?: null))
-            ->map(fn (string $name, int $id) => ['id' => $id, 'name' => $name])
+        $dumpSites = collect($this->lookups->dumpSitesForSite($request->string('site')->value() ?: null))
+            ->map(fn (string $name, string $id) => ['id' => $id, 'name' => $name])
             ->values();
 
         return response()->json($dumpSites);

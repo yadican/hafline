@@ -5,14 +5,16 @@ namespace App\Models;
 use Database\Factories\VehicleOwnerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['first_name', 'last_name', 'phone'])]
 class VehicleOwner extends Model
 {
     /** @use HasFactory<VehicleOwnerFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids, SoftDeletes;
 
     /**
      * @return Attribute<string, never>

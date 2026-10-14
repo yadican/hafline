@@ -5,15 +5,17 @@ namespace App\Models;
 use Database\Factories\VehicleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['plate', 'owner_id', 'vehicle_class_id', 'driver_name', 'active'])]
 class Vehicle extends Model
 {
     /** @use HasFactory<VehicleFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids, SoftDeletes;
 
     public static function normalizePlate(string $plate): string
     {

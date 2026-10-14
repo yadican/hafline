@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\HaulShift;
+use App\Enums\Shift;
 use App\Models\DumpSite;
 use App\Models\DumpSiteClassPrice;
 use App\Models\Haul;
@@ -16,6 +16,7 @@ use App\Models\VehicleClass;
 use App\Models\VehicleOwner;
 use App\Services\HaulPricing;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class HaulSeeder extends Seeder
 {
@@ -93,6 +94,7 @@ class HaulSeeder extends Seeder
             $enteredAt = now()->subMinutes(fake()->numberBetween(5, 60 * 24 * 12));
 
             Haul::query()->forceCreate([
+                'id' => (string) Str::uuid7($enteredAt),
                 'ticket_no' => 'T'.$enteredAt->format('Ym').fake()->unique()->numerify('######'),
                 'vehicle_id' => $vehicle->id,
                 'owner_id' => $vehicle->owner_id,
@@ -101,7 +103,7 @@ class HaulSeeder extends Seeder
                 'site_id' => $route->site_id,
                 'dump_site_id' => $route->dump_site_id,
                 'tonnage' => fake()->numberBetween(8, 30),
-                'shift' => in_array((int) $enteredAt->format('G'), range(8, 19), true) ? HaulShift::Day : HaulShift::Night,
+                'shift' => in_array((int) $enteredAt->format('G'), range(8, 19), true) ? Shift::Day : Shift::Night,
                 'hauled_at' => $enteredAt->copy()->subMinutes(fake()->numberBetween(0, 90)),
                 'created_by' => $creator?->id,
                 'created_at' => $enteredAt,

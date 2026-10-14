@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use App\Enums\HaulShift;
+use App\Enums\Shift;
 use Database\Factories\HaulFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'ticket_no',
@@ -27,7 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Haul extends Model
 {
     /** @use HasFactory<HaulFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids, SoftDeletes;
 
     /**
      * @return BelongsTo<Vehicle, $this>
@@ -86,7 +88,7 @@ class Haul extends Model
             'tonnage' => 'integer',
             'price' => 'decimal:2',
             'dump_price' => 'decimal:2',
-            'shift' => HaulShift::class,
+            'shift' => Shift::class,
             'hauled_at' => 'datetime',
         ];
     }

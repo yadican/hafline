@@ -39,8 +39,8 @@
             <form method="POST" action="{{ route('admin.login.store') }}" autocomplete="on">
                 @csrf
                 <div class="mb-4 flex flex-col gap-1.5">
-                    <label for="email" class="text-[0.72rem] font-bold tracking-[0.08em] text-[#e6ebe8]/55 uppercase">Kullanıcı Adı</label>
-                    <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="kullanıcı adınız" autofocus autocomplete="username" required class="h-12 border border-white/15 bg-white/5 px-3.5 text-[15px] font-medium text-white outline-none placeholder:text-[#e6ebe8]/30 focus:border-ochre focus:bg-ochre/10">
+                    <label for="login" class="text-[0.72rem] font-bold tracking-[0.08em] text-[#e6ebe8]/55 uppercase">Kullanıcı Adı / E-posta</label>
+                    <input id="login" name="login" type="text" value="{{ old('login') }}" placeholder="kullanıcı adı veya e-posta" autocapitalize="none" spellcheck="false" autofocus autocomplete="username" required class="h-12 border border-white/15 bg-white/5 px-3.5 text-[15px] font-medium text-white outline-none placeholder:text-[#e6ebe8]/30 focus:border-ochre focus:bg-ochre/10">
                 </div>
                 <div class="mb-4 flex flex-col gap-1.5">
                     <label for="password" class="text-[0.72rem] font-bold tracking-[0.08em] text-[#e6ebe8]/55 uppercase">Şifre</label>

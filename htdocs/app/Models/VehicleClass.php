@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Database\Factories\VehicleClassFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['name', 'active'])]
 class VehicleClass extends Model
 {
     /** @use HasFactory<VehicleClassFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids, SoftDeletes;
 
     /**
      * @return array<string, string>
