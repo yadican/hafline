@@ -14,6 +14,6 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@hafline.test',
         ]);
 
-        $this->call(ExampleSeeder::class);
+        $this->call([ExampleSeeder::class, HaulSeeder::class]);
     }
 }

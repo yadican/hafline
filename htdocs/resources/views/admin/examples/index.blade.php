@@ -3,7 +3,15 @@
 @section('content')
     <div class="panel-wrap">
         <div class="panel">
-            @include('admin.layouts.partials.panel-heading', ['heading' => 'Örnek kayıtlar'])
+            @include('admin.layouts.partials.panel-heading', [
+                'heading' => 'Örnek kayıtlar',
+                'icon' => 'fa-solid fa-layer-group',
+                'description' => 'Tüm kayıtları görüntüleyin, arayın ve yönetin.',
+                'breadcrumbs' => [
+                    'Gösterge paneli' => route('admin.dashboard'),
+                    'Örnek kayıtlar' => null,
+                ],
+            ])
             <div class="panel-body">
                 @include('admin.examples.partials.index.toolbar')
                 <div class="panel-list-scroll">

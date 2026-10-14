@@ -24,5 +24,18 @@
             <a href="{{ route('admin.examples.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.examples.*')])>Kayıt listesi</a>
         </div>
     </div>
+
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*')]) id="um-sec-hauls">
+        <button type="button" class="um-title" data-um-toggle="um-sec-hauls">
+            <span class="um-title-text">
+                <i class="fa-solid fa-truck-ramp-box um-title-icon" aria-hidden="true"></i>
+                <span class="um-title-label">Taşıma fişleri</span>
+            </span>
+            <span class="um-caret" aria-hidden="true"></span>
+        </button>
+        <div class="um-items">
+            <a href="{{ route('admin.hauls.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.hauls.*')])>Fiş listesi</a>
+        </div>
+    </div>
 </div>
 @include('admin.layouts.partials.menu')

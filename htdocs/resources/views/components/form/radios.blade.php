@@ -8,10 +8,12 @@
 @endphp
 
 <x-form.field :label="$label" :name="$name">
-    @foreach ($options as $optionValue => $optionLabel)
-        <label class="panel-choice">
-            <input type="radio" name="{{ $name }}" value="{{ $optionValue }}" @checked((string) $selected === (string) $optionValue)>
-            {{ $optionLabel }}
-        </label>
-    @endforeach
+    <div class="panel-choices" role="radiogroup">
+        @foreach ($options as $optionValue => $optionLabel)
+            <label class="panel-choice">
+                <input type="radio" name="{{ $name }}" value="{{ $optionValue }}" @checked((string) $selected === (string) $optionValue)>
+                {{ $optionLabel }}
+            </label>
+        @endforeach
+    </div>
 </x-form.field>

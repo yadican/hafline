@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Repositories;
+
+use App\Models\DumpSite;
+use App\Models\Haul;
+use App\Models\Site;
+use App\Models\Vehicle;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+
+class HaulRepository extends Repository
+{
+    public const RECENT_DAYS = 5;
+
+    public const SORTS = ['ticket', 'plate', 'site', 'dump_site', 'price', 'hauled_at', 'created_at'];
+
+    public function __construct(Haul $model)
+    {
+        parent::__construct($model);
+    }
+
+    /**
+     * @param  array<string, string>  $filters
+     */
+    public function search(array $filters, ?string $sort, string $direction, int $perPage): LengthAwarePaginator
+    {
+        $query = $this->filtered($filters)
+            ->with(['vehicle.vehicleClass', 'site', 'dumpSite', 'creator']);
+
+        $this->sort($query, $sort, $direction);
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * @param  array<string, string>  $filters
+     * @return array{price: float, tonnage: int}
+     */
+    public function totals(array $filters): array
+    {
+        $row = $this->filtered($filters)
+            ->toBase()
+            ->selectRaw('COALESCE(SUM(price), 0) AS price, COALESCE(SUM(tonnage), 0) AS tonnage')
+            ->first();
+
+        return [
+            'price' => (float) $row->price,
+            'tonnage' => (int) $row->tonnage,
+        ];
+    }
+
+    public function ticketTaken(string $ticketNo): bool
+    {
+        return $this->query()->where('ticket_no', $ticketNo)->exists();
+    }
+
+    /**
+     * Without filters only the last few days are listed to keep data entry fast.
+     *
+     * @param  array<string, string>  $filters
+     * @return Builder<Haul>
+     */
+    private function filtered(array $filters): Builder
+    {
+        $query = $this->query();
+
+        if ($filters === []) {
+            return $query->where('created_at', '>=', now()->subDays(self::RECENT_DAYS)->startOfDay());
+        }
+
+        return $query
+            ->when($filters['site'] ?? null, fn (Builder $query, string $site) => $query->where('site_id', $site))
+            ->when($filters['dump_site'] ?? null, fn (Builder $query, string $dumpSite) => $query->where('dump_site_id', $dumpSite))
+            ->when($filters['hauled_from'] ?? null, fn (Builder $query, string $from) => $query->where('hauled_at', '>=', Carbon::parse($from)))
+            ->when($filters['hauled_to'] ?? null, fn (Builder $query, string $to) => $query->where('hauled_at', '<=', Carbon::parse($to)))
+            ->when($filters['entered_from'] ?? null, fn (Builder $query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)))
+            ->when($filters['entered_to'] ?? null, fn (Builder $query, string $to) => $query->where('created_at', '<=', Carbon::parse($to)))
+            ->when($filters['owner'] ?? null, fn (Builder $query, string $owner) => $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('owner_id', $owner)))
+            ->when($filters['class'] ?? null, fn (Builder $query, string $class) => $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('vehicle_class_id', $class)))
+            ->when($filters['plate'] ?? null, function (Builder $query, string $plate): void {
+                $like = '%'.addcslashes(Vehicle::normalizePlate($plate), '%_\\').'%';
+
+                $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->whereLike('plate_key', $like));
+            })
+            ->when($filters['shift'] ?? null, fn (Builder $query, string $shift) => $query->where('shift', $shift))
+            ->when($filters['ticket'] ?? null, function (Builder $query, string $ticket): void {
+                str_contains($ticket, '%')
+                    ? $query->whereLike('ticket_no', $ticket)
+                    : $query->where('ticket_no', $ticket);
+            })
+            ->when($filters['creator'] ?? null, fn (Builder $query, string $creator) => $query->where('created_by', $creator));
+    }
+
+    /**
+     * @param  Builder<Haul>  $query
+     */
+    private function sort(Builder $query, ?string $sort, string $direction): void
+    {
+        match ($sort) {
+            'ticket' => $query->orderBy('ticket_no', $direction),
+            'plate' => $query->orderBy(Vehicle::query()->select('plate')->whereColumn('vehicles.id', 'hauls.vehicle_id'), $direction),
+            'site' => $query->orderBy(Site::query()->select('name')->whereColumn('sites.id', 'hauls.site_id'), $direction),
+            'dump_site' => $query->orderBy(DumpSite::query()->select('name')->whereColumn('dump_sites.id', 'hauls.dump_site_id'), $direction),
+            'price' => $query->orderBy('price', $direction),
+            'hauled_at' => $query->orderBy('hauled_at', $direction),
+            'created_at' => $query->orderBy('created_at', $direction),
+            default => $query->latest(),
+        };
+
+        $query->orderByDesc('id');
+    }
+}

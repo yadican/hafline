@@ -28,14 +28,40 @@
     }
 
     $current = old($name, $raw);
+
+    $pickerIcon = match ($type) {
+        'time' => 'fa-solid fa-clock',
+        'datetime-local' => 'fa-solid fa-calendar-day',
+        'month', 'week' => 'fa-solid fa-calendar-week',
+        'date' => 'fa-solid fa-calendar-days',
+        default => null,
+    };
 @endphp
 
 <x-form.field :label="$label" :for="$name">
-    <input
-        id="{{ $name }}"
-        name="{{ $name }}"
-        type="{{ $type }}"
-        value="{{ $current }}"
-        {{ $attributes->merge(['class' => 'slct']) }}
-    >
+    @if ($pickerIcon)
+        <div class="panel-date" data-picker-wrap>
+            <i class="{{ $pickerIcon }} panel-date-icon" aria-hidden="true"></i>
+            <input
+                id="{{ $name }}"
+                name="{{ $name }}"
+                type="text"
+                value="{{ $current }}"
+                data-picker="{{ $type }}"
+                autocomplete="off"
+                {{ $attributes->merge(['class' => 'slct']) }}
+            >
+            <button type="button" class="panel-date-clear" data-picker-clear aria-label="Temizle" @if (blank($current)) hidden @endif>
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+    @else
+        <input
+            id="{{ $name }}"
+            name="{{ $name }}"
+            type="{{ $type }}"
+            value="{{ $current }}"
+            {{ $attributes->merge(['class' => 'slct']) }}
+        >
+    @endif
 </x-form.field>

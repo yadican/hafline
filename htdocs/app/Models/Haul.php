@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\HaulShift;
+use Database\Factories\HaulFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable([
+    'ticket_no',
+    'vehicle_id',
+    'owner_id',
+    'route_id',
+    'site_id',
+    'dump_site_id',
+    'driver_name',
+    'tonnage',
+    'price',
+    'dump_price',
+    'shift',
+    'hauled_at',
+    'created_by',
+])]
+class Haul extends Model
+{
+    /** @use HasFactory<HaulFactory> */
+    use HasFactory;
+
+    /**
+     * @return BelongsTo<Vehicle, $this>
+     */
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    /**
+     * @return BelongsTo<VehicleOwner, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(VehicleOwner::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<HaulRoute, $this>
+     */
+    public function route(): BelongsTo
+    {
+        return $this->belongsTo(HaulRoute::class, 'route_id');
+    }
+
+    /**
+     * @return BelongsTo<Site, $this>
+     */
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * @return BelongsTo<DumpSite, $this>
+     */
+    public function dumpSite(): BelongsTo
+    {
+        return $this->belongsTo(DumpSite::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'tonnage' => 'integer',
+            'price' => 'decimal:2',
+            'dump_price' => 'decimal:2',
+            'shift' => HaulShift::class,
+            'hauled_at' => 'datetime',
+        ];
+    }
+}

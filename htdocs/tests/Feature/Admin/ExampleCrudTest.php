@@ -51,6 +51,31 @@ class ExampleCrudTest extends TestCase
         $this->assertDatabaseMissing('examples', ['id' => $example->id]);
     }
 
+    public function test_admin_can_search_and_filter_the_example_list(): void
+    {
+        $admin = User::factory()->create();
+
+        Example::factory()->create(['title' => 'Saha notu', 'active' => true, 'shift' => 'day']);
+        Example::factory()->create(['title' => 'Depo sayımı', 'active' => false, 'shift' => 'night']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.examples.index', ['q' => 'SAHA']))
+            ->assertOk()
+            ->assertSee('Saha notu')
+            ->assertDontSee('Depo sayımı');
+
+        $this->actingAs($admin)
+            ->get(route('admin.examples.index', ['active' => '0', 'shift' => 'night']))
+            ->assertOk()
+            ->assertSee('Depo sayımı')
+            ->assertDontSee('Saha notu');
+
+        $this->actingAs($admin)
+            ->get(route('admin.examples.index', ['q' => 'yok böyle bir kayıt']))
+            ->assertOk()
+            ->assertSee('Aramanızla eşleşen kayıt bulunamadı.');
+    }
+
     public function test_invalid_example_is_not_stored(): void
     {
         $admin = User::factory()->create();

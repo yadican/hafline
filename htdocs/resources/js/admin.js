@@ -1,6 +1,8 @@
 import Alpine from 'alpinejs';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
+import { bindDatePickers } from './date-picker.js';
+import { bindMultiSelects } from './multi-select.js';
 
 window.Alpine = Alpine;
 window.Swal = Swal;
@@ -108,6 +110,8 @@ function bindConfirms(root = document) {
 
 function bootPanel() {
     bindConfirms();
+    bindDatePickers();
+    bindMultiSelects();
 
     const flashNode = document.getElementById('panel-flash');
 

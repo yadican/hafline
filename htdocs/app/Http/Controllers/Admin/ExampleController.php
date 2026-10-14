@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\Admin\ExampleRequest;
+use App\Http\Requests\Admin\ExampleSearchRequest;
 use App\Models\Example;
 use App\Services\ExampleService;
 use Illuminate\Http\RedirectResponse;
@@ -12,11 +13,14 @@ class ExampleController extends AdminController
 {
     public function __construct(private ExampleService $examples) {}
 
-    public function index(): View
+    public function index(ExampleSearchRequest $request): View
     {
+        $filters = $request->filters();
+
         return view('admin.examples.index', [
             'title' => 'Örnek kayıtlar',
-            'examples' => $this->examples->paginate(),
+            'examples' => $this->examples->paginate($filters),
+            'filters' => $filters,
         ]);
     }
 

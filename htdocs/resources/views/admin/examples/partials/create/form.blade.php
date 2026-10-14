@@ -2,28 +2,28 @@
     @csrf
     <x-form.hidden name="source" value="panel" />
     <x-form.grid>
-        <x-form.group legend="Kayıt">
+        <x-form.group legend="Kayıt" icon="fa-solid fa-file-lines" description="Temel kayıt bilgileri">
             <x-form.input name="title" label="Metin" required />
             <x-form.input name="secret" label="Şifre" type="password" autocomplete="new-password" />
             <x-form.textarea name="note" label="Uzun metin" />
             <x-form.checkbox name="active" label="Aktif" text="Kayıt aktif" />
         </x-form.group>
 
-        <x-form.group legend="İletişim">
+        <x-form.group legend="İletişim" icon="fa-solid fa-address-book" description="E-posta, telefon ve web adresi">
             <x-form.input name="email" label="E-posta" type="email" />
             <x-form.input name="phone" label="Telefon" type="tel" />
             <x-form.input name="website" label="Web adresi" type="url" />
             <x-form.input name="reference" label="Arama" type="search" />
         </x-form.group>
 
-        <x-form.group legend="Ölçü">
+        <x-form.group legend="Ölçü" icon="fa-solid fa-ruler-combined" description="Sayısal değerler ve renk">
             <x-form.input name="quantity" label="Sayı" type="number" min="0" />
             <x-form.input name="amount" label="Tutar" type="number" min="0" step="0.01" />
             <x-form.input name="color" label="Renk" type="color" />
             <x-form.input name="level" label="Aralık" type="range" min="0" max="100" />
         </x-form.group>
 
-        <x-form.group legend="Zaman">
+        <x-form.group legend="Zaman" icon="fa-solid fa-clock" description="Tarih, saat ve dönem seçimleri">
             <x-form.input name="event_date" label="Tarih" type="date" />
             <x-form.input name="event_time" label="Saat" type="time" />
             <x-form.input name="starts_at" label="Tarih ve saat" type="datetime-local" />
@@ -31,7 +31,7 @@
             <x-form.input name="event_week" label="Hafta" type="week" />
         </x-form.group>
 
-        <x-form.group legend="Seçimler">
+        <x-form.group legend="Seçimler" icon="fa-solid fa-list-check" description="Liste ve işaretleme alanları">
             <x-form.select
                 name="status"
                 label="Seçim listesi"
@@ -42,7 +42,7 @@
                 name="channels"
                 label="Çoklu seçim"
                 multiple
-                size="3"
+                placeholder="Kanal seçin"
                 :options="\App\Enums\ExampleChannel::options()"
             />
             <x-form.checkboxes
@@ -57,7 +57,7 @@
             />
         </x-form.group>
 
-        <x-form.group legend="Dosya">
+        <x-form.group legend="Dosya" icon="fa-solid fa-paperclip" description="Kayda eklenecek belge">
             <x-form.file name="attachment" label="Dosya" />
         </x-form.group>
 

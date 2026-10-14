@@ -28,7 +28,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="7">Henüz kayıt yok.</td>
+            <td colspan="7">{{ empty($filters) ? 'Henüz kayıt yok.' : 'Aramanızla eşleşen kayıt bulunamadı.' }}</td>
         </tr>
     @endforelse
 </tbody>

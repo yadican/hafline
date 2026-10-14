@@ -11,9 +11,12 @@ class ExampleService extends Service
 {
     public function __construct(private ExampleRepository $examples) {}
 
-    public function paginate(int $perPage = 10): LengthAwarePaginator
+    /**
+     * @param  array{q?: string, active?: string, shift?: string}  $filters
+     */
+    public function paginate(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
-        return $this->examples->paginate($perPage);
+        return $this->examples->search($filters, $perPage);
     }
 
     /**

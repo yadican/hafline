@@ -17,7 +17,7 @@
     <select
         id="{{ $name }}"
         name="{{ $multiple ? $name.'[]' : $name }}"
-        @if ($multiple) multiple @endif
+        @if ($multiple) multiple data-multi-select data-placeholder="{{ $placeholder ?? 'Seçin' }}" @endif
         {{ $attributes->merge(['class' => 'slct']) }}
     >
         @if (! $multiple && $placeholder !== null)
