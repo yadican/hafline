@@ -29,11 +29,15 @@
 }
 
 body.panel-app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     margin: 0;
     background: var(--ui-body);
     color: var(--ui-ink);
     font-family: Manrope, Geneva, Verdana, Arial, Helvetica, sans-serif;
-    font-size: 12px;
+    font-size: 16px;
+    line-height: 1.5;
 }
 
 button.app-topbar-exit,
@@ -47,7 +51,7 @@ button.panel-btn {
 .panel-form-grid select.slct,
 .panel-form-grid textarea.slct {
     font-family: inherit;
-    font-size: 11px;
+    font-size: 16px;
     color: var(--ui-ink);
 }
 
@@ -72,14 +76,34 @@ button.panel-btn {
     align-items: center;
     gap: 6px;
     margin-right: 12px;
-    font-size: 11px;
+    font-size: 16px;
     color: var(--ui-ink);
 }
 
 .panel-file {
     font-family: inherit;
-    font-size: 11px;
+    font-size: 16px;
     color: var(--ui-ink);
+}
+
+.panel-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    grid-column: 1 / -1;
+}
+
+.panel-field-error {
+    margin-top: 4px;
+    color: var(--ui-danger);
+    font-size: 16px;
+    line-height: 1.35;
+}
+
+.panel-field-invalid .slct,
+.panel-field-invalid .panel-file {
+    border-color: var(--ui-danger);
 }
 
 .panel-alert-ok {
@@ -108,6 +132,63 @@ button.panel-btn {
     white-space: nowrap;
 }
 
+.panel-list .panel-badge-aktif,
+.panel-list .panel-badge-pasif {
+    min-height: 0;
+    gap: 5px;
+    padding: 2px 8px 2px 6px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 16px;
+    letter-spacing: 0.01em;
+}
+
+.panel-list .panel-badge-aktif::before,
+.panel-list .panel-badge-pasif::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.panel-list .panel-badge-aktif {
+    background: #e7f2e4;
+    color: #3d6340;
+}
+
+.panel-list .panel-badge-pasif {
+    background: #f3f1ee;
+    color: #8a847c;
+}
+
+.panel-list .panel-badge-gunduz,
+.panel-list .panel-badge-gece {
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+}
+
+.panel-list .panel-badge-gunduz {
+    background: #f8efd4;
+    color: #c4892e;
+}
+
+.panel-list .panel-badge-gece {
+    background: #2c3338;
+    color: #edd9b0;
+}
+
+.panel-list .panel-badge-gunduz i[class*="fa-"],
+.panel-list .panel-badge-gece i[class*="fa-"] {
+    font-size: 16px;
+}
+
 .panel-list .is-phone { width: 112px; }
 .panel-list .is-date { width: 88px; }
 .panel-list .is-status { width: 84px; }
@@ -121,8 +202,52 @@ button.panel-btn {
 
 .app-shell {
     display: flex;
+    flex: 1 1 auto;
     align-items: flex-start;
     min-width: 0;
+}
+
+.app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 8px 16px 12px;
+    background: var(--ui-steel);
+    color: rgba(243, 241, 238, 0.78);
+    border-top: 0;
+}
+
+.app-footer-left,
+.app-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0;
+    font-size: 16px;
+}
+
+.app-footer-right {
+    margin-left: auto;
+}
+
+.app-footer-logo {
+    height: 44px;
+    width: auto;
+}
+
+.app-shell > .um-cell {
+    flex: 0 0 240px;
+    width: 240px !important;
+    min-width: 240px;
+}
+
+.app-shell > .um-cell .um-nav {
+    max-width: none;
 }
 
 .app-shell > .app-main-cell {
@@ -138,6 +263,15 @@ button.panel-btn {
 }
 
 @media (max-width: 860px) {
+    :root {
+        --ui-control-h: 44px;
+    }
+
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
     .app-topbar {
         position: sticky;
         top: 0;
@@ -150,10 +284,11 @@ button.panel-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
         flex: 0 0 auto;
         border: 1px solid rgba(196, 137, 46, 0.42);
+        border-radius: 8px;
         background: rgba(255, 255, 255, 0.04);
         color: #edd9b0;
         cursor: pointer;
@@ -178,7 +313,9 @@ button.panel-btn {
         top: 51px;
         bottom: 0;
         left: 0;
+        flex: none;
         width: min(240px, 86vw) !important;
+        min-width: 0;
         max-width: 240px;
         padding: 8px !important;
         overflow: auto;
@@ -202,7 +339,25 @@ button.panel-btn {
     }
 
     .app-main-cell {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: clip;
         padding: 8px !important;
+    }
+
+    .app-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 8px 12px 12px;
+    }
+
+    .app-footer-right {
+        margin-left: 0;
+    }
+
+    .panel-list-scroll {
+        max-width: 100%;
+        min-width: 0;
     }
 
     .panel-title,
@@ -213,7 +368,7 @@ button.panel-btn {
     }
 
     .panel-body {
-        overflow-x: auto;
+        overflow-x: clip;
     }
 
     .panel-list-scroll {
@@ -226,29 +381,14 @@ button.panel-btn {
         min-width: 780px;
     }
 
-    .panel-form-grid,
-    .panel-form-grid tbody,
-    .panel-form-grid tr,
-    .panel-form-grid th,
-    .panel-form-grid td {
-        display: block;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .panel-form-grid th {
-        border-bottom: 0;
-        padding-bottom: 0;
-    }
-
     .panel-form-grid input.slct,
     .panel-form-grid select.slct:not([multiple]),
     .panel-form-grid textarea.slct,
     .panel-file {
         width: 100%;
         max-width: 100%;
-        height: 36px;
-        min-height: 36px;
+        height: 44px;
+        min-height: 44px;
         max-height: none;
         font-size: 16px;
     }
@@ -265,18 +405,19 @@ button.panel-btn {
 
     .panel-form-grid input[type="range"] {
         width: 100%;
-        height: 36px;
+        height: 44px;
     }
 
     .panel-choice {
-        min-height: 32px;
-        font-size: 14px;
+        min-height: 44px;
+        font-size: 16px;
     }
 
+    .app-topbar-exit,
     .um-title,
     .um-link,
     .panel-btn,
     .panel-arama-toggle {
-        min-height: 36px;
+        min-height: 44px;
     }
 }

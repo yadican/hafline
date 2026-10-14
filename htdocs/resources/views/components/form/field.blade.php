@@ -1,14 +1,33 @@
-@props(['label', 'for' => null])
+@props(['label', 'for' => null, 'name' => null])
 
-<tr>
-    <th>
-        @if ($label === '')
-            &nbsp;
-        @elseif ($for)
+@php
+    $errorName = $name ?? $for;
+    $error = null;
+
+    if ($errorName && isset($errors)) {
+        $error = $errors->first($errorName) ?: null;
+
+        if ($error === null) {
+            foreach ($errors->keys() as $key) {
+                if (str_starts_with((string) $key, $errorName.'.')) {
+                    $error = $errors->first($key) ?: null;
+                    break;
+                }
+            }
+        }
+    }
+@endphp
+
+<div {{ $attributes->class(['panel-field', 'panel-field-invalid' => (bool) $error]) }}>
+    @if ($label !== '')
+        @if ($for)
             <label for="{{ $for }}">{{ $label }}</label>
         @else
-            {{ $label }}
+            <span class="panel-field-name">{{ $label }}</span>
         @endif
-    </th>
-    <td {{ $attributes }}>{{ $slot }}</td>
-</tr>
+    @endif
+    {{ $slot }}
+    @if ($error)
+        <div class="panel-field-error">{{ $error }}</div>
+    @endif
+</div>

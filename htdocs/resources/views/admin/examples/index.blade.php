@@ -3,7 +3,7 @@
 @section('content')
     <div class="panel-wrap">
         <div class="panel">
-            @include('admin.layouts.partials.panel-heading', ['heading' => 'Örnek kayıtlar', 'meta' => 'Liste'])
+            @include('admin.layouts.partials.panel-heading', ['heading' => 'Örnek kayıtlar'])
             <div class="panel-body">
                 @include('admin.examples.partials.index.toolbar')
                 <div class="panel-list-scroll">

@@ -1,4 +1,6 @@
 <div class="panel-title">
     <span>{{ $heading }}</span>
-    <span class="panel-meta">{{ $meta }}</span>
+    @if (! empty($meta))
+        <span class="panel-meta">{{ $meta }}</span>
+    @endif
 </div>

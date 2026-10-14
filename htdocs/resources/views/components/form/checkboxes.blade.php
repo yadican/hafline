@@ -8,7 +8,7 @@
         ->all();
 @endphp
 
-<x-form.field :label="$label">
+<x-form.field :label="$label" :name="$name">
     @foreach ($options as $optionValue => $optionLabel)
         <label class="panel-choice">
             <input type="checkbox" name="{{ $name }}[]" value="{{ $optionValue }}" @checked(in_array((string) $optionValue, array_map('strval', $selected), true))>

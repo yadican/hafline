@@ -18,4 +18,20 @@ enum ExampleShift: string
             self::Night => 'Gece',
         };
     }
+
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Day => 'fa-solid fa-sun',
+            self::Night => 'fa-solid fa-moon',
+        };
+    }
+
+    public function badge(): string
+    {
+        return match ($this) {
+            self::Day => 'panel-badge-gunduz',
+            self::Night => 'panel-badge-gece',
+        };
+    }
 }
