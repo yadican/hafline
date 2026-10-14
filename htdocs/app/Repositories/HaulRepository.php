@@ -6,6 +6,7 @@ use App\Models\DumpSite;
 use App\Models\Haul;
 use App\Models\Site;
 use App\Models\Vehicle;
+use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -13,8 +14,6 @@ use Illuminate\Support\Carbon;
 class HaulRepository extends Repository
 {
     public const RECENT_DAYS = 5;
-
-    public const SORTS = ['ticket', 'plate', 'site', 'dump_site', 'price', 'hauled_at', 'created_at'];
 
     public function __construct(Haul $model)
     {
@@ -24,14 +23,14 @@ class HaulRepository extends Repository
     /**
      * @param  array<string, string>  $filters
      */
-    public function search(array $filters, ?string $sort, string $direction, int $perPage): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort, int $perPage): LengthAwarePaginator
     {
         $query = $this->filtered($filters)
             ->with(['vehicle.vehicleClass', 'site', 'dumpSite', 'creator']);
 
-        $this->sort($query, $sort, $direction);
-
-        return $query->paginate($perPage)->withQueryString();
+        return $this->applySort($query, $sort)
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /**
@@ -48,6 +47,29 @@ class HaulRepository extends Repository
         return [
             'price' => (float) $row->price,
             'tonnage' => (int) $row->tonnage,
+        ];
+    }
+
+    protected function sortColumns(): array
+    {
+        return [
+            'ticket' => 'ticket_no',
+            'plate' => fn (Builder $query, string $direction) => $query->orderBy(
+                Vehicle::query()->select('plate_key')->whereColumn('vehicles.id', 'hauls.vehicle_id'),
+                $direction,
+            ),
+            'site' => fn (Builder $query, string $direction) => $query->orderBy(
+                Site::query()->select('name')->whereColumn('sites.id', 'hauls.site_id'),
+                $direction,
+            ),
+            'dump_site' => fn (Builder $query, string $direction) => $query->orderBy(
+                DumpSite::query()->select('name')->whereColumn('dump_sites.id', 'hauls.dump_site_id'),
+                $direction,
+            ),
+            'price' => 'price',
+            'tonnage' => 'tonnage',
+            'hauled_at' => 'hauled_at',
+            'created_at' => 'created_at',
         ];
     }
 
@@ -91,24 +113,5 @@ class HaulRepository extends Repository
                     : $query->where('ticket_no', $ticket);
             })
             ->when($filters['creator'] ?? null, fn (Builder $query, string $creator) => $query->where('created_by', $creator));
-    }
-
-    /**
-     * @param  Builder<Haul>  $query
-     */
-    private function sort(Builder $query, ?string $sort, string $direction): void
-    {
-        match ($sort) {
-            'ticket' => $query->orderBy('ticket_no', $direction),
-            'plate' => $query->orderBy(Vehicle::query()->select('plate')->whereColumn('vehicles.id', 'hauls.vehicle_id'), $direction),
-            'site' => $query->orderBy(Site::query()->select('name')->whereColumn('sites.id', 'hauls.site_id'), $direction),
-            'dump_site' => $query->orderBy(DumpSite::query()->select('name')->whereColumn('dump_sites.id', 'hauls.dump_site_id'), $direction),
-            'price' => $query->orderBy('price', $direction),
-            'hauled_at' => $query->orderBy('hauled_at', $direction),
-            'created_at' => $query->orderBy('created_at', $direction),
-            default => $query->latest(),
-        };
-
-        $query->orderByDesc('id');
     }
 }

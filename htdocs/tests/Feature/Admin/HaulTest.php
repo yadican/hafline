@@ -153,6 +153,46 @@ class HaulTest extends TestCase
             ->assertDontSee('OLD-1');
     }
 
+    public function test_list_sorts_by_a_whitelisted_column_in_both_directions(): void
+    {
+        Haul::factory()->create(['ticket_no' => 'CHEAP', 'price' => 1000]);
+        Haul::factory()->create(['ticket_no' => 'PRICEY', 'price' => 9000]);
+        Haul::factory()->create(['ticket_no' => 'MIDDLE', 'price' => 5000]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.index', ['sort' => 'price', 'dir' => 'asc']))
+            ->assertOk()
+            ->assertSeeInOrder(['CHEAP', 'MIDDLE', 'PRICEY'])
+            ->assertSee('aria-sort="ascending"', false);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.index', ['sort' => 'price', 'dir' => 'desc']))
+            ->assertOk()
+            ->assertSeeInOrder(['PRICEY', 'MIDDLE', 'CHEAP'])
+            ->assertSee('aria-sort="descending"', false);
+    }
+
+    public function test_list_sorts_by_a_related_column(): void
+    {
+        $zeta = HaulRoute::factory()->create(['site_id' => Site::factory()->create(['name' => 'ZETA ŞANTİYE'])->id]);
+        $alfa = HaulRoute::factory()->create(['site_id' => Site::factory()->create(['name' => 'ALFA ŞANTİYE'])->id]);
+
+        Haul::factory()->create(['ticket_no' => 'AT-ZETA', 'route_id' => $zeta->id]);
+        Haul::factory()->create(['ticket_no' => 'AT-ALFA', 'route_id' => $alfa->id]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.index', ['sort' => 'site']))
+            ->assertOk()
+            ->assertSeeInOrder(['AT-ALFA', 'AT-ZETA']);
+    }
+
+    public function test_unknown_sort_column_is_rejected(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.index', ['sort' => 'driver_name; drop table hauls']))
+            ->assertRedirect(route('admin.hauls.index'));
+    }
+
     public function test_create_page_is_displayed(): void
     {
         $this->actingAs($this->admin)
@@ -185,7 +225,9 @@ class HaulTest extends TestCase
         $this->actingAs($this->admin)
             ->getJson(route('admin.hauls.lookups.vehicles', ['q' => '34 abc']))
             ->assertOk()
-            ->assertJsonPath('0.plate', '34 ABC 123');
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.value', '34 ABC 123')
+            ->assertJsonStructure([['value', 'meta']]);
     }
 
     /**

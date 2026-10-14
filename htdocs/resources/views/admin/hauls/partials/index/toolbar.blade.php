@@ -1,35 +1,29 @@
 <div class="panel-liste-bar">
-    <button
-        type="button"
-        class="panel-btn haul-search-toggle"
-        :class="{ 'is-open': searchOpen }"
+    <x-ui.button
+        variant="search"
+        icon="fa-solid fa-filter"
+        class="haul-search-toggle"
+        x-bind:class="{ 'is-open': searchOpen }"
         x-on:click="searchOpen = ! searchOpen"
-        :aria-expanded="searchOpen.toString()"
+        x-bind:aria-expanded="searchOpen.toString()"
         aria-controls="haul-search"
         aria-expanded="false"
     >
-        <i class="fa-solid fa-filter" aria-hidden="true"></i>
         Arama
         @if ($filters !== [])
             <span class="haul-search-count">{{ count($filters) }}</span>
         @endif
         <i class="fa-solid fa-chevron-down haul-search-chevron" aria-hidden="true"></i>
-    </button>
+    </x-ui.button>
     @if ($filters === [])
         <span class="panel-info">
             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
             Liste performansı için son {{ \App\Repositories\HaulRepository::RECENT_DAYS }} günün kayıtları gösteriliyor.
         </span>
     @else
-        <a href="{{ route('admin.hauls.index') }}" class="panel-btn">
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i> Filtreleri temizle
-        </a>
+        <x-ui.button icon="fa-solid fa-xmark" :href="route('admin.hauls.index')">Filtreleri temizle</x-ui.button>
     @endif
     <span class="uyari">{{ number_format($hauls->total(), 0, ',', '.') }} kayıt</span>
-    <button type="button" class="panel-btn" data-haul-print>
-        <i class="fa-solid fa-print" aria-hidden="true"></i> Yazdır
-    </button>
-    <a href="{{ route('admin.hauls.create') }}" class="panel-btn">
-        <i class="fa-solid fa-plus" aria-hidden="true"></i> Yeni fiş
-    </a>
+    <x-ui.button icon="fa-solid fa-print" data-haul-print>Yazdır</x-ui.button>
+    <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.hauls.create')">Yeni fiş</x-ui.button>
 </div>

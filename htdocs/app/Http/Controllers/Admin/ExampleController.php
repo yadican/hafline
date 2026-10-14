@@ -19,7 +19,7 @@ class ExampleController extends AdminController
 
         return view('admin.examples.index', [
             'title' => 'Örnek kayıtlar',
-            'examples' => $this->examples->paginate($filters),
+            'examples' => $this->examples->paginate($filters, $request->sort()),
             'filters' => $filters,
         ]);
     }

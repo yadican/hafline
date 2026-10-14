@@ -1,11 +1,11 @@
 <thead>
     <tr>
-        <th>Başlık</th>
+        <x-table.th sort="title">Başlık</x-table.th>
         <th>E-posta</th>
         <th class="is-phone">Telefon</th>
-        <th class="is-date">Tarih</th>
+        <x-table.th sort="event_date" first="desc" class="is-date">Tarih</x-table.th>
         <th class="is-status">Durum</th>
         <th class="is-shift">Vardiya</th>
-        <th class="is-center">İşlem</th>
+        <th class="is-center is-actions">İşlem</th>
     </tr>
 </thead>

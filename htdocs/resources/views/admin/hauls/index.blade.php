@@ -1,32 +1,23 @@
 @extends('admin.layouts.app')
 
 @section('content')
-    <div class="panel-wrap haul-list">
-        <div class="panel">
-            @include('admin.layouts.partials.panel-heading', [
-                'heading' => 'Taşıma fişleri',
-                'icon' => 'fa-solid fa-truck-ramp-box',
-                'description' => 'Taşıma fişlerini görüntüleyin, arayın ve yönetin.',
-                'breadcrumbs' => [
-                    'Gösterge paneli' => route('admin.dashboard'),
-                    'Taşıma fişleri' => null,
-                ],
-            ])
-            <div class="panel-body">
-                <div x-data="{ searchOpen: false }">
-                    @include('admin.hauls.partials.index.toolbar')
-                    @include('admin.hauls.partials.index.search')
-                </div>
-                <div class="panel-list-scroll">
-                    <table class="panel-table panel-list haul-table">
-                        @include('admin.hauls.partials.index.table-head')
-                        @include('admin.hauls.partials.index.table-body')
-                    </table>
-                </div>
-                @include('admin.hauls.partials.index.pagination')
-            </div>
+    <x-panel.page
+        class="haul-list"
+        heading="Taşıma fişleri"
+        icon="fa-solid fa-truck-ramp-box"
+        description="Taşıma fişlerini görüntüleyin, arayın ve yönetin."
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Taşıma fişleri' => null]"
+    >
+        <div x-data="{ searchOpen: false }">
+            @include('admin.hauls.partials.index.toolbar')
+            @include('admin.hauls.partials.index.search')
         </div>
-    </div>
+        <x-table.list class="haul-table">
+            @include('admin.hauls.partials.index.table-head')
+            @include('admin.hauls.partials.index.table-body')
+        </x-table.list>
+        <x-table.pager :items="$hauls" />
+    </x-panel.page>
 @endsection
 
 @push('scripts')

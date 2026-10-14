@@ -1,10 +1,12 @@
+@props(['heading', 'icon' => null, 'description' => null, 'breadcrumbs' => [], 'back' => null, 'meta' => null])
+
 <div class="panel-title">
     <div class="panel-title-main">
-        @if (! empty($icon))
+        @if ($icon)
             <span class="panel-title-icon" aria-hidden="true"><i class="{{ $icon }}"></i></span>
         @endif
         <div class="panel-title-text">
-            @if (! empty($breadcrumbs))
+            @if ($breadcrumbs)
                 <nav class="panel-crumbs" aria-label="Sayfa konumu">
                     @foreach ($breadcrumbs as $label => $url)
                         @if ($url)
@@ -19,20 +21,18 @@
                 </nav>
             @endif
             <h1 class="panel-title-heading">{{ $heading }}</h1>
-            @if (! empty($description))
+            @if ($description)
                 <p class="panel-title-desc">{{ $description }}</p>
             @endif
         </div>
     </div>
-    @if (! empty($meta) || ! empty($back))
+    @if ($meta || $back)
         <div class="panel-title-aside">
-            @if (! empty($meta))
+            @if ($meta)
                 <span class="panel-meta">{{ $meta }}</span>
             @endif
-            @if (! empty($back))
-                <a href="{{ $back }}" class="panel-btn panel-btn-secondary">
-                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Listeye dön
-                </a>
+            @if ($back)
+                <x-ui.button variant="secondary" icon="fa-solid fa-arrow-left" :href="$back">Listeye dön</x-ui.button>
             @endif
         </div>
     @endif

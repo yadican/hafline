@@ -13,22 +13,27 @@
             <td>{{ $haul->hauled_at->translatedFormat('j F Y H:i') }}</td>
             <td>{{ $haul->created_at->translatedFormat('j F Y H:i') }}</td>
             <td>{{ $haul->creator?->name ?? '—' }}</td>
-            <td class="is-center">
-                <span class="panel-badge {{ $haul->shift->badge() }}" title="{{ $haul->shift->label() }}">
-                    <i class="{{ $haul->shift->icon() }}" aria-hidden="true"></i>
-                    <span class="sr-only">{{ $haul->shift->label() }}</span>
-                </span>
-            </td>
-            <td class="panel-actions-cell">
-                @include('admin.hauls.partials.index.actions')
-            </td>
+            <td class="is-center"><x-ui.enum-badge :value="$haul->shift" /></td>
+            <x-table.actions
+                :edit="route('admin.hauls.edit', $haul)"
+                :delete="route('admin.hauls.destroy', $haul)"
+                confirm="Taşıma fişi silinsin mi?"
+                :confirm-text="$haul->ticket_no.' numaralı fişin bu seferi listeden kaldırılacak ve geri alınamayacak.'"
+            />
         </tr>
     @empty
-        <tr>
-            <td colspan="14">
-                {{ $filters === [] ? 'Son '.\App\Repositories\HaulRepository::RECENT_DAYS.' günde girilmiş taşıma fişi yok.' : 'Aramanızla eşleşen kayıt bulunamadı.' }}
-            </td>
-        </tr>
+        @if ($filters === [])
+            <x-table.empty
+                colspan="14"
+                icon="fa-solid fa-truck-ramp-box"
+                :title="'Son '.\App\Repositories\HaulRepository::RECENT_DAYS.' günde girilmiş taşıma fişi yok.'"
+                text="Daha eski fişler için Arama panelinden tarih aralığı seçin."
+            >
+                <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.hauls.create')">Yeni fiş</x-ui.button>
+            </x-table.empty>
+        @else
+            <x-table.no-results colspan="14" :reset="route('admin.hauls.index')" />
+        @endif
     @endforelse
 
     @if ($hauls->isNotEmpty())

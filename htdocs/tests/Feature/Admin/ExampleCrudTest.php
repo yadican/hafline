@@ -76,6 +76,26 @@ class ExampleCrudTest extends TestCase
             ->assertSee('Aramanızla eşleşen kayıt bulunamadı.');
     }
 
+    public function test_list_sorts_by_title_and_keeps_the_sort_in_the_search_form(): void
+    {
+        $admin = User::factory()->create();
+
+        Example::factory()->create(['title' => 'Beta kaydı']);
+        Example::factory()->create(['title' => 'Alfa kaydı']);
+        Example::factory()->create(['title' => 'Gama kaydı']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.examples.index', ['sort' => 'title', 'dir' => 'asc']))
+            ->assertOk()
+            ->assertSeeInOrder(['Alfa kaydı', 'Beta kaydı', 'Gama kaydı'])
+            ->assertSee('<input type="hidden" name="sort" value="title">', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.examples.index', ['sort' => 'title', 'dir' => 'desc']))
+            ->assertOk()
+            ->assertSeeInOrder(['Gama kaydı', 'Beta kaydı', 'Alfa kaydı']);
+    }
+
     public function test_invalid_example_is_not_stored(): void
     {
         $admin = User::factory()->create();

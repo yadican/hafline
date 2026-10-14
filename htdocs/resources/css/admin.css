@@ -646,15 +646,36 @@ span.flatpickr-weekday {
 }
 
 .panel-field-error {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     margin-top: 4px;
     color: var(--ui-danger);
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 600;
     line-height: 1.35;
 }
 
+.panel-field-error::before {
+    content: "\f06a";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 13px;
+}
+
+.panel-field-invalid > label,
+.panel-field-invalid > .panel-field-name {
+    color: var(--ui-danger);
+}
+
 .panel-field-invalid .slct,
-.panel-field-invalid .panel-file {
+.panel-field-invalid .panel-file,
+.panel-form-grid .panel-field-invalid input.slct,
+.panel-form-grid .panel-field-invalid select.slct,
+.panel-form-grid .panel-field-invalid textarea.slct {
     border-color: var(--ui-danger);
+    background-color: #fff6f6;
+    box-shadow: 0 0 0 3px rgba(139, 58, 58, 0.14);
 }
 
 .panel-alert-ok {
@@ -745,13 +766,79 @@ span.flatpickr-weekday {
 }
 
 .panel-list .is-phone { width: 112px; }
-.panel-list .is-date { width: 88px; }
+.panel-list .is-date { width: 108px; }
 .panel-list .is-status { width: 84px; }
 .panel-list .is-shift { width: 72px; }
 
-.panel-list th.is-center,
-.panel-list td.panel-actions-cell {
+.panel-list-scroll {
+    container-type: inline-size;
+}
+
+.panel-table .panel-empty-row td {
+    padding: 44px 0;
+    background: #fff;
+    text-align: center;
+    white-space: normal;
+    overflow: visible;
+}
+
+.panel-table .panel-empty-row:hover td {
+    background: #fff;
+}
+
+.panel-empty {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100cqw;
+    padding: 0 16px;
+}
+
+.panel-empty-title,
+.panel-empty-text {
+    max-width: 440px;
+}
+
+.panel-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 8px;
+    border-radius: 50%;
+    background: var(--ui-ochre-soft);
+    color: var(--ui-ochre-dark);
+    font-size: 26px;
+    box-shadow: 0 0 0 8px rgba(176, 120, 42, 0.07);
+}
+
+.panel-empty-title {
+    color: var(--ui-ink);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.panel-empty-text {
+    margin: 0 0 10px;
+    color: var(--ui-muted);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.panel-list th.is-center {
     width: 76px;
+    text-align: center;
+}
+
+.panel-list th.is-actions,
+.panel-list td.panel-actions-cell {
+    width: 96px;
     text-align: center;
 }
 

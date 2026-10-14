@@ -1,8 +1,4 @@
-const PLATE_STATES = {
-    idle: 'fa-solid fa-circle',
-    ok: 'fa-solid fa-circle-check',
-    err: 'fa-solid fa-circle-xmark',
-};
+import { setStatus } from './components/status.js';
 
 function normalizePlate(value) {
     return String(value ?? '').toUpperCase().replace(/\s+/g, '');
@@ -33,88 +29,27 @@ function bindPlate(form) {
         return;
     }
 
-    const list = document.getElementById(input.getAttribute('list'));
-    const status = hint.querySelector('.panel-field-status');
-    const icon = status.querySelector('i');
-    const text = hint.querySelector('[data-haul-plate-text]');
-    const idleText = text.textContent;
     let vehicles = [];
-    let request = 0;
-    let timer = null;
-
-    const setState = (state, message) => {
-        hint.classList.remove('is-ok', 'is-err');
-        status.className = `panel-field-status is-${state}`;
-        icon.className = PLATE_STATES[state];
-
-        if (state !== 'idle') {
-            hint.classList.add(`is-${state}`);
-        }
-
-        text.textContent = message;
-    };
 
     const render = () => {
         const key = normalizePlate(input.value);
-
-        if (key === '') {
-            setState('idle', idleText);
-
-            return;
-        }
-
-        const match = vehicles.find((vehicle) => normalizePlate(vehicle.plate) === key);
+        const match = vehicles.find((vehicle) => normalizePlate(vehicle.value) === key);
 
         if (match) {
-            setState('ok', [match.owner, match.class, match.driver ? `Şoför: ${match.driver}` : null].filter(Boolean).join(' · ') || 'Kayıtlı plaka');
+            setStatus(hint, 'ok', match.meta || 'Kayıtlı plaka');
         } else if (key.length >= 2) {
-            setState('err', 'Kayıtlı plaka bulunamadı');
+            setStatus(hint, 'err', 'Kayıtlı plaka bulunamadı');
         } else {
-            setState('idle', idleText);
+            setStatus(hint, 'idle');
         }
     };
 
-    const lookup = async () => {
-        const current = ++request;
-
-        if (normalizePlate(input.value).length < 2) {
-            vehicles = [];
-            list?.replaceChildren();
-            render();
-
-            return;
-        }
-
-        try {
-            const result = await getJson(input.dataset.url, { q: input.value });
-
-            if (current !== request) {
-                return;
-            }
-
-            vehicles = result;
-            list?.replaceChildren(...vehicles.map((vehicle) => {
-                const option = document.createElement('option');
-
-                option.value = vehicle.plate;
-                option.label = [vehicle.owner, vehicle.class].filter(Boolean).join(' · ');
-
-                return option;
-            }));
-            render();
-        } catch {
-            setState('err', 'Plaka listesi alınamadı');
-        }
-    };
-
-    input.addEventListener('input', () => {
-        clearTimeout(timer);
-        timer = setTimeout(lookup, 200);
+    input.addEventListener('autocomplete:results', (event) => {
+        vehicles = event.detail.items;
+        render();
     });
-
-    if (input.value) {
-        lookup();
-    }
+    input.addEventListener('autocomplete:select', render);
+    input.addEventListener('autocomplete:error', () => setStatus(hint, 'err', 'Plaka listesi alınamadı'));
 }
 
 function bindDumpSites(form) {

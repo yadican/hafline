@@ -19,7 +19,7 @@ class HaulController extends AdminController
 
         return view('admin.hauls.index', [
             'title' => 'Taşıma fişleri',
-            'hauls' => $this->hauls->paginate($filters, $request->sort(), $request->direction()),
+            'hauls' => $this->hauls->paginate($filters, $request->sort()),
             'totals' => $this->hauls->totals($filters),
             'filters' => $filters,
             'options' => $this->hauls->searchOptions(),

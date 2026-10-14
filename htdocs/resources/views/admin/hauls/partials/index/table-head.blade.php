@@ -1,18 +1,18 @@
 <thead>
     <tr>
         <th class="is-center">#</th>
-        <th>Fiş No @include('admin.hauls.partials.index.sort', ['field' => 'ticket'])</th>
+        <x-table.th sort="ticket">Fiş No</x-table.th>
         <th>Aktif şoför</th>
-        <th>Plaka @include('admin.hauls.partials.index.sort', ['field' => 'plate'])</th>
+        <x-table.th sort="plate">Plaka</x-table.th>
         <th>Sınıf</th>
-        <th>Şantiye @include('admin.hauls.partials.index.sort', ['field' => 'site'])</th>
-        <th>Döküm yeri @include('admin.hauls.partials.index.sort', ['field' => 'dump_site'])</th>
-        <th>Tutar @include('admin.hauls.partials.index.sort', ['field' => 'price'])</th>
-        <th class="is-center">Ton</th>
-        <th>Tarih @include('admin.hauls.partials.index.sort', ['field' => 'hauled_at'])</th>
-        <th><abbr title="Veri giriş zamanı">VGZ</abbr> @include('admin.hauls.partials.index.sort', ['field' => 'created_at'])</th>
+        <x-table.th sort="site">Şantiye</x-table.th>
+        <x-table.th sort="dump_site">Döküm yeri</x-table.th>
+        <x-table.th sort="price" first="desc">Tutar</x-table.th>
+        <x-table.th sort="tonnage" first="desc" class="is-center">Ton</x-table.th>
+        <x-table.th sort="hauled_at" first="desc">Tarih</x-table.th>
+        <x-table.th sort="created_at" first="desc"><abbr title="Veri giriş zamanı">VGZ</abbr></x-table.th>
         <th>İşlem yapan</th>
         <th class="is-center">Vardiya</th>
-        <th class="is-center">İşlem</th>
+        <th class="is-center is-actions">İşlem</th>
     </tr>
 </thead>

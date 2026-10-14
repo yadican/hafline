@@ -1,39 +1,13 @@
 <div class="panel-liste-bar">
-    <form method="GET" action="{{ route('admin.examples.index') }}" role="search">
-        <input
-            type="search"
-            name="q"
-            value="{{ $filters['q'] ?? '' }}"
-            class="slct"
-            placeholder="Başlık, e-posta, telefon…"
-            aria-label="Ara"
-            maxlength="100"
-        >
+    <x-search.form :action="route('admin.examples.index')">
+        <x-search.text name="q" label="Ara" :value="$filters['q'] ?? null" placeholder="Başlık, e-posta, telefon…" maxlength="100" />
+        <x-search.select name="active" label="Durum" placeholder="Tüm durumlar" :options="['1' => 'Aktif', '0' => 'Pasif']" :value="$filters['active'] ?? null" />
+        <x-search.select name="shift" label="Vardiya" placeholder="Tüm vardiyalar" :options="\App\Enums\ExampleShift::options()" :value="$filters['shift'] ?? null" />
 
-        <select name="active" class="slct" aria-label="Durum">
-            <option value="">Tüm durumlar</option>
-            <option value="1" @selected(($filters['active'] ?? null) === '1')>Aktif</option>
-            <option value="0" @selected(($filters['active'] ?? null) === '0')>Pasif</option>
-        </select>
-
-        <select name="shift" class="slct" aria-label="Vardiya">
-            <option value="">Tüm vardiyalar</option>
-            @foreach (\App\Enums\ExampleShift::options() as $value => $label)
-                <option value="{{ $value }}" @selected(($filters['shift'] ?? null) === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
-
-        <button type="submit" class="panel-btn">
-            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Ara
-        </button>
-
+        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass">Ara</x-ui.button>
         @if (! empty($filters))
-            <a href="{{ route('admin.examples.index') }}" class="panel-btn">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i> Temizle
-            </a>
+            <x-ui.button icon="fa-solid fa-xmark" :href="route('admin.examples.index')">Temizle</x-ui.button>
         @endif
-        <a href="{{ route('admin.examples.create') }}" class="panel-btn">
-            <i class="fa-solid fa-plus" aria-hidden="true"></i> Yeni kayıt
-        </a>
-    </form>
+        <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.examples.create')">Yeni kayıt</x-ui.button>
+    </x-search.form>
 </div>

@@ -30,10 +30,12 @@ class HaulLookupController extends Controller
         }
 
         $vehicles = $this->lookups->vehicles($term)->map(fn (Vehicle $vehicle) => [
-            'plate' => $vehicle->plate,
-            'owner' => $vehicle->owner?->full_name,
-            'class' => $vehicle->vehicleClass?->name,
-            'driver' => $vehicle->driver_name,
+            'value' => $vehicle->plate,
+            'meta' => collect([
+                $vehicle->owner?->full_name,
+                $vehicle->vehicleClass?->name,
+                $vehicle->driver_name ? 'Şoför: '.$vehicle->driver_name : null,
+            ])->filter()->implode(' · '),
         ]);
 
         return response()->json($vehicles);

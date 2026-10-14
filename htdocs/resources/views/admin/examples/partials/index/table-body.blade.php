@@ -7,28 +7,24 @@
             <td>{{ $example->event_date?->format('d.m.Y') ?: '—' }}</td>
             <td>
                 @if ($example->active)
-                    <span class="panel-badge panel-badge-aktif">Aktif</span>
+                    <x-ui.badge tone="aktif">Aktif</x-ui.badge>
                 @else
-                    <span class="panel-badge panel-badge-pasif">Pasif</span>
+                    <x-ui.badge tone="pasif">Pasif</x-ui.badge>
                 @endif
             </td>
-            <td>
-                @if ($example->shift)
-                    <span class="panel-badge {{ $example->shift->badge() }}" title="{{ $example->shift->label() }}">
-                        <i class="{{ $example->shift->icon() }}" aria-hidden="true"></i>
-                        <span class="sr-only">{{ $example->shift->label() }}</span>
-                    </span>
-                @else
-                    —
-                @endif
-            </td>
-            <td class="panel-actions-cell">
-                @include('admin.examples.partials.index.actions')
-            </td>
+            <td><x-ui.enum-badge :value="$example->shift" /></td>
+            <x-table.actions
+                :edit="route('admin.examples.edit', $example)"
+                :delete="route('admin.examples.destroy', $example)"
+            />
         </tr>
     @empty
-        <tr>
-            <td colspan="7">{{ empty($filters) ? 'Henüz kayıt yok.' : 'Aramanızla eşleşen kayıt bulunamadı.' }}</td>
-        </tr>
+        @if (empty($filters))
+            <x-table.empty colspan="7" title="Henüz kayıt yok." text="İlk kaydı oluşturarak başlayın.">
+                <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.examples.create')">Yeni kayıt</x-ui.button>
+            </x-table.empty>
+        @else
+            <x-table.no-results colspan="7" :reset="route('admin.examples.index')" />
+        @endif
     @endforelse
 </tbody>

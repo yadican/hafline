@@ -9,6 +9,7 @@ use App\Models\HaulRoute;
 use App\Models\Vehicle;
 use App\Repositories\HaulLookupRepository;
 use App\Repositories\HaulRepository;
+use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -23,9 +24,9 @@ class HaulService extends Service
     /**
      * @param  array<string, string>  $filters
      */
-    public function paginate(array $filters, ?string $sort = null, string $direction = 'desc', int $perPage = 30): LengthAwarePaginator
+    public function paginate(array $filters, ?Sort $sort = null, int $perPage = 30): LengthAwarePaginator
     {
-        return $this->hauls->search($filters, $sort, $direction, $perPage);
+        return $this->hauls->search($filters, $sort, $perPage);
     }
 
     /**

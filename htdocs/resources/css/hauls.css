@@ -1,18 +1,15 @@
 /* Taşıma fişi ekranları */
 
-.haul-plate input.slct {
+input.haul-plate {
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 	font-weight: bold;
 }
-.haul-plate-hint {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	min-height: 20px;
+input.haul-plate::placeholder {
+	font-weight: normal;
+	letter-spacing: normal;
+	color: #a59e95;
 }
-.haul-plate-hint.is-ok { color: #5a7a52; }
-.haul-plate-hint.is-err { color: var(--ui-danger); }
 
 .haul-search-toggle .haul-search-chevron {
 	font-size: 12px;
@@ -22,9 +19,8 @@
 	transform: rotate(180deg);
 }
 .panel-liste-bar .haul-search-toggle.is-open {
-	background: var(--ui-menu);
-	border-color: var(--ui-menu-dark);
-	color: #fff !important;
+	background: var(--ui-steel-dark);
+	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 .haul-search-count {
 	display: inline-flex;
@@ -109,18 +105,6 @@
 .haul-table td.is-center,
 .haul-table th.is-center {
 	text-align: center;
-}
-.haul-table th .panel-sort {
-	margin-left: 4px;
-	vertical-align: middle;
-}
-.haul-table .panel-sort a {
-	font-size: 9px;
-}
-.haul-table .panel-sort a.is-active {
-	background: var(--ui-ochre);
-	border-color: var(--ui-ochre-dark);
-	color: #fff;
 }
 
 @media print {

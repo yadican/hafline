@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Example;
 use App\Repositories\ExampleRepository;
+use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 
@@ -14,9 +15,9 @@ class ExampleService extends Service
     /**
      * @param  array{q?: string, active?: string, shift?: string}  $filters
      */
-    public function paginate(array $filters = [], int $perPage = 10): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 10): LengthAwarePaginator
     {
-        return $this->examples->search($filters, $perPage);
+        return $this->examples->search($filters, $sort, $perPage);
     }
 
     /**

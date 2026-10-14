@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\Shift;
+use App\Http\Requests\Concerns\SortsResults;
 use App\Repositories\HaulRepository;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class HaulSearchRequest extends FormRequest
 {
+    use SortsResults;
+
     /**
      * An invalid query string would otherwise redirect back to itself.
      */
@@ -18,6 +21,11 @@ class HaulSearchRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function sortRepository(): string
+    {
+        return HaulRepository::class;
     }
 
     /**
@@ -39,8 +47,7 @@ class HaulSearchRequest extends FormRequest
             'f.class' => ['nullable', 'uuid'],
             'f.ticket' => ['nullable', 'string', 'max:20'],
             'f.creator' => ['nullable', 'uuid'],
-            'sort' => ['nullable', Rule::in(HaulRepository::SORTS)],
-            'dir' => ['nullable', Rule::in(['asc', 'desc'])],
+            ...$this->sortRules(),
         ];
     }
 
@@ -53,15 +60,5 @@ class HaulSearchRequest extends FormRequest
             (array) $this->validated('f', []),
             fn ($value) => $value !== null && $value !== '',
         );
-    }
-
-    public function sort(): ?string
-    {
-        return $this->validated('sort');
-    }
-
-    public function direction(): string
-    {
-        return $this->validated('dir') ?? 'desc';
     }
 }

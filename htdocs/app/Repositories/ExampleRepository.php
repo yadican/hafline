@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Example;
+use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -16,9 +17,9 @@ class ExampleRepository extends Repository
     /**
      * @param  array{q?: string, active?: string, shift?: string}  $filters
      */
-    public function search(array $filters, int $perPage = 15): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->query()
+        $query = $this->query()
             ->when($filters['q'] ?? null, function (Builder $query, string $term): void {
                 $like = '%'.addcslashes($term, '%_\\').'%';
 
@@ -30,9 +31,18 @@ class ExampleRepository extends Repository
                 });
             })
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'))
-            ->when($filters['shift'] ?? null, fn (Builder $query, string $shift) => $query->where('shift', $shift))
-            ->latest()
+            ->when($filters['shift'] ?? null, fn (Builder $query, string $shift) => $query->where('shift', $shift));
+
+        return $this->applySort($query, $sort)
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    protected function sortColumns(): array
+    {
+        return [
+            'title' => 'title',
+            'event_date' => 'event_date',
+        ];
     }
 }
