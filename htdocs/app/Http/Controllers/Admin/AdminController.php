@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Exceptions\OperationException;
+use App\Exceptions\OperationRejectedException;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 
@@ -16,6 +17,8 @@ abstract class AdminController extends Controller
     {
         try {
             $action();
+        } catch (OperationRejectedException $exception) {
+            return back()->with('error', $exception->getMessage());
         } catch (OperationException) {
             return back()
                 ->withInput()

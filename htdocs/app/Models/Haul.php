@@ -36,7 +36,7 @@ class Haul extends Model
      */
     public function vehicle(): BelongsTo
     {
-        return $this->belongsTo(Vehicle::class);
+        return $this->belongsTo(Vehicle::class)->withTrashed();
     }
 
     /**
@@ -44,7 +44,7 @@ class Haul extends Model
      */
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(VehicleOwner::class, 'owner_id');
+        return $this->belongsTo(VehicleOwner::class, 'owner_id')->withTrashed();
     }
 
     /**
@@ -52,7 +52,7 @@ class Haul extends Model
      */
     public function route(): BelongsTo
     {
-        return $this->belongsTo(HaulRoute::class, 'route_id');
+        return $this->belongsTo(HaulRoute::class, 'route_id')->withTrashed();
     }
 
     /**
@@ -60,7 +60,7 @@ class Haul extends Model
      */
     public function site(): BelongsTo
     {
-        return $this->belongsTo(Site::class);
+        return $this->belongsTo(Site::class)->withTrashed();
     }
 
     /**
@@ -68,7 +68,7 @@ class Haul extends Model
      */
     public function dumpSite(): BelongsTo
     {
-        return $this->belongsTo(DumpSite::class);
+        return $this->belongsTo(DumpSite::class)->withTrashed();
     }
 
     /**

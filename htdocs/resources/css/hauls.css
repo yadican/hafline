@@ -1,16 +1,5 @@
 /* Taşıma fişi ekranları */
 
-input.haul-plate {
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	font-weight: bold;
-}
-input.haul-plate::placeholder {
-	font-weight: normal;
-	letter-spacing: normal;
-	color: #a59e95;
-}
-
 .haul-search-toggle .haul-search-chevron {
 	font-size: 12px;
 	transition: transform 0.15s ease;

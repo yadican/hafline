@@ -1,0 +1,105 @@
+<?php
+
+namespace Tests\Feature\Admin;
+
+use App\Models\HaulRoute;
+use App\Models\Site;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class SiteTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->admin = User::factory()->create();
+    }
+
+    public function test_guest_is_redirected_from_the_site_list(): void
+    {
+        $this->get(route('admin.sites.index'))
+            ->assertRedirect(route('admin.login'));
+    }
+
+    public function test_admin_can_create_update_and_delete_a_site(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.sites.create'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.sites.store'), ['name' => 'KARTAL MERKEZ', 'active' => '1'])
+            ->assertRedirect(route('admin.sites.index'))
+            ->assertSessionHas('success');
+
+        $site = Site::query()->where('name', 'KARTAL MERKEZ')->firstOrFail();
+        $this->assertTrue($site->active);
+
+        $this->actingAs($this->admin)->get(route('admin.sites.edit', $site))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.sites.update', $site), ['name' => 'KARTAL SAHİL'])
+            ->assertRedirect(route('admin.sites.index'));
+
+        $site->refresh();
+        $this->assertSame('KARTAL SAHİL', $site->name);
+        $this->assertFalse($site->active);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.sites.destroy', $site))
+            ->assertRedirect(route('admin.sites.index'));
+
+        $this->assertSoftDeleted($site);
+    }
+
+    public function test_site_names_are_unique_among_active_records(): void
+    {
+        $taken = Site::factory()->create(['name' => 'PENDİK']);
+
+        $this->actingAs($this->admin)
+            ->from(route('admin.sites.create'))
+            ->post(route('admin.sites.store'), ['name' => 'PENDİK'])
+            ->assertSessionHasErrors('name');
+
+        $taken->delete();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.sites.store'), ['name' => 'PENDİK'])
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_site_with_routes_cannot_be_deleted(): void
+    {
+        $route = HaulRoute::factory()->create();
+
+        $this->actingAs($this->admin)
+            ->from(route('admin.sites.index'))
+            ->delete(route('admin.sites.destroy', $route->site_id))
+            ->assertRedirect(route('admin.sites.index'))
+            ->assertSessionHas('error', fn (string $message) => str_contains($message, 'güzergah'));
+
+        $this->assertNotSoftDeleted('sites', ['id' => $route->site_id]);
+    }
+
+    public function test_list_filters_and_sorts_by_route_count(): void
+    {
+        $busy = Site::factory()->create(['name' => 'ATAŞEHİR']);
+        HaulRoute::factory()->count(2)->create(['site_id' => $busy->id]);
+        Site::factory()->create(['name' => 'BEYKOZ', 'active' => false]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.sites.index', ['active' => '0']))
+            ->assertOk()
+            ->assertSee('BEYKOZ')
+            ->assertDontSee('ATAŞEHİR');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.sites.index', ['sort' => 'routes', 'dir' => 'asc']))
+            ->assertOk()
+            ->assertSeeInOrder(['BEYKOZ', 'ATAŞEHİR']);
+    }
+}

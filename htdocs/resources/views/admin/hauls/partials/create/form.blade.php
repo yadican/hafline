@@ -10,7 +10,7 @@
                 placeholder="34 ABC 123"
                 maxlength="20"
                 required
-                class="haul-plate"
+                class="panel-plate"
                 data-haul-plate
             >
                 <x-form.status data-haul-plate-hint>Yazmaya başlayın, listeden seçin</x-form.status>

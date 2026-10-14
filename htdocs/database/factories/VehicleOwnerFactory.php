@@ -21,6 +21,8 @@ class VehicleOwnerFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'phone' => fake()->numerify('05#########'),
+            'mobile' => fake()->optional()->numerify('05#########'),
+            'address' => fake()->optional()->address(),
         ];
     }
 }

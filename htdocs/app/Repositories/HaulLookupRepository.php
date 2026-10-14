@@ -91,6 +91,7 @@ class HaulLookupRepository
 
         return Vehicle::query()
             ->with(['owner', 'vehicleClass'])
+            ->where('active', true)
             ->whereLike('plate_key', $like)
             ->orderBy('plate')
             ->limit($limit)

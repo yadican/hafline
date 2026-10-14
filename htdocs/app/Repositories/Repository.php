@@ -71,10 +71,38 @@ abstract class Repository
         match (true) {
             $column instanceof Closure => $column($query, $sort->direction),
             is_string($column) => $query->orderBy($column, $sort->direction),
-            default => $query->latest(),
+            default => $this->defaultSort($query),
         };
 
         return $query->orderByDesc($this->model->getQualifiedKeyName());
+    }
+
+    protected function defaultSort(Builder $query): void
+    {
+        $query->latest();
+    }
+
+    /**
+     * @param  list<string>  $columns
+     */
+    protected function whereTerm(Builder $query, ?string $term, array $columns): Builder
+    {
+        if ($term === null || $term === '') {
+            return $query;
+        }
+
+        $like = $this->likePattern($term);
+
+        return $query->where(function (Builder $query) use ($columns, $like): void {
+            foreach ($columns as $column) {
+                $query->orWhereLike($column, $like);
+            }
+        });
+    }
+
+    protected function likePattern(string $term): string
+    {
+        return '%'.addcslashes($term, '%_\\').'%';
     }
 
     protected function query(): Builder

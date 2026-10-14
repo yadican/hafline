@@ -55,15 +55,15 @@ class HaulRepository extends Repository
         return [
             'ticket' => 'ticket_no',
             'plate' => fn (Builder $query, string $direction) => $query->orderBy(
-                Vehicle::query()->select('plate_key')->whereColumn('vehicles.id', 'hauls.vehicle_id'),
+                Vehicle::withTrashed()->select('plate_key')->whereColumn('vehicles.id', 'hauls.vehicle_id'),
                 $direction,
             ),
             'site' => fn (Builder $query, string $direction) => $query->orderBy(
-                Site::query()->select('name')->whereColumn('sites.id', 'hauls.site_id'),
+                Site::withTrashed()->select('name')->whereColumn('sites.id', 'hauls.site_id'),
                 $direction,
             ),
             'dump_site' => fn (Builder $query, string $direction) => $query->orderBy(
-                DumpSite::query()->select('name')->whereColumn('dump_sites.id', 'hauls.dump_site_id'),
+                DumpSite::withTrashed()->select('name')->whereColumn('dump_sites.id', 'hauls.dump_site_id'),
                 $direction,
             ),
             'price' => 'price',

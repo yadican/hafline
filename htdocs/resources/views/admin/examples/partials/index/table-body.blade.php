@@ -5,13 +5,7 @@
             <td>{{ $example->email ?: '—' }}</td>
             <td>{{ $example->phone ?: '—' }}</td>
             <td>{{ $example->event_date?->format('d.m.Y') ?: '—' }}</td>
-            <td>
-                @if ($example->active)
-                    <x-ui.badge tone="aktif">Aktif</x-ui.badge>
-                @else
-                    <x-ui.badge tone="pasif">Pasif</x-ui.badge>
-                @endif
-            </td>
+            <td><x-ui.active-badge :active="$example->active" /></td>
             <td><x-ui.enum-badge :value="$example->shift" /></td>
             <x-table.actions
                 :edit="route('admin.examples.edit', $example)"

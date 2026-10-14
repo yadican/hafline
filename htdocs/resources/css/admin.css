@@ -770,6 +770,34 @@ span.flatpickr-weekday {
 .panel-list .is-status { width: 84px; }
 .panel-list .is-shift { width: 72px; }
 
+.panel-list .is-count { width: 96px; }
+.panel-list td.is-center { text-align: center; }
+
+input.panel-plate {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: bold;
+}
+
+input.panel-plate::placeholder {
+    font-weight: normal;
+    letter-spacing: normal;
+    color: #a59e95;
+}
+
+.panel-plate-text {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.panel-muted-icon {
+    width: 18px;
+    margin-right: 4px;
+    color: var(--ui-muted);
+    text-align: center;
+}
+
 .panel-list-scroll {
     container-type: inline-size;
 }
