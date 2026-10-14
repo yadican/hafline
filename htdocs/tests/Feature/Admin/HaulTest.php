@@ -54,13 +54,13 @@ class HaulTest extends TestCase
     public function test_each_trip_is_stored_with_the_class_price(): void
     {
         $this->actingAs($this->admin)
-            ->post(route('admin.hauls.store'), $this->payload(['plate' => '34abc 123', 'trips' => 3]))
+            ->post(route('admin.hauls.store'), $this->payload(['plate' => '34abc 123', 'trips' => 5]))
             ->assertRedirect(route('admin.hauls.index'))
-            ->assertSessionHas('success', '3 sefer kaydedildi.');
+            ->assertSessionHas('success', '5 sefer kaydedildi.');
 
         $hauls = Haul::query()->where('ticket_no', 'F-100')->get();
 
-        $this->assertCount(3, $hauls);
+        $this->assertCount(5, $hauls);
         $this->assertTrue($hauls->every(fn (Haul $haul) => $haul->vehicle_id === $this->vehicle->id
             && $haul->price === '2500.00'
             && $haul->dump_price === '400.00'
@@ -82,19 +82,76 @@ class HaulTest extends TestCase
         $this->assertSame('3100.00', Haul::query()->sole()->price);
     }
 
-    public function test_duplicate_ticket_unknown_plate_and_missing_route_are_rejected(): void
+    public function test_duplicate_ticket_unknown_plate_and_unknown_route_are_rejected(): void
     {
         Haul::factory()->create(['ticket_no' => 'F-100']);
-        $otherDumpSite = DumpSite::factory()->create();
 
         $this->actingAs($this->admin)
             ->post(route('admin.hauls.store'), $this->payload([
                 'plate' => '06 ZZ 999',
-                'dump_site_id' => $otherDumpSite->id,
+                'dump_site_id' => DumpSite::factory()->create()->id,
             ]))
-            ->assertSessionHasErrors(['ticket_no', 'plate', 'dump_site_id']);
+            ->assertSessionHasErrors([
+                'ticket_no',
+                'plate',
+                'dump_site_id' => 'Bu şantiye ile döküm yeri arasında aktif güzergah yok.',
+            ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload(['ticket_no' => 'F-101', 'site_id' => 'not-a-uuid']))
+            ->assertSessionHasErrors(['site_id']);
 
         $this->assertDatabaseCount('hauls', 1);
+    }
+
+    public function test_closed_route_is_rejected_for_new_hauls_but_kept_on_existing_ones(): void
+    {
+        $haul = Haul::factory()->create([
+            'vehicle_id' => $this->vehicle->id,
+            'route_id' => $this->route->id,
+        ]);
+        $this->route->update(['active' => false]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload())
+            ->assertSessionHasErrors(['dump_site_id']);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.hauls.update', $haul), $this->payload(['ticket_no' => $haul->ticket_no]))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.create'))
+            ->assertViewHas('options', fn (array $options) => ! array_key_exists($this->route->site_id, $options['sites']));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.edit', $haul))
+            ->assertViewHas('options', fn (array $options) => array_key_exists($this->route->site_id, $options['sites'])
+                && array_key_exists($this->route->dump_site_id, $options['dumpSites']));
+    }
+
+    public function test_closing_a_site_hides_it_from_the_entry_form(): void
+    {
+        $this->route->site->update(['active' => false]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.hauls.create'))
+            ->assertViewHas('options', fn (array $options) => $options['sites'] === []);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload())
+            ->assertSessionHasErrors(['dump_site_id']);
+    }
+
+    public function test_stored_haul_takes_site_and_dump_site_from_the_route(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload());
+
+        $haul = Haul::query()->sole();
+        $this->assertSame($this->route->id, $haul->route_id);
+        $this->assertSame($this->route->site_id, $haul->site_id);
+        $this->assertSame($this->route->dump_site_id, $haul->dump_site_id);
     }
 
     public function test_update_requotes_the_price(): void
@@ -199,7 +256,20 @@ class HaulTest extends TestCase
             ->get(route('admin.hauls.create'))
             ->assertOk()
             ->assertSee('Yeni taşıma fişi')
+            ->assertSee('name="site_id"', false)
+            ->assertSee('name="dump_site_id"', false)
+            ->assertSee('name="trips"', false)
+            ->assertSeeInOrder(['name="tonnage"', 'name="trips"', 'value="1"'], false)
             ->assertSee($this->route->site->name);
+    }
+
+    public function test_a_single_trip_is_stored_once(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload())
+            ->assertSessionHas('success', 'Taşıma fişi kaydedildi.');
+
+        $this->assertDatabaseCount('hauls', 1);
     }
 
     public function test_edit_page_prefills_the_form(): void
@@ -213,15 +283,72 @@ class HaulTest extends TestCase
             ->assertSee('value="34 ABC 123"', false);
     }
 
-    public function test_lookups_return_dump_sites_for_a_site_and_matching_vehicles(): void
+    public function test_quote_lookup_explains_the_price_a_haul_would_get(): void
     {
-        HaulRoute::factory()->create(['site_id' => Site::factory()->create()->id]);
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.quote', $this->quoteQuery(['plate' => '34abc123'])))
+            ->assertOk()
+            ->assertJson([
+                'price' => '2500.00',
+                'dump_price' => '400.00',
+                'source' => 'class',
+                'class' => $this->vehicle->vehicleClass->name,
+                'dump_priced' => true,
+            ]);
+
+        RouteVehiclePrice::query()->create([
+            'route_id' => $this->route->id,
+            'vehicle_id' => $this->vehicle->id,
+            'price' => 3100,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.quote', $this->quoteQuery()))
+            ->assertOk()
+            ->assertJson(['price' => '3100.00', 'source' => 'vehicle']);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.quote', $this->quoteQuery(['plate' => '06 ZZ 999'])))
+            ->assertNotFound();
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.quote', $this->quoteQuery(['dump_site' => 'x'])))
+            ->assertNotFound();
+
+        $this->route->update(['active' => false]);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.quote', $this->quoteQuery()))
+            ->assertNotFound();
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.quote', $this->quoteQuery(['current' => $this->route->id])))
+            ->assertOk();
+    }
+
+    public function test_dump_site_lookup_lists_only_destinations_with_an_open_route(): void
+    {
+        $closed = HaulRoute::factory()->create(['site_id' => $this->route->site_id, 'active' => false]);
+        HaulRoute::factory()->create();
 
         $this->actingAs($this->admin)
             ->getJson(route('admin.hauls.lookups.dump-sites', ['site' => $this->route->site_id]))
             ->assertOk()
             ->assertExactJson([['id' => $this->route->dump_site_id, 'name' => $this->route->dumpSite->name]]);
 
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.dump-sites', ['site' => $this->route->site_id, 'current' => $closed->id]))
+            ->assertOk()
+            ->assertJsonCount(2);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.hauls.lookups.dump-sites', ['site' => 'x']))
+            ->assertOk()
+            ->assertExactJson([]);
+    }
+
+    public function test_lookup_returns_matching_vehicles(): void
+    {
         $this->actingAs($this->admin)
             ->getJson(route('admin.hauls.lookups.vehicles', ['q' => '34 abc']))
             ->assertOk()
@@ -245,6 +372,20 @@ class HaulTest extends TestCase
             'dump_site_id' => $this->route->dump_site_id,
             'tonnage' => 18,
             'shift' => 'day',
+            ...$overrides,
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $overrides
+     * @return array<string, string>
+     */
+    private function quoteQuery(array $overrides = []): array
+    {
+        return [
+            'plate' => '34 ABC 123',
+            'site' => $this->route->site_id,
+            'dump_site' => $this->route->dump_site_id,
             ...$overrides,
         ];
     }

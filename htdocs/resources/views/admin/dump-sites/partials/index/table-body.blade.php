@@ -2,7 +2,14 @@
     @forelse ($dumpSites as $dumpSite)
         <tr>
             <td>{{ $dumpSite->name }}</td>
-            <td class="is-center">{{ $dumpSite->routes_count ?: '—' }}</td>
+            <td><x-ui.class-prices :prices="$dumpSite->classPrices" empty="Ücret yok" /></td>
+            <td class="is-center">
+                @if ($dumpSite->routes_count)
+                    <a href="{{ route('admin.haul-routes.index', ['dump_site' => $dumpSite->id]) }}" title="Bu döküm yerinin güzergahlarını göster">{{ $dumpSite->routes_count }}</a>
+                @else
+                    —
+                @endif
+            </td>
             <td><x-ui.active-badge :active="$dumpSite->active" /></td>
             <x-table.actions
                 :edit="route('admin.dump-sites.edit', $dumpSite)"
@@ -13,11 +20,11 @@
         </tr>
     @empty
         @if (empty($filters))
-            <x-table.empty colspan="4" icon="fa-solid fa-dumpster" title="Henüz döküm yeri yok." text="Taşıma fişlerinde seçmek için döküm yerlerini ekleyin.">
+            <x-table.empty colspan="5" icon="fa-solid fa-dumpster" title="Henüz döküm yeri yok." text="Taşıma fişlerinde seçmek için döküm yerlerini ekleyin.">
                 <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.dump-sites.create')">Yeni döküm yeri</x-ui.button>
             </x-table.empty>
         @else
-            <x-table.no-results colspan="4" :reset="route('admin.dump-sites.index')" />
+            <x-table.no-results colspan="5" :reset="route('admin.dump-sites.index')" />
         @endif
     @endforelse
 </tbody>

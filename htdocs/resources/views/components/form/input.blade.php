@@ -64,4 +64,5 @@
             {{ $attributes->merge(['class' => 'slct']) }}
         >
     @endif
+    {{ $slot }}
 </x-form.field>

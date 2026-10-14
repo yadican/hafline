@@ -27,6 +27,20 @@ class SiteRepository extends Repository
             ->withQueryString();
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function options(bool $activeOnly = false, ?string $include = null): array
+    {
+        return $this->query()
+            ->when($activeOnly, fn (Builder $query) => $query->where(
+                fn (Builder $query) => $query->where('active', true)->orWhere('id', $include),
+            ))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
     protected function defaultSort(Builder $query): void
     {
         $query->orderBy('name');

@@ -8,24 +8,16 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
 use App\Models\VehicleOwner;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Str;
 
 class HaulLookupRepository
 {
     /**
      * @return array<string, string>
      */
-    public function sites(bool $activeOnly = false, ?string $include = null): array
+    public function sites(): array
     {
-        return Site::query()
-            ->when($activeOnly, fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query->where('active', true)->orWhere('id', $include),
-            ))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        return Site::query()->orderBy('name')->pluck('name', 'id')->all();
     }
 
     /**
@@ -34,23 +26,6 @@ class HaulLookupRepository
     public function dumpSites(): array
     {
         return DumpSite::query()->orderBy('name')->pluck('name', 'id')->all();
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function dumpSitesForSite(?string $siteId): array
-    {
-        if (! $siteId || ! Str::isUuid($siteId)) {
-            return [];
-        }
-
-        return DumpSite::query()
-            ->where('active', true)
-            ->whereHas('routes', fn (Builder $route) => $route->where('site_id', $siteId)->where('active', true))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
     }
 
     /**

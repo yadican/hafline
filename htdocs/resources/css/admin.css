@@ -515,6 +515,74 @@ span.flatpickr-weekday {
     display: contents;
 }
 
+.select2-container--default .select2-selection--single {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: var(--ui-control-h);
+    padding: 0 36px 0 12px;
+    border: 1px solid #cfc7bb;
+    border-radius: 6px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238c5f20' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select2-container--default .select2-selection--single:hover {
+    border-color: #bfb3a2;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--ui-ochre);
+    box-shadow: 0 0 0 2px rgba(176, 120, 42, 0.18);
+}
+
+.panel-field-invalid .select2-container--default .select2-selection--single {
+    border-color: var(--ui-danger);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding: 0;
+    color: var(--ui-ink);
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #a59e95;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    display: none;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    margin-right: 4px;
+    color: var(--ui-muted);
+    font-size: 18px;
+}
+
+.select2-search--dropdown {
+    padding: 8px 8px 4px;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #cfc7bb;
+    border-radius: 6px;
+    color: var(--ui-ink);
+    font-family: inherit;
+    font-size: 16px;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--ui-ochre);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(176, 120, 42, 0.18);
+}
+
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
     display: inline-flex;
     align-items: center;
@@ -789,6 +857,111 @@ input.panel-plate::placeholder {
     font-weight: 700;
     letter-spacing: 0.5px;
     white-space: nowrap;
+}
+
+.panel-form-grid-after {
+    margin-top: 16px;
+}
+
+.panel-form-group.is-wide {
+    grid-column: 1 / -1;
+}
+
+.panel-money {
+    position: relative;
+}
+
+.panel-form-grid .panel-money input.slct {
+    padding-right: 44px;
+}
+
+.panel-money-suffix {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    color: var(--ui-muted);
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.panel-money-text {
+    white-space: nowrap;
+}
+
+.panel-price-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px 14px;
+}
+
+.panel-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.panel-list .panel-chips {
+    flex-wrap: nowrap;
+}
+
+.panel-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--ui-ochre-soft);
+    color: var(--ui-ink);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.panel-chip-label {
+    color: var(--ui-ochre-dark);
+    font-weight: 700;
+}
+
+.panel-chips-empty {
+    color: var(--ui-muted);
+    font-size: 14px;
+}
+
+.panel-subtable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+.panel-subtable th,
+.panel-subtable td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--ui-border-soft);
+    text-align: left;
+}
+
+.panel-subtable th {
+    color: var(--ui-muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.panel-subtable td.is-end,
+.panel-subtable th.is-end {
+    text-align: right;
+}
+
+.panel-inline-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+@media (max-width: 575px) {
+    .panel-inline-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 .panel-muted-icon {

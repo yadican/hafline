@@ -30,6 +30,8 @@ class DumpSiteRequest extends FormRequest
                 'max:255',
                 Rule::unique('dump_sites', 'name')->ignore($this->route('dump_site'))->withoutTrashed(),
             ],
+            'class_prices' => ['array'],
+            'class_prices.*' => HaulRouteRequest::PRICE_RULES,
             'active' => ['boolean'],
         ];
     }
@@ -41,6 +43,7 @@ class DumpSiteRequest extends FormRequest
     {
         return [
             'name' => 'döküm yeri adı',
+            'class_prices.*' => 'döküm ücreti',
             'active' => 'aktif',
         ];
     }

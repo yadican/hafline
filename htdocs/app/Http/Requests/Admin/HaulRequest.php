@@ -3,10 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\Shift;
-use App\Models\DumpSite;
 use App\Models\Haul;
-use App\Models\HaulRoute;
-use App\Models\Site;
 use App\Models\Vehicle;
 use App\Services\HaulService;
 use Closure;
@@ -44,14 +41,16 @@ class HaulRequest extends FormRequest
             }],
             'trips' => [Rule::excludeIf($this->haul() !== null), 'required', 'integer', 'between:1,50'],
             'hauled_at' => ['required', 'date'],
-            'site_id' => ['required', 'uuid', Rule::exists(Site::class, 'id')->withoutTrashed()],
-            'dump_site_id' => ['required', 'uuid', Rule::exists(DumpSite::class, 'id')->withoutTrashed()],
+            'site_id' => ['required', 'uuid'],
+            'dump_site_id' => ['required', 'uuid'],
             'tonnage' => ['required', 'integer', 'between:0,1000'],
             'shift' => ['required', Rule::enum(Shift::class)],
         ];
     }
 
     /**
+     * A closed route stays valid only for the haul already recorded on it.
+     *
      * @return array<int, Closure(Validator): void>
      */
     public function after(): array
@@ -62,8 +61,14 @@ class HaulRequest extends FormRequest
                     return;
                 }
 
-                if (! HaulRoute::between($this->string('site_id')->value(), $this->string('dump_site_id')->value())) {
-                    $validator->errors()->add('dump_site_id', 'Bu şantiye ile döküm yeri arasında tanımlı güzergah yok.');
+                $route = app(HaulService::class)->findRoute(
+                    $this->string('site_id')->value(),
+                    $this->string('dump_site_id')->value(),
+                    $this->haul()?->route_id,
+                );
+
+                if (! $route) {
+                    $validator->errors()->add('dump_site_id', 'Bu şantiye ile döküm yeri arasında aktif güzergah yok.');
                 }
             },
         ];

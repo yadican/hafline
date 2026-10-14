@@ -9,6 +9,7 @@ use App\Models\HaulRoute;
 use App\Models\Vehicle;
 use App\Repositories\HaulLookupRepository;
 use App\Repositories\HaulRepository;
+use App\Repositories\HaulRouteRepository;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -18,6 +19,7 @@ class HaulService extends Service
     public function __construct(
         private HaulRepository $hauls,
         private HaulLookupRepository $lookups,
+        private HaulRouteRepository $routes,
         private HaulPricing $pricing,
     ) {}
 
@@ -59,10 +61,31 @@ class HaulService extends Service
     public function formOptions(?string $siteId, ?Haul $haul = null): array
     {
         return [
-            'sites' => $this->lookups->sites(activeOnly: true, include: $haul?->site_id),
-            'dumpSites' => $this->lookups->dumpSitesForSite($siteId),
+            'sites' => $this->routes->siteOptions($haul?->route_id),
+            'dumpSites' => $this->routes->dumpSiteOptions($siteId, $haul?->route_id),
             'shifts' => Shift::options(),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function dumpSitesFor(?string $siteId, ?string $includeRoute = null): array
+    {
+        return $this->routes->dumpSiteOptions($siteId, $includeRoute);
+    }
+
+    public function findRoute(?string $siteId, ?string $dumpSiteId, ?string $includeRoute = null): ?HaulRoute
+    {
+        return $this->routes->findOpen($siteId, $dumpSiteId, $includeRoute);
+    }
+
+    /**
+     * @return array{price: string, dump_price: string, source: 'vehicle'|'class'|null, class: ?string, dump_priced: bool}
+     */
+    public function preview(Vehicle $vehicle, HaulRoute $route): array
+    {
+        return $this->pricing->explain($vehicle, $route);
     }
 
     public function ticketTaken(string $ticketNo): bool
@@ -100,7 +123,7 @@ class HaulService extends Service
      */
     public function update(Haul $haul, array $data): Haul
     {
-        [$vehicle, $route] = $this->resolve($data);
+        [$vehicle, $route] = $this->resolve($data, $haul->route_id);
 
         return $this->transaction(function () use ($haul, $data, $vehicle, $route): Haul {
             $attributes = $this->attributes($data, $vehicle, $route);
@@ -126,10 +149,10 @@ class HaulService extends Service
      * @param  array<string, mixed>  $data
      * @return array{Vehicle, HaulRoute}
      */
-    private function resolve(array $data): array
+    private function resolve(array $data, ?string $currentRoute = null): array
     {
         $vehicle = Vehicle::findByPlate((string) $data['plate']);
-        $route = HaulRoute::between((string) $data['site_id'], (string) $data['dump_site_id']);
+        $route = $this->findRoute($data['site_id'], $data['dump_site_id'], $currentRoute);
 
         if (! $vehicle || ! $route) {
             throw new OperationException('Plaka veya güzergah bulunamadı.');

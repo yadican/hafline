@@ -7,6 +7,12 @@
             <x-form.checkbox name="active" label="Durum" text="Seçim listelerinde gösterilsin" />
         </x-form.group>
 
+        <x-form.group legend="Döküm ücretleri" icon="fa-solid fa-layer-group" description="Sefer başına araç sınıfı döküm ücreti">
+            <x-form.class-prices :classes="$classes" :prices="$dumpSite->classPrices->pluck('price', 'vehicle_class_id')->all()">
+                <p class="panel-hint">Taşıma fişindeki döküm ücreti aracın sınıfına göre buradan alınır. Kayıtlı fişler düzenlenmedikçe eski ücretiyle kalır.</p>
+            </x-form.class-prices>
+        </x-form.group>
+
         <x-form.actions label="Güncelle" :cancel="route('admin.dump-sites.index')" />
     </x-form.grid>
 </form>

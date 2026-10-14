@@ -2,7 +2,13 @@
     @forelse ($sites as $site)
         <tr>
             <td>{{ $site->name }}</td>
-            <td class="is-center">{{ $site->routes_count ?: '—' }}</td>
+            <td class="is-center">
+                @if ($site->routes_count)
+                    <a href="{{ route('admin.haul-routes.index', ['site' => $site->id]) }}" title="Bu şantiyenin güzergahlarını göster">{{ $site->routes_count }}</a>
+                @else
+                    —
+                @endif
+            </td>
             <td><x-ui.active-badge :active="$site->active" /></td>
             <x-table.actions
                 :edit="route('admin.sites.edit', $site)"

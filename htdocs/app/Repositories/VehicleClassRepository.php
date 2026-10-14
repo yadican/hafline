@@ -28,15 +28,16 @@ class VehicleClassRepository extends Repository
     }
 
     /**
-     * Active classes, plus the one already assigned so an edit form never loses its value.
+     * Active classes, plus the ones already in use so an edit form never loses a value.
      *
+     * @param  string|list<string>|null  $include
      * @return array<string, string>
      */
-    public function options(bool $activeOnly = false, ?string $include = null): array
+    public function options(bool $activeOnly = false, string|array|null $include = null): array
     {
         return $this->query()
             ->when($activeOnly, fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query->where('active', true)->orWhere('id', $include),
+                fn (Builder $query) => $query->where('active', true)->orWhereIn('id', array_filter((array) $include)),
             ))
             ->orderBy('name')
             ->pluck('name', 'id')

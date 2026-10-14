@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\HaulRouteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,7 +32,7 @@ class HaulRoute extends Model
      */
     public function site(): BelongsTo
     {
-        return $this->belongsTo(Site::class);
+        return $this->belongsTo(Site::class)->withTrashed();
     }
 
     /**
@@ -39,7 +40,15 @@ class HaulRoute extends Model
      */
     public function dumpSite(): BelongsTo
     {
-        return $this->belongsTo(DumpSite::class);
+        return $this->belongsTo(DumpSite::class)->withTrashed();
+    }
+
+    /**
+     * @return Attribute<string, never>
+     */
+    protected function label(): Attribute
+    {
+        return Attribute::get(fn () => $this->site?->name.' → '.$this->dumpSite?->name);
     }
 
     /**

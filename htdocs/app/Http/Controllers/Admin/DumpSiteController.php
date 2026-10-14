@@ -28,6 +28,7 @@ class DumpSiteController extends AdminController
     {
         return view('admin.dump-sites.create', [
             'title' => 'Yeni döküm yeri',
+            'classes' => $this->dumpSites->classOptions(),
         ]);
     }
 
@@ -42,9 +43,12 @@ class DumpSiteController extends AdminController
 
     public function edit(DumpSite $dumpSite): View
     {
+        $dumpSite->load('classPrices');
+
         return view('admin.dump-sites.edit', [
             'title' => 'Döküm yerini düzenle',
             'dumpSite' => $dumpSite,
+            'classes' => $this->dumpSites->classOptions($dumpSite),
         ]);
     }
 

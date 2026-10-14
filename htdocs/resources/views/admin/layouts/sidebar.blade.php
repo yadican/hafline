@@ -12,6 +12,19 @@
         </div>
     </div>
 
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*')]) id="um-sec-tickets">
+        <button type="button" class="um-title" data-um-toggle="um-sec-tickets">
+            <span class="um-title-text">
+                <i class="fa-solid fa-file-invoice um-title-icon" aria-hidden="true"></i>
+                <span class="um-title-label">Fiş işlemleri</span>
+            </span>
+            <span class="um-caret" aria-hidden="true"></span>
+        </button>
+        <div class="um-items">
+            <a href="{{ route('admin.hauls.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.hauls.*')])>Taşıma fişleri</a>
+        </div>
+    </div>
+
     <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.payment-types.*', 'admin.cash-categories.*', 'admin.banks.*')]) id="um-sec-definitions">
         <button type="button" class="um-title" data-um-toggle="um-sec-definitions">
             <span class="um-title-text">
@@ -42,7 +55,7 @@
         </div>
     </div>
 
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.sites.*', 'admin.dump-sites.*')]) id="um-sec-field">
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.sites.*', 'admin.dump-sites.*', 'admin.haul-routes.*', 'admin.fuel-stations.*')]) id="um-sec-field">
         <button type="button" class="um-title" data-um-toggle="um-sec-field">
             <span class="um-title-text">
                 <i class="fa-solid fa-map-location-dot um-title-icon" aria-hidden="true"></i>
@@ -53,6 +66,8 @@
         <div class="um-items">
             <a href="{{ route('admin.sites.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.sites.*')])>Şantiyeler</a>
             <a href="{{ route('admin.dump-sites.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.dump-sites.*')])>Döküm yerleri</a>
+            <a href="{{ route('admin.haul-routes.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.haul-routes.*')])>Güzergahlar ve fiyatlar</a>
+            <a href="{{ route('admin.fuel-stations.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.fuel-stations.*')])>Akaryakıt istasyonları</a>
         </div>
     </div>
 
@@ -66,19 +81,6 @@
         </button>
         <div class="um-items">
             <a href="{{ route('admin.examples.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.examples.*')])>Kayıt listesi</a>
-        </div>
-    </div>
-
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*')]) id="um-sec-hauls">
-        <button type="button" class="um-title" data-um-toggle="um-sec-hauls">
-            <span class="um-title-text">
-                <i class="fa-solid fa-truck-ramp-box um-title-icon" aria-hidden="true"></i>
-                <span class="um-title-label">Taşıma fişleri</span>
-            </span>
-            <span class="um-caret" aria-hidden="true"></span>
-        </button>
-        <div class="um-items">
-            <a href="{{ route('admin.hauls.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.hauls.*')])>Fiş listesi</a>
         </div>
     </div>
 </div>

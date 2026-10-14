@@ -16,6 +16,14 @@ const turkish = {
     searching: () => 'Aranıyor…',
 };
 
+// select2 değişikliği jQuery üzerinden tetikler; addEventListener('change') dinleyenlerine
+// ulaşması için seçimden sonra yerel bir change olayı da gönderilir.
+function relayChange($select) {
+    $select.on('select2:select select2:clear', () => {
+        $select[0].dispatchEvent(new Event('change', { bubbles: true }));
+    });
+}
+
 export function bindMultiSelects(root = document) {
     $(root).find('select[data-multi-select]').each(function () {
         const $select = $(this);
@@ -30,5 +38,21 @@ export function bindMultiSelects(root = document) {
             placeholder: $select.data('placeholder') || 'Seçin',
             language: turkish,
         });
+    });
+
+    $(root).find('select[data-searchable-select]').each(function () {
+        const $select = $(this);
+
+        if ($select.hasClass('select2-hidden-accessible')) {
+            return;
+        }
+
+        $select.select2({
+            width: '100%',
+            placeholder: $select.data('placeholder') || 'Seçin',
+            allowClear: ! $select.prop('required'),
+            language: turkish,
+        });
+        relayChange($select);
     });
 }

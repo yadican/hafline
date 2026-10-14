@@ -5,12 +5,20 @@ namespace App\Services;
 use App\Exceptions\OperationRejectedException;
 use App\Models\DumpSite;
 use App\Repositories\DumpSiteRepository;
+use App\Repositories\VehicleClassRepository;
+use App\Services\Concerns\SyncsClassPrices;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 
 class DumpSiteService extends Service
 {
-    public function __construct(private DumpSiteRepository $dumpSites) {}
+    use SyncsClassPrices;
+
+    public function __construct(
+        private DumpSiteRepository $dumpSites,
+        private VehicleClassRepository $classes,
+    ) {}
 
     /**
      * @param  array{q?: string, active?: string}  $filters
@@ -21,12 +29,28 @@ class DumpSiteService extends Service
     }
 
     /**
+     * @return array<string, string>
+     */
+    public function classOptions(?DumpSite $dumpSite = null): array
+    {
+        return $this->classes->options(activeOnly: true, include: $dumpSite?->classPrices->pluck('vehicle_class_id')->all());
+    }
+
+    /**
      * @param  array<string, mixed>  $attributes
      */
     public function create(array $attributes): DumpSite
     {
+        $prices = Arr::pull($attributes, 'class_prices', []);
+
         /** @var DumpSite */
-        return $this->transaction(fn () => $this->dumpSites->create($attributes));
+        return $this->transaction(function () use ($attributes, $prices): DumpSite {
+            /** @var DumpSite $dumpSite */
+            $dumpSite = $this->dumpSites->create($attributes);
+            $this->syncClassPrices($dumpSite, 'classPrices', $prices);
+
+            return $dumpSite;
+        });
     }
 
     /**
@@ -34,8 +58,16 @@ class DumpSiteService extends Service
      */
     public function update(DumpSite $dumpSite, array $attributes): DumpSite
     {
+        $prices = Arr::pull($attributes, 'class_prices', []);
+
         /** @var DumpSite */
-        return $this->transaction(fn () => $this->dumpSites->update($dumpSite, $attributes));
+        return $this->transaction(function () use ($dumpSite, $attributes, $prices): DumpSite {
+            /** @var DumpSite $updated */
+            $updated = $this->dumpSites->update($dumpSite, $attributes);
+            $this->syncClassPrices($updated, 'classPrices', $prices);
+
+            return $updated;
+        });
     }
 
     public function delete(DumpSite $dumpSite): void
