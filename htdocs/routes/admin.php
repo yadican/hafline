@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\BankController;
 use App\Http\Controllers\Admin\CariEntryController;
+use App\Http\Controllers\Admin\CariEntryLookupController;
 use App\Http\Controllers\Admin\CashCategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DumpSiteController;
@@ -44,6 +45,8 @@ Route::middleware('auth')->group(function () {
     Route::get('persons', [PartyController::class, 'index'])->name('persons.index')->defaults('type', 'person');
     Route::get('companies', [PartyController::class, 'index'])->name('companies.index')->defaults('type', 'company');
     Route::resource('parties', PartyController::class)->except(['index', 'show']);
+    Route::get('cari-entries/lookups/plates', [CariEntryLookupController::class, 'plate'])->name('cari-entries.lookups.plate');
+    Route::get('cari-entries/lookups/parties/{party}', [CariEntryLookupController::class, 'party'])->name('cari-entries.lookups.party');
     Route::get('cari-entries', [CariEntryController::class, 'index'])->name('cari-entries.index');
     Route::get('cari-entries/create', [CariEntryController::class, 'create'])->name('cari-entries.create');
     Route::post('cari-entries', [CariEntryController::class, 'store'])->name('cari-entries.store');

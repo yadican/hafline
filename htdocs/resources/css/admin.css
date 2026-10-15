@@ -997,6 +997,59 @@ input.panel-plate::placeholder {
 .panel-balance.is-debit abbr { color: #a2452f; }
 .panel-balance.is-credit abbr { color: #3d6340; }
 
+.panel-cari-summary {
+    display: grid;
+    gap: 3px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius);
+    background: #fff;
+    color: var(--ui-ink);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.panel-cari-summary.is-idle,
+.panel-cari-summary.is-err {
+    display: block;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ui-muted);
+    font-size: 13px;
+}
+
+.panel-cari-summary.is-err { color: var(--ui-danger); }
+
+.panel-cari-summary-name {
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.panel-cari-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.panel-cari-summary-row span:last-child {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.panel-cari-summary-row.is-debit { color: #a2452f; }
+.panel-cari-summary-row.is-credit { color: #3d6340; }
+.panel-cari-summary-row.is-zero { color: var(--ui-muted); }
+
+.panel-cari-summary-row.is-total {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ui-border);
+    font-weight: 700;
+}
+
 .panel-ledger-totals {
     display: flex;
     flex-wrap: wrap;

@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/js/hauls.js',
                 'resources/js/machine-works.js',
                 'resources/js/fuel-receipts.js',
+                'resources/js/cari-entries.js',
             ],
             refresh: true,
             fonts: [

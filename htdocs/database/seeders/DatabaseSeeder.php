@@ -11,10 +11,19 @@ class DatabaseSeeder extends Seeder
     {
         User::factory()->create([
             'name' => 'Hafline Yönetici',
-            'username' => 'admin',
-            'email' => 'admin@hafline.test',
+            'username' => 'hafline.admin',
+            'email' => 'admin@hafline.net',
         ]);
 
-        $this->call([LocationSeeder::class, VehicleClassSeeder::class, CashCategorySeeder::class, ExampleSeeder::class, HaulSeeder::class, MachineWorkSeeder::class, FuelReceiptSeeder::class]);
+        $this->call([
+            LocationSeeder::class,
+            VehicleClassSeeder::class,
+            CashCategorySeeder::class,
+            ExampleSeeder::class,
+            HaulSeeder::class,
+            MachineWorkSeeder::class,
+            FuelReceiptSeeder::class,
+            MediumDataSeeder::class,
+        ]);
     }
 }

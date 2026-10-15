@@ -13,7 +13,10 @@ export async function getJson(url, params) {
     });
 
     if (! response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        const error = new Error(`HTTP ${response.status}`);
+
+        error.payload = await response.json().catch(() => null);
+        throw error;
     }
 
     return response.json();

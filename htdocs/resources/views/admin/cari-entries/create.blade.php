@@ -8,7 +8,7 @@
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari hareketleri' => route('admin.cari-entries.index'), 'Yeni' => null]"
         :back="route('admin.cari-entries.index')"
     >
-        <form method="POST" action="{{ route('admin.cari-entries.store') }}" x-data="{ kind: @js(old('kind', $form['kind'])) }">
+        <form method="POST" action="{{ route('admin.cari-entries.store') }}" x-data="{ kind: @js(old('kind', $form['kind'])) }" data-cari-entry data-party-url="{{ route('admin.cari-entries.lookups.party', ['party' => '__ID__']) }}" data-plate-url="{{ route('admin.cari-entries.lookups.plate') }}">
             @csrf
             <x-form.grid :model="$form">
                 @include('admin.cari-entries.partials.form.fields')
@@ -17,3 +17,7 @@
         </form>
     </x-panel.page>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/cari-entries.js')
+@endpush

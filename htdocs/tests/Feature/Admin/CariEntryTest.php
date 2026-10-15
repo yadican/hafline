@@ -116,6 +116,68 @@ class CariEntryTest extends TestCase
         $this->assertSame(0, LedgerEntry::query()->count());
     }
 
+    public function test_party_lookup_returns_the_current_balance(): void
+    {
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => 'Satıcı petrol']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '1500',
+                'occurred_on' => '2026-06-01',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.cari-entries.lookups.party', $supplier))
+            ->assertOk()
+            ->assertJsonPath('name', 'Satıcı petrol')
+            ->assertJsonPath('debit', 0)
+            ->assertJsonPath('credit', 1500)
+            ->assertJsonPath('balance', -1500);
+
+        $empty = Party::factory()->company()->create();
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.cari-entries.lookups.party', $empty))
+            ->assertOk()
+            ->assertJsonPath('balance', 0);
+    }
+
+    public function test_plate_lookup_returns_the_owners_balance_on_that_date(): void
+    {
+        $owner = Party::factory()->create(['name' => 'Araç sahibi']);
+        Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 CR 10']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 10',
+                'amount' => '800',
+                'occurred_on' => '2026-06-02',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.cari-entries.lookups.plate', ['plate' => '34cr 10', 'date' => '2026-06-02']))
+            ->assertOk()
+            ->assertJsonPath('plate', '34 CR 10')
+            ->assertJsonPath('name', 'Araç sahibi')
+            ->assertJsonPath('balance', 800);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.cari-entries.lookups.plate', ['plate' => '34 YOK', 'date' => '2026-06-02']))
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Kayıtlı bir plaka girin.');
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.cari-entries.lookups.plate', ['plate' => '34 CR 10', 'date' => '2025-01-01']))
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Bu tarihte aracın kayıtlı sahibi yok.');
+    }
+
     public function test_supplier_entry_rejects_a_party_without_the_role(): void
     {
         $party = Party::factory()->create();

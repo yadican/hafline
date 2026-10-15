@@ -26,7 +26,7 @@
     @foreach (['supplier' => 'Satıcı', 'customer' => 'Alıcı', 'fuel' => 'Akaryakıt firması', 'market' => 'Piyasa firması', 'owner_payment' => 'Araç sahibi'] as $roleKind => $partyLabel)
         <div x-show="kind === '{{ $roleKind }}'" x-cloak>
             <x-form.field :label="$partyLabel" for="party-{{ $roleKind }}" name="party_id">
-                <select id="party-{{ $roleKind }}" name="party_id" class="slct" x-bind:disabled="kind !== '{{ $roleKind }}'">
+                <select id="party-{{ $roleKind }}" name="party_id" class="slct" data-cari-party x-bind:disabled="kind !== '{{ $roleKind }}'">
                     <option value="">{{ $partyLabel }} seçin</option>
                     @foreach ($options['parties'][$roleKind] ?? [] as $id => $name)
                         <option value="{{ $id }}" @selected((string) old('party_id', $form['party_id'] ?? '') === (string) $id)>{{ $name }}</option>
@@ -35,6 +35,9 @@
             </x-form.field>
         </div>
     @endforeach
+    <div x-show="['supplier', 'customer', 'fuel', 'market', 'owner_payment'].includes(kind)" x-cloak>
+        <div class="panel-cari-summary is-idle" data-cari-party-status aria-live="polite">Firma veya kişi seçilince cari durumu gelir</div>
+    </div>
     <div x-show="['vehicle_payment', 'vehicle_receivable', 'market'].includes(kind)" x-cloak>
         <x-form.autocomplete
             name="plate"
@@ -45,6 +48,9 @@
             maxlength="20"
             class="panel-plate"
         />
+    </div>
+    <div x-show="['vehicle_payment', 'vehicle_receivable'].includes(kind)" x-cloak>
+        <div class="panel-cari-summary is-idle" data-cari-plate-status aria-live="polite">Plaka girilince araç sahibinin cari durumu gelir</div>
     </div>
     <div x-show="kind === 'dump_payment'" x-cloak>
         <x-form.select name="dump_site_id" label="Döküm yeri" placeholder="Döküm yeri seçin" :options="$options['dumpSites']" />

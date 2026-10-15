@@ -26,7 +26,7 @@ class FuelReceiptSeeder extends Seeder
             return;
         }
 
-        for ($i = 0; $i < 24; $i++) {
+        for ($i = 0; $i < 80; $i++) {
             $vehicle = $vehicles->random();
             $station = $stations->random();
             $issuedOn = today()->subDays(fake()->numberBetween(0, 10));
