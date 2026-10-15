@@ -30,7 +30,7 @@
                                 <x-table.actions
                                     :delete="route('admin.vehicles.ownerships.destroy', [$vehicle, $ownership])"
                                     confirm="Son devir geri alınsın mı?"
-                                    :confirm-text="$ownership->party?->name.' sahipliği silinecek; önceki sahip yeniden güncel sahip olur ve '.$ownership->started_on->format('d.m.Y').' sonrası taşımalar ona aktarılır.'"
+                                    :confirm-text="$ownership->party?->name.' sahipliği silinecek; önceki sahip yeniden güncel sahip olur ve '.$ownership->started_on->format('d.m.Y').' sonrası taşıma, makine ve yakıt fişleri ona aktarılır.'"
                                 />
                             @else
                                 <td></td>
@@ -49,6 +49,6 @@
             <x-form.input name="started_on" label="Devir tarihi" type="date" :value="today()" required />
             <x-ui.button type="submit" variant="create" icon="fa-solid fa-right-left">Devret</x-ui.button>
         </form>
-        <p class="panel-hint">Devir tarihinden itibaren girilmiş taşımalar yeni sahibe aktarılır; eski sahibin cari hareketleri ters kayıtla kapatılır.</p>
+        <p class="panel-hint">Devir tarihinden itibaren girilmiş taşıma, makine ve yakıt fişleri yeni sahibe aktarılır; eski sahibin cari hareketleri ters kayıtla kapatılır.</p>
     </x-form.group>
 </div>

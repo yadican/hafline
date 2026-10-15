@@ -23,4 +23,5 @@
         >
         <span class="panel-money-suffix" aria-hidden="true">{{ $suffix }}</span>
     </div>
+    {{ $slot }}
 </x-form.field>

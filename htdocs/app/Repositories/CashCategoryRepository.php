@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\CashDirection;
 use App\Models\CashCategory;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -15,16 +16,35 @@ class CashCategoryRepository extends Repository
     }
 
     /**
-     * @param  array{q?: string, active?: string}  $filters
+     * @param  array{q?: string, direction?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
     {
         $query = $this->whereTerm($this->query(), $filters['q'] ?? null, ['name'])
+            ->when($filters['direction'] ?? null, fn (Builder $query, string $direction) => $query->where('direction', $direction))
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         return $this->applySort($query, $sort)
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Active categories usable for the given side, plus the one already chosen on a record.
+     *
+     * @return array<string, string>
+     */
+    public function options(?CashDirection $direction = null, ?string $include = null): array
+    {
+        return $this->query()
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $query) => $query
+                    ->where('active', true)
+                    ->when($direction, fn (Builder $query, CashDirection $direction) => $query->for($direction)))
+                ->when($include, fn (Builder $query, string $id) => $query->orWhere('id', $id)))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
     }
 
     protected function defaultSort(Builder $query): void
@@ -36,6 +56,7 @@ class CashCategoryRepository extends Repository
     {
         return [
             'name' => 'name',
+            'direction' => 'direction',
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Support\Database;
 
+use App\Enums\PaymentMethod;
 use Illuminate\Support\Facades\DB;
 
 class SchemaRules
@@ -81,6 +82,11 @@ class SchemaRules
             $from,
             $to,
         ));
+    }
+
+    public static function checkPaymentMethod(string $table): void
+    {
+        self::checkIn($table, 'payment_method', PaymentMethod::values(), nullable: true);
     }
 
     public static function checkDebitCredit(string $table): void

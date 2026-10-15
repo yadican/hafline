@@ -44,7 +44,7 @@ class VehicleController extends AdminController
 
     public function edit(Vehicle $vehicle): View
     {
-        $vehicle->load('ownerships.party');
+        $vehicle->load(['ownerships.party', 'rates', 'vehicleClass']);
 
         return view('admin.vehicles.edit', [
             'title' => 'Aracı düzenle',

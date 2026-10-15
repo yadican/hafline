@@ -65,7 +65,8 @@ Tek yönlü tablolarda tek bir pozitif `amount` vardır; yönü `ledger_entries`
 | `other_payments.amount` | `other` | debit |
 
 `financial_instruments` view'e girmez: çek/senet bir ödeme aracıdır, ödemenin kendisi ilgili ödeme tablosunda zaten vardır (çift sayım olmasın).
-`haul_dumps` ve `machine_loadings` de view'e girmez: eski bakiye raporlarının hiçbiri bu tabloları okumuyordu.
+`haul_dumps` view'e girmez: eski bakiye raporlarının hiçbiri bu tabloyu okumuyordu.
+`machine_works` ise yeni sistemde cariye yazılır (saat × saat ücreti, makine sahibine alacak). Eskide `yukleme` hiçbir raporda yoktu ve ücret hiç kaydedilmiyordu; canlı veride kayıt yok.
 
 **Eski işaretle fark:** Eski cari ve plaka bakiye raporları `Alacak − Borç` gösteriyordu (pozitif = biz borçluyuz). Yeni kural bunun tersidir. Arayüz, eski kullanıcı alışkanlığı için bakiyeyi "(B)" / "(A)" etiketiyle gösterebilir.
 
@@ -93,7 +94,7 @@ Tek yönlü tablolarda tek bir pozitif `amount` vardır; yönü `ledger_entries`
 | `fisteslim.Fisteslim_Vardiya`, `dokumkontrol.*_Vardiya`, `yakitkontrol.*_Vardiya` | `D` / `N` | `shift` | `day` / `night` | `fisteslim_detay.php:51-52` (D = Gündüz, N = Gece) |
 | `yonetici.vardiya` | `0` / diğer | `users.shift` | `night` / `day` | `yonetici_detay.php:42` (0 = GECE, aksi GUNDUZ) |
 | Firma kaynak tablosu | `cari_*` / `alicilar_*` / `petrol_*` / `piyasalar_*` | `company_roles.role`, `company_transactions.role` | `supplier` / `customer` / `fuel` / `market` | menü adları |
-| `odeme_tipi` | id 3 "Nakit", id 4 "Çek" | `payment_types.kind` | `cash` / `cheque` | `prod.sql` verisi |
+| `odeme_tipi` | id 3 "Nakit", id 4 "Çek" | `payment_method` (sabit enum) | `cash` / `cheque` | `prod.sql` verisi |
 
 Bilinmeyen ya da boş vardiya kodu → `NULL` (kolon nullable ise), zorunlu ise kayıt raporlanır.
 
@@ -106,13 +107,13 @@ Tüm tablolarda `shift varchar(10)` + `CHECK (shift IN ('day', 'night'))`; PHP t
 FK bağımlılığına göre:
 
 1. `cities` → `districts` → `neighborhoods`
-2. `payment_types`, `cash_categories`, `banks`, `vehicle_classes`
+2. `cash_categories`, `banks`, `vehicle_classes` (ödeme tipleri tablo değil, `App\Enums\PaymentMethod`)
 3. `sites`, `dump_sites` → `fuel_stations` → `vehicle_owners` → `vehicles`
 4. `haul_routes` → `route_class_prices`, `route_vehicle_prices`, `dump_site_class_prices`
 5. `users` (yonetici)
 6. `companies` + `company_roles` → `company_transactions`
 7. `employees` → `employee_periods`, `employee_salaries`, `employee_payments`, `employee_bonuses`
-8. `hauls` → `haul_dumps`; `machine_loadings`; `fuel_receipts`; `ticket_handovers`, `dump_checks`, `fuel_checks`
+8. `hauls` → `haul_dumps`; `machine_works`; `fuel_receipts`; `ticket_handovers`, `dump_checks`, `fuel_checks`
 9. `dump_site_payments`, `site_transactions`, `vehicle_payments`, `vehicle_receivables`, `vehicle_fines`, `vehicle_owner_payments`, `other_payments`, `cash_entries`
 10. `financial_instruments` (önce tümü, sonra ikinci geçişte `endorsed_from_id`) → `financial_instrument_installments`, `financial_instrument_attachments`
 11. `notes`
@@ -148,16 +149,11 @@ Her tabloda ortak kolonlar (`id`, `created_at`, `updated_at`, `deleted_at`) böl
 
 ### 6.2 Sabit tablolar
 
-**`odeme_tipi` → `payment_types`**
+**`odeme_tipi` → `payment_method` (tablo yok)**
 
-| Eski | Yeni | Dönüşüm |
-|---|---|---|
-| `Odeme_Tipi_ID` | `legacy_id_maps` | — |
-| `Odeme_Tipi_Adi` | `name` | trim |
-| — | `kind` | "Nakit" → `cash`, "Çek" → `cheque`, diğer → `other` (aktarım sırasında elle teyit) |
-| `Odeme_Tipi_Aktif` | `active` | Y/N |
+Ödeme tipleri sabittir (`App\Enums\PaymentMethod`: `cash` Nakit, `cheque` Çek, `promissory_note` Senet, `bank_transfer` Havale / EFT, `credit_card` Kredi kartı, `offset` Mahsup); raporlar ve yan etkiler (kasa, çek takibi, banka) bu değerlere bağlıdır. Eski `*_Odeme_Tipi` id'leri aktarımda doğrudan çevrilir: 3 → `cash`, 4 → `cheque`; boş ya da tanımsız id → null. Ödeme satırlarının cari hareketleri (`ledger_entries`) aynı `payment_method` değerini taşır.
 
-**`cari_kategori` → `cash_categories`**: `cari_kategori_id` → map, `cari_kategori_ad` → `name`, `active = true`.
+**`cari_kategori` → `cash_categories`**: `cari_kategori_id` → map, `cari_kategori_ad` → `name`, `active = true`. Yeni `direction` kolonu (`expense` gider, `income` gelir, `both` ikisi) eski veride yok; aktarımda varsayılan `both`, sonra elle düzeltilir. Kendi ekranı olan kalemler (mazot, maaş, çek, kredi, nakliye) eski kayıtların bağı kopmasın diye `active = false` taşınır; yeni kurulumun başlangıç listesi `CashCategorySeeder`. Kategori `company_transactions`, `party_payments`, `other_payments` ve `ledger_entries` satırlarında `cash_category_id` olarak tutulabilir.
 
 **`cks_banka` → `banks`**
 
@@ -272,7 +268,7 @@ Kolonlar (önek `cari_` / `alicilar_` / `Petrol_` / `piyasalar_`):
 | `CF_Firma` | `PF_Firma` | `piyasalar_Firma` | `company_id` | aynı rolün firma tablosundan map; zorunlu |
 | `CF_Miktar` + `CF_Odeme_Turu` | `PF_Miktar` + `PF_Odeme_Turu` | `piyasalar_Miktar` + `piyasalar_Odeme_Turu` | `debit` / `credit` | A → credit, B → debit, `''` → aktarılmaz (bölüm 4) |
 | `CF_Odeme_Zaman` | `PF_Odeme_Zaman` | `piyasalar_Odeme_Zaman` | `occurred_on` | DATE |
-| `CF_Odeme_Tipi` | `PF_Odeme_Tipi` | `piyasalar_Odeme_Tipi` | `payment_type_id` | map |
+| `CF_Odeme_Tipi` | `PF_Odeme_Tipi` | `piyasalar_Odeme_Tipi` | `payment_method` | map |
 | `CF_Belge_No` | `PF_Belge_No` | `piyasalar_Belge_No` | `document_no` | `''` → null |
 | `CF_Aciklama` | `PF_Aciklama` | `piyasalar_Aciklama` | `description` | `''` → null |
 | `CF_Yakit_Yeri` | `PF_Yakit_Yeri` | — | `fuel_station_id` | map (market rolünde CHECK gereği null) |
@@ -315,7 +311,7 @@ Kolonlar (önek `cari_` / `alicilar_` / `Petrol_` / `piyasalar_`):
 
 Aynı (personel, dönem) için birden fazla kart varsa (partial unique): en yüksek `PM_ID` aktarılır, diğerleri raporlanır. Eski raporlar bu durumda `LIMIT 1` ile rastgele birini okuyordu.
 
-**`personel_odeme` → `employee_payments`**: `PO_Personel` → `employee_id`, `PO_Miktar` → `amount`, `PO_Odeme_Tipi` → `payment_type_id`, `PO_Aciklama` → `description`, `PO_Donem` → `period` (ayın 1'i), `PO_VGZ` → `occurred_on` (tarih kısmı; VGZ null ise `period`) ve `created_at`.
+**`personel_odeme` → `employee_payments`**: `PO_Personel` → `employee_id`, `PO_Miktar` → `amount`, `PO_Odeme_Tipi` → `payment_method`, `PO_Aciklama` → `description`, `PO_Donem` → `period` (ayın 1'i), `PO_VGZ` → `occurred_on` (tarih kısmı; VGZ null ise `period`) ve `created_at`.
 
 **`personel_pirim` → `employee_bonuses`**: `PP_Personel` → `employee_id`, `PP_Pirim` → `amount`, `PP_Tarih` → `occurred_on`, `PP_Aciklama` → `description`, `PP_VGZ` → `created_at`.
 
@@ -346,7 +342,7 @@ Not: `site_id` / `dump_site_id` güzergahınkiyle uyuşmuyorsa taşımanın kend
 
 **`tasima_dokum` → `haul_dumps`**: `TD_Tasima` → `haul_id` (nullable), `TD_Plaka` → `vehicle_id`, `TD_DY` → `dump_site_id`, `TD_Fiyat` → `price`, `TD_Ton` → `tonnage`, `TD_Zaman` → `dumped_on`, `TD_VGZ` → `created_at`.
 
-**`yukleme` → `machine_loadings`**: `Yukleme_Fisno` → `ticket_no`, `Yukleme_Plaka_ID` → `vehicle_id`, `Yukleme_Sahibi` → `owner_id`, `Yukleme_Santiye_ID` → `site_id`, `Yukleme_Fiyat` → `price`, `Yukleme_Dokum_Fiyat` → `dump_price`, `Yukleme_Aktif_Sofor` → `driver_name`, `Yukleme_Vardiya` → `shift`, `Yukleme_Saat` → `hours`, `Yukleme_Zaman` → `loaded_on`, `Yukleme_VGZ` → `created_at`.
+**`yukleme` → `machine_works`**: `Yukleme_Fisno` → `ticket_no`, `Yukleme_Plaka_ID` → `vehicle_id`, `Yukleme_Sahibi` → `party_id` (boşsa fiş tarihindeki sahip), `Yukleme_Santiye_ID` → `site_id`, `Yukleme_Fiyat` → `hourly_rate` (eski kod hiç yazmıyordu, hep 0), `Yukleme_Aktif_Sofor` → `operator_id` (eski serbest metin; aynı adlı kişi carisi bulunur, yoksa açılır ve "Makine operatörü" rolü verilir; boşsa null), `operator_rate` = null (eski sistem operatöre ücret yazmıyordu), `Yukleme_Vardiya` → `shift`, `Yukleme_Saat` → `hours`, `Yukleme_Zaman` → `worked_on`, `Yukleme_VGZ` → `created_at`. `Yukleme_Dokum_Fiyat` taşınmaz (makineyle ilgisi yok). Saat ücretleri `vehicle_rates` dönemlerinden gelir; aracın tipi `vehicle_classes.hourly` ile işaretlenir.
 
 **`yakit_fisi` → `fuel_receipts`**
 
@@ -368,6 +364,8 @@ Not: `site_id` / `dump_site_id` güzergahınkiyle uyuşmuyorsa taşımanın kend
 | `Yakit_Fisi_Tasima_Fis_Adet` | `haul_ticket_count` | — |
 | `Yakit_Fisi_VGZ` | `created_at` | — |
 
+Fiş ekranı tutarı araç sahibinin carisine borç yazar (`ledger_entries`, `fuel_receipt`). Akaryakıt firmasına alacak yazılmaz; firmanın ödemesi ayrıca petrol fişidir, aynı litre iki kez sayılmasın. `fuel_party_id` istasyonun firmasından kopyalanır.
+
 **`fisteslim` → `ticket_handovers`**: `Fisteslim_Plaka` → `vehicle_id`, `Fisteslim_Guzergah` → `route_id`, `Fisteslim_Hareketadet` → `haul_count`, `Fisteslim_Yakitadet` → `fuel_count`, `Fisteslim_Aciklama` → `description`, `Fisteslim_Tarih` → `handed_on` (null ise VGZ tarihi, o da yoksa atla), `Fisteslim_Vardiya` → `shift`, `Fisteslim_VGZ` → `created_at`.
 
 **`dokumkontrol` → `dump_checks`**: `Dokumkontrol_Guzergah` → `route_id`, `Dokumkontrol_Hareketadet` → `haul_count`, `Dokumkontrol_Aciklama` → `description`, `Dokumkontrol_Tarih` → `checked_on`, `Dokumkontrol_Vardiya` → `shift`, `Dokumkontrol_Kullanici` → `user_id`, `Dokumkontrol_VGZ` → `created_at`.
@@ -378,13 +376,13 @@ Not: `site_id` / `dump_site_id` güzergahınkiyle uyuşmuyorsa taşımanın kend
 
 | Eski tablo | Yeni tablo | Kolonlar |
 |---|---|---|
-| `dokum_odeme` | `dump_site_payments` | `Dokum_Odeme_DY_ID` → `dump_site_id`, `Dokum_Odeme_Tipi` → `payment_type_id`, `Dokum_Odeme_Miktar` → `amount`, `Dokum_Odeme_Zaman` → `occurred_on`, `Dokum_Cek_No` → `cheque_no`, `Dokum_Odeme_Aciklama` → `description`, `Dokum_Odeme_VGZ` → `created_at` |
-| `santiye_odeme` | `site_transactions` | `Santiye_Odeme_Santiye_ID` → `site_id`, `Santiye_Odeme_Tipi` → `payment_type_id`, `Santiye_Odeme_Miktar` + `Santiye_Odeme_Tur` → `debit` (C) / `credit` (G), `Santiye_Odeme_Zaman` → `occurred_on`, `Santiye_Odeme_Aciklama` → `description` |
-| `plaka_odeme` | `vehicle_payments` | `Plaka_Odeme_Plaka_ID` → `vehicle_id`, `Plaka_Odeme_Sahibi` → `owner_id` (boşsa aracın sahibi), `Plaka_Odeme_Tipi` → `payment_type_id`, `Plaka_Odeme_Miktar` → `amount`, `Plaka_Odeme_Zaman` → `occurred_on`, `Plaka_Odeme_Aciklama` → `description`, `Plaka_Odeme_Piyasa_ID` → `company_transaction_id` (`piyasalar_fis` map'i) |
-| `plaka_alacak` | `vehicle_receivables` | `Plaka_Alacak_Plaka_ID` → `vehicle_id`, aracın o anki sahibi → `owner_id`, `Plaka_Alacak_Tipi` → `payment_type_id`, `Plaka_Alacak_Miktar` → `amount`, `Plaka_Alacak_Zaman` → `occurred_on`, `Plaka_Alacak_Aciklama` → `description`, `Plaka_Alacak_Piyasa_ID` → `company_transaction_id` |
-| `plaka_ceza` | `vehicle_fines` | `Plaka_Ceza_Plaka_ID` → `vehicle_id`, aracın o anki sahibi → `owner_id`, `Plaka_Ceza_Guzergah` → `route_id`, `Plaka_Ceza_Miktar` → `amount`, `Plaka_Ceza_Zaman` → `occurred_on`, `Plaka_Ceza_Belge_No` → `document_no` (`0` → null), `Plaka_Ceza_Sofor` → `driver_name`, `Plaka_Ceza_Durum` → `status`, `Plaka_Ceza_Aciklama` → `description`; `P` ise `paid_on` = `date(Plaka_Ceza_VGZ)` (kolon `ON UPDATE CURRENT_TIMESTAMP`, yani ödendi işaretlendiği an; boşsa `Plaka_Ceza_Zaman`), `A` ise `paid_on` = null. Eski sistemde ödeme tipi tutulmuyordu → `payment_type_id` null. |
-| `sofor_odeme` | `vehicle_owner_payments` | `Sofor_Odeme_Sofor_ID` → `vehicle_owner_id` (**`plaka_sahibi` id'si**, adı yanıltıcı), `Sofor_Odeme_Tipi` → `payment_type_id`, `Sofor_Odeme_Miktar` → `amount`, `Sofor_Odeme_Zaman` → `occurred_on`, `Sofor_Odeme_Aciklama` → `description`, `Sofor_Odeme_Piyasa_ID` → `company_transaction_id` |
-| `diger_odeme` | `other_payments` | `Diger_Odeme_Odeme_Tipi` → `payment_type_id`, `Diger_Odeme_Miktar` → `amount`, `Diger_Odeme_Zaman` → `occurred_on`, `Diger_Odeme_Aciklama` → `description` |
+| `dokum_odeme` | `dump_site_payments` | `Dokum_Odeme_DY_ID` → `dump_site_id`, `Dokum_Odeme_Tipi` → `payment_method`, `Dokum_Odeme_Miktar` → `amount`, `Dokum_Odeme_Zaman` → `occurred_on`, `Dokum_Cek_No` → `cheque_no`, `Dokum_Odeme_Aciklama` → `description`, `Dokum_Odeme_VGZ` → `created_at` |
+| `santiye_odeme` | `site_transactions` | `Santiye_Odeme_Santiye_ID` → `site_id`, `Santiye_Odeme_Tipi` → `payment_method`, `Santiye_Odeme_Miktar` + `Santiye_Odeme_Tur` → `debit` (C) / `credit` (G), `Santiye_Odeme_Zaman` → `occurred_on`, `Santiye_Odeme_Aciklama` → `description` |
+| `plaka_odeme` | `vehicle_payments` | `Plaka_Odeme_Plaka_ID` → `vehicle_id`, `Plaka_Odeme_Sahibi` → `owner_id` (boşsa aracın sahibi), `Plaka_Odeme_Tipi` → `payment_method`, `Plaka_Odeme_Miktar` → `amount`, `Plaka_Odeme_Zaman` → `occurred_on`, `Plaka_Odeme_Aciklama` → `description`, `Plaka_Odeme_Piyasa_ID` → `company_transaction_id` (`piyasalar_fis` map'i) |
+| `plaka_alacak` | `vehicle_receivables` | `Plaka_Alacak_Plaka_ID` → `vehicle_id`, aracın o anki sahibi → `owner_id`, `Plaka_Alacak_Tipi` → `payment_method`, `Plaka_Alacak_Miktar` → `amount`, `Plaka_Alacak_Zaman` → `occurred_on`, `Plaka_Alacak_Aciklama` → `description`, `Plaka_Alacak_Piyasa_ID` → `company_transaction_id` |
+| `plaka_ceza` | `vehicle_fines` | `Plaka_Ceza_Plaka_ID` → `vehicle_id`, aracın o anki sahibi → `owner_id`, `Plaka_Ceza_Guzergah` → `route_id`, `Plaka_Ceza_Miktar` → `amount`, `Plaka_Ceza_Zaman` → `occurred_on`, `Plaka_Ceza_Belge_No` → `document_no` (`0` → null), `Plaka_Ceza_Sofor` → `driver_name`, `Plaka_Ceza_Durum` → `status`, `Plaka_Ceza_Aciklama` → `description`; `P` ise `paid_on` = `date(Plaka_Ceza_VGZ)` (kolon `ON UPDATE CURRENT_TIMESTAMP`, yani ödendi işaretlendiği an; boşsa `Plaka_Ceza_Zaman`), `A` ise `paid_on` = null. Eski sistemde ödeme tipi tutulmuyordu → `payment_method` null. |
+| `sofor_odeme` | `vehicle_owner_payments` | `Sofor_Odeme_Sofor_ID` → `vehicle_owner_id` (**`plaka_sahibi` id'si**, adı yanıltıcı), `Sofor_Odeme_Tipi` → `payment_method`, `Sofor_Odeme_Miktar` → `amount`, `Sofor_Odeme_Zaman` → `occurred_on`, `Sofor_Odeme_Aciklama` → `description`, `Sofor_Odeme_Piyasa_ID` → `company_transaction_id` |
+| `diger_odeme` | `other_payments` | `Diger_Odeme_Odeme_Tipi` → `payment_method`, `Diger_Odeme_Miktar` → `amount`, `Diger_Odeme_Zaman` → `occurred_on`, `Diger_Odeme_Aciklama` → `description` |
 | `nakit_girisi` | `cash_entries` | `Nakit_Kalem` → `cash_category_id`, `Nakit_Banka` → `bank_id`, `Nakit_Girisi_Miktar` + `Nakit_Islem` → `debit` (G) / `credit` (C), `Nakit_Girisi_Zaman` → `occurred_on`, `Nakit_Girisi_Aciklama` → `description` |
 
 Hepsinde `*_VGZ` → `created_at`.
@@ -479,7 +477,7 @@ Yakıt tutarı fiş bazında (`quantity * unit_price`, 2 hane) hesaplandığı i
 ## 10. Eski veride bilinen tuhaflıklar
 
 - **Düz metin şifreler** (`yonetici.sifre`) → aktarımda hash'lenir.
-- **Sabit ödeme tipi id'leri:** `odeme_tipi` tablosunda yalnızca id 3 (Nakit) ve 4 (Çek) var. Kod ise çeki `"2"`, nakiti `"1"` olarak kontrol ediyor (`dokumodeme_ekle.php:25`, `dokumodeme_islemler.php:12/19`, `functions.php:639`). Bu yüzden döküm ödemesinden otomatik çek kaydı hiç oluşmamış; `cks_fis.Cks_Bag_Tablo` pratikte boş. Yeni sistem `payment_types.kind` kullanır.
+- **Sabit ödeme tipi id'leri:** `odeme_tipi` tablosunda yalnızca id 3 (Nakit) ve 4 (Çek) var. Kod ise çeki `"2"`, nakiti `"1"` olarak kontrol ediyor (`dokumodeme_ekle.php:25`, `dokumodeme_islemler.php:12/19`, `functions.php:639`). Bu yüzden döküm ödemesinden otomatik çek kaydı hiç oluşmamış; `cks_fis.Cks_Bag_Tablo` pratikte boş. Yeni sistem sabit `payment_method` değerlerini kullanır.
 - **Serbest metin ilişkiler:** `cks_fis.Cks_Firma`, `tasima.Tasima_Aktif_Sofor`, `yukleme.Yukleme_Aktif_Sofor`, `plaka_ceza.Plaka_Ceza_Sofor`, `yakit_fisi.Yakit_Fisi_Alan` serbest metindir; FK'ye çevrilmez, metin olarak taşınır.
 - **`yakit_yeri.yer`** varchar(10) içinde bir şantiye id'si saklıyor → `fuel_stations.site_id`.
 - **`yakit_fisi.Yakit_Fisi_Santiye_ID`** şemada var ama eski PHP hiç yazmıyor → yakıt yerinin şantiyesinden doldurulur.
@@ -497,4 +495,5 @@ Yakıt tutarı fiş bazında (`quantity * unit_price`, 2 hane) hesaplandığı i
 2. ~~`users.email`~~ → nullable; giriş e-posta veya kullanıcı adı + şifre.
 3. `Odeme_Turu = ''` olan firma fişleri ve `Nakit_Islem = NULL` olan nakit satırları için tek tek karar (aktarım raporundan).
 4. Güzergahı olmayan taşımalar: eski DB'de güzergah tamamlanacak mı, yoksa atlanıp tutarları elle mi düzeltilecek?
-5. `payment_types.kind` için "Nakit" ve "Çek" dışındaki tiplerin sınıflandırılması.
+5. ~~Ödeme tiplerinin sınıflandırılması~~ → sabit `payment_method` enum'u; eski veride yalnız Nakit (3) ve Çek (4) var.
+6. ~~Makine operatörünün ücreti~~ → fişe operatör eklenirse `hours × operator_rate` operatörün carisine alacak yazılır; ücret yansımasın isteniyorsa operatör boş bırakılır. Personel rolü olan operatöre ücret yazılmaz (`operator_rate` null). Personel olan operatöre ikinci kart açılmaz, mevcut kartına "Makine operatörü" rolü eklenir.

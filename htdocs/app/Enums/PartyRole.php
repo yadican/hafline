@@ -15,6 +15,7 @@ enum PartyRole: string
     case Fuel = 'fuel';
     case Market = 'market';
     case Employee = 'employee';
+    case MachineOperator = 'machine_operator';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum PartyRole: string
             self::Fuel => 'Akaryakıt',
             self::Market => 'Piyasa',
             self::Employee => 'Personel',
+            self::MachineOperator => 'Makine operatörü',
         };
     }
 
@@ -49,6 +51,7 @@ enum PartyRole: string
             self::Fuel => 'Akaryakıt firmaları',
             self::Market => 'Piyasa firmaları',
             self::Employee => 'Personel',
+            self::MachineOperator => 'Makine operatörleri',
         };
     }
 
@@ -62,6 +65,7 @@ enum PartyRole: string
             self::Fuel => 'fa-solid fa-gas-pump',
             self::Market => 'fa-solid fa-store',
             self::Employee => 'fa-solid fa-user-tie',
+            self::MachineOperator => 'fa-solid fa-helmet-safety',
         };
     }
 }

@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('dump_site_payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('dump_site_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
             $table->decimal('amount', 14, 2);
             $table->date('occurred_on');
             $table->string('cheque_no', 20)->nullable();
@@ -26,11 +26,12 @@ return new class extends Migration
         });
 
         SchemaRules::check('dump_site_payments', 'amount', 'amount > 0');
+        SchemaRules::checkPaymentMethod('dump_site_payments');
 
         Schema::create('site_transactions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('site_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
             $table->decimal('debit', 14, 2)->default(0);
             $table->decimal('credit', 14, 2)->default(0);
             $table->date('occurred_on');
@@ -44,12 +45,13 @@ return new class extends Migration
         });
 
         SchemaRules::checkDebitCredit('site_transactions');
+        SchemaRules::checkPaymentMethod('site_transactions');
 
         Schema::create('vehicle_payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
             $table->decimal('amount', 14, 2);
             $table->date('occurred_on');
             $table->string('description')->nullable();
@@ -63,12 +65,13 @@ return new class extends Migration
         });
 
         SchemaRules::check('vehicle_payments', 'amount', 'amount > 0');
+        SchemaRules::checkPaymentMethod('vehicle_payments');
 
         Schema::create('vehicle_receivables', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
             $table->decimal('amount', 14, 2);
             $table->date('occurred_on');
             $table->string('description')->nullable();
@@ -82,6 +85,7 @@ return new class extends Migration
         });
 
         SchemaRules::check('vehicle_receivables', 'amount', 'amount > 0');
+        SchemaRules::checkPaymentMethod('vehicle_receivables');
 
         Schema::create('vehicle_fines', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -94,7 +98,7 @@ return new class extends Migration
             $table->string('driver_name', 80)->nullable();
             $table->string('status', 10)->default('pending');
             $table->date('paid_on')->nullable();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
             $table->string('description')->nullable();
             $table->foreignUuid('created_by')->nullable()->index()->constrained('users')->nullOnDelete();
             $table->timestamps();
@@ -108,11 +112,13 @@ return new class extends Migration
         SchemaRules::check('vehicle_fines', 'amount', 'amount > 0');
         SchemaRules::checkIn('vehicle_fines', 'status', ['pending', 'paid']);
         SchemaRules::check('vehicle_fines', 'paid_on', "(status = 'paid') = (paid_on IS NOT NULL)");
+        SchemaRules::checkPaymentMethod('vehicle_fines');
 
         Schema::create('party_payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('party_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
+            $table->foreignUuid('cash_category_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->decimal('amount', 14, 2);
             $table->date('occurred_on');
             $table->string('description')->nullable();
@@ -126,10 +132,12 @@ return new class extends Migration
         });
 
         SchemaRules::check('party_payments', 'amount', 'amount > 0');
+        SchemaRules::checkPaymentMethod('party_payments');
 
         Schema::create('other_payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
+            $table->foreignUuid('cash_category_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->decimal('amount', 14, 2);
             $table->date('occurred_on');
             $table->string('description')->nullable();
@@ -141,6 +149,7 @@ return new class extends Migration
         });
 
         SchemaRules::check('other_payments', 'amount', 'amount > 0');
+        SchemaRules::checkPaymentMethod('other_payments');
 
         Schema::create('cash_entries', function (Blueprint $table) {
             $table->uuid('id')->primary();

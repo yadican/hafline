@@ -45,7 +45,7 @@
             @endforeach
         </div>
     </x-form.field>
-    <p class="panel-hint">Roller; araç, döküm yeri, akaryakıt istasyonu veya şantiye bağlandığında kendiliğinden eklenir ve bağ sürdükçe kaldırılamaz.</p>
+    <p class="panel-hint">Roller; araç, döküm yeri, akaryakıt istasyonu veya şantiye bağlandığında kendiliğinden eklenir. "Makine operatörü" rolü verilen kişiler makine çalışma fişinde seçilebilir. Roller ve bağ sürdükçe kaldırılamaz.</p>
     <x-form.checkbox name="active" label="Durum" text="Seçim listelerinde görünsün" :checked="true" />
     <x-form.textarea name="notes" label="Not" rows="2" maxlength="2000" />
 </x-form.group>

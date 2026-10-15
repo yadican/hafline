@@ -19,7 +19,13 @@ class VehicleClassFactory extends Factory
     {
         return [
             'name' => fake()->randomElement(['TIR', 'KAMYON', 'DAMPERLİ', 'KIRKAYAK']).' '.fake()->unique()->numberBetween(1, 9999),
+            'hourly' => false,
             'active' => true,
         ];
+    }
+
+    public function hourly(): static
+    {
+        return $this->state(['name' => 'MAKİNE '.fake()->unique()->numberBetween(1, 9999), 'hourly' => true]);
     }
 }

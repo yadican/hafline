@@ -4,7 +4,7 @@
     <x-panel.page
         heading="Kasa kategorileri"
         icon="fa-solid fa-tags"
-        description="Kasa giriş ve çıkışlarını gruplamak için kullanılan kategorileri yönetin."
+        description="Kasa ve cari hareketlerini gider/gelir kalemine göre gruplamak için kullanılan kategorileri yönetin."
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa kategorileri' => null]"
     >
         @include('admin.cash-categories.partials.index.toolbar')

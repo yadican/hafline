@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'active'])]
+#[Fillable(['name', 'hourly', 'active'])]
 class VehicleClass extends Model
 {
     /** @use HasFactory<VehicleClassFactory> */
@@ -30,6 +30,7 @@ class VehicleClass extends Model
     protected function casts(): array
     {
         return [
+            'hourly' => 'boolean',
             'active' => 'boolean',
         ];
     }

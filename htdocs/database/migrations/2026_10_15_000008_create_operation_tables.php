@@ -55,27 +55,35 @@ return new class extends Migration
             $table->index(['dump_site_id', 'dumped_on']);
         });
 
-        Schema::create('machine_loadings', function (Blueprint $table) {
+        // Hours a machine worked at a site; party_id is the machine's owner on worked_on. A ticket with
+        // an operator_rate also credits the operator (left null for salaried staff).
+        Schema::create('machine_works', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('ticket_no', 20)->nullable()->index();
+            $table->string('ticket_no', 20)->index();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
             $table->foreignUuid('site_id')->constrained()->restrictOnDelete();
-            $table->decimal('price', 12, 2)->default(0);
-            $table->decimal('dump_price', 12, 2)->default(0);
-            $table->string('driver_name', 80)->nullable();
+            $table->foreignUuid('operator_id')->nullable()->index()->constrained('parties')->restrictOnDelete();
             $table->string('shift', 10);
-            $table->unsignedInteger('hours')->default(0);
-            $table->date('loaded_on');
+            $table->decimal('hours', 5, 2);
+            $table->decimal('hourly_rate', 12, 2);
+            $table->decimal('amount', 14, 2)->storedAs('round(hours * hourly_rate, 2)');
+            $table->decimal('operator_rate', 12, 2)->nullable();
+            $table->decimal('operator_amount', 14, 2)->nullable()->storedAs('round(hours * operator_rate, 2)');
+            $table->date('worked_on');
             $table->foreignUuid('created_by')->nullable()->index()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['vehicle_id', 'loaded_on']);
-            $table->index(['site_id', 'loaded_on']);
+            $table->index('worked_on');
+            $table->index('created_at');
+            $table->index(['vehicle_id', 'worked_on']);
+            $table->index(['site_id', 'worked_on']);
         });
 
-        SchemaRules::checkIn('machine_loadings', 'shift', self::SHIFTS);
+        SchemaRules::checkIn('machine_works', 'shift', self::SHIFTS);
+        SchemaRules::check('machine_works', 'quantities', 'hours > 0 AND hours <= 24 AND hourly_rate >= 0');
+        SchemaRules::check('machine_works', 'operator_rate', 'operator_rate IS NULL OR (operator_rate >= 0 AND operator_id IS NOT NULL)');
 
         Schema::create('fuel_receipts', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -169,7 +177,7 @@ return new class extends Migration
         Schema::dropIfExists('dump_checks');
         Schema::dropIfExists('ticket_handovers');
         Schema::dropIfExists('fuel_receipts');
-        Schema::dropIfExists('machine_loadings');
+        Schema::dropIfExists('machine_works');
         Schema::dropIfExists('haul_dumps');
         Schema::dropIfExists('hauls');
     }

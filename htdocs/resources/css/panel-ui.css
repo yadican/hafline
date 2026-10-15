@@ -1010,6 +1010,9 @@ td.um-cell,
 }
 .panel-badge-aktif { background: #dce8d8; color: #3f5c38; }
 .panel-badge-pasif { background: #e8e6e3; color: #6a6560; }
+.panel-badge-gider { background: #f6e1dc; color: #8a3b2b; }
+.panel-badge-gelir { background: #dce8d8; color: #3f5c38; }
+.panel-badge-ikisi { background: #e9e4da; color: #5d554a; }
 
 .panel-plaka-cell {
 	font-weight: bold;
@@ -1136,6 +1139,10 @@ td.um-cell,
 	margin-top: 4px;
 	color: #78909c;
 	font-size: 14px;
+}
+.panel-hint a {
+	color: var(--ui-ochre-dark);
+	text-decoration: underline;
 }
 .panel-form-actions { white-space: nowrap; }
 

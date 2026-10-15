@@ -50,6 +50,7 @@ return new class extends Migration
         Schema::create('vehicle_classes', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name', 60)->collation(SchemaRules::turkish());
+            $table->boolean('hourly')->default(false);
             $table->boolean('active')->default(true);
             $table->timestamps();
             $table->softDeletes();
@@ -84,6 +85,22 @@ return new class extends Migration
 
         SchemaRules::check('vehicle_ownerships', 'dates', 'ended_on IS NULL OR ended_on >= started_on');
         SchemaRules::excludeOverlap('vehicle_ownerships', 'vehicle_id', 'started_on', 'ended_on');
+
+        // Hourly rate periods of machines; same inclusive, contiguous periods as ownerships.
+        Schema::create('vehicle_rates', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
+            $table->decimal('hourly_rate', 12, 2);
+            $table->date('started_on');
+            $table->date('ended_on')->nullable();
+            $table->timestamps();
+
+            $table->index(['vehicle_id', 'started_on']);
+        });
+
+        SchemaRules::check('vehicle_rates', 'dates', 'ended_on IS NULL OR ended_on >= started_on');
+        SchemaRules::check('vehicle_rates', 'hourly_rate', 'hourly_rate >= 0');
+        SchemaRules::excludeOverlap('vehicle_rates', 'vehicle_id', 'started_on', 'ended_on');
 
         Schema::create('fuel_stations', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -159,6 +176,7 @@ return new class extends Migration
         Schema::dropIfExists('haul_routes');
         Schema::dropIfExists('fuel_station_sites');
         Schema::dropIfExists('fuel_stations');
+        Schema::dropIfExists('vehicle_rates');
         Schema::dropIfExists('vehicle_ownerships');
         Schema::dropIfExists('vehicles');
         Schema::dropIfExists('vehicle_classes');

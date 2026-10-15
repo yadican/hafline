@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PaymentMethod;
+use App\Models\CashCategory;
 use App\Models\Haul;
 use App\Models\LedgerEntry;
 use App\Models\Party;
@@ -71,5 +73,30 @@ class LedgerTest extends TestCase
         $ledger->sync($haul, [LedgerLine::credit($party->id, $day, '1000.00', 'New')]);
 
         $this->assertSame(1, LedgerEntry::query()->count());
+    }
+
+    public function test_payment_method_and_category_are_posted_and_copied_on_reversal(): void
+    {
+        $haul = Haul::factory()->create();
+        $party = Party::factory()->create();
+        $category = CashCategory::factory()->create();
+        $ledger = app(Ledger::class);
+        $day = Carbon::parse('2026-05-01');
+        $line = LedgerLine::debit($party->id, $day, 500, 'Ödeme')->paidBy(PaymentMethod::Cash, $category->id);
+
+        $ledger->sync($haul, [$line]);
+        $ledger->sync($haul, [$line]);
+
+        $entry = LedgerEntry::query()->sole();
+        $this->assertSame(PaymentMethod::Cash, $entry->payment_method);
+        $this->assertSame($category->id, $entry->cash_category_id);
+        $this->assertSame('500.00', $entry->debit);
+
+        $ledger->sync($haul, [LedgerLine::debit($party->id, $day, 500, 'Ödeme')->paidBy(PaymentMethod::Cheque, $category->id)]);
+
+        $reversal = LedgerEntry::query()->whereNotNull('reversal_of')->sole();
+        $this->assertSame(PaymentMethod::Cash, $reversal->payment_method);
+        $this->assertSame($category->id, $reversal->cash_category_id);
+        $this->assertSame(PaymentMethod::Cheque, $ledger->live($haul)->sole()->payment_method);
     }
 }

@@ -10,5 +10,8 @@
     >
         @include('admin.vehicles.partials.edit.form')
         @include('admin.vehicles.partials.edit.ownerships')
+        @if ($vehicle->isHourly() || $vehicle->rates->isNotEmpty())
+            @include('admin.vehicles.partials.edit.rates')
+        @endif
     </x-panel.page>
 @endsection

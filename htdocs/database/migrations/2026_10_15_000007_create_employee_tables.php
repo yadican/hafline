@@ -55,7 +55,7 @@ return new class extends Migration
         Schema::create('employee_payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('employee_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
             $table->decimal('amount', 14, 2);
             $table->date('period');
             $table->date('occurred_on');
@@ -69,6 +69,7 @@ return new class extends Migration
         });
 
         SchemaRules::check('employee_payments', 'amount', 'amount > 0');
+        SchemaRules::checkPaymentMethod('employee_payments');
 
         Schema::create('employee_bonuses', function (Blueprint $table) {
             $table->uuid('id')->primary();

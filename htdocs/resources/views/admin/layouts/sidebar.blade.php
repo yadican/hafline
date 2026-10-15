@@ -12,7 +12,7 @@
         </div>
     </div>
 
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*')]) id="um-sec-tickets">
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*', 'admin.machine-works.*', 'admin.fuel-receipts.*')]) id="um-sec-tickets">
         <button type="button" class="um-title" data-um-toggle="um-sec-tickets">
             <span class="um-title-text">
                 <i class="fa-solid fa-file-invoice um-title-icon" aria-hidden="true"></i>
@@ -22,6 +22,8 @@
         </button>
         <div class="um-items">
             <a href="{{ route('admin.hauls.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.hauls.*')])>Taşıma fişleri</a>
+            <a href="{{ route('admin.machine-works.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.machine-works.*')])>Makine çalışma fişleri</a>
+            <a href="{{ route('admin.fuel-receipts.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.fuel-receipts.*')])>Yakıt fişleri</a>
         </div>
     </div>
 
@@ -31,7 +33,7 @@
             : \App\Enums\PartyType::tryFrom((string) request('type'));
         $onParty = request()->routeIs('admin.parties.*');
     @endphp
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*')]) id="um-sec-accounts">
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*', 'admin.cari-entries.*')]) id="um-sec-accounts">
         <button type="button" class="um-title" data-um-toggle="um-sec-accounts">
             <span class="um-title-text">
                 <i class="fa-solid fa-address-card um-title-icon" aria-hidden="true"></i>
@@ -40,12 +42,13 @@
             <span class="um-caret" aria-hidden="true"></span>
         </button>
         <div class="um-items">
+            <a href="{{ route('admin.cari-entries.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cari-entries.*')])>Cari hareketleri</a>
             <a href="{{ route('admin.persons.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.persons.*') || ($onParty && $partyType === \App\Enums\PartyType::Person)])>Kişiler</a>
             <a href="{{ route('admin.companies.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.companies.*') || ($onParty && $partyType === \App\Enums\PartyType::Company)])>Şirketler</a>
         </div>
     </div>
 
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.payment-types.*', 'admin.cash-categories.*', 'admin.banks.*')]) id="um-sec-definitions">
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.cash-categories.*', 'admin.banks.*')]) id="um-sec-definitions">
         <button type="button" class="um-title" data-um-toggle="um-sec-definitions">
             <span class="um-title-text">
                 <i class="fa-solid fa-sliders um-title-icon" aria-hidden="true"></i>
@@ -54,7 +57,6 @@
             <span class="um-caret" aria-hidden="true"></span>
         </button>
         <div class="um-items">
-            <a href="{{ route('admin.payment-types.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.payment-types.*')])>Ödeme tipleri</a>
             <a href="{{ route('admin.cash-categories.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cash-categories.*')])>Kasa kategorileri</a>
             <a href="{{ route('admin.banks.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.banks.*')])>Bankalar</a>
         </div>

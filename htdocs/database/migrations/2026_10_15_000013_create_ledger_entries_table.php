@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Schema;
  * Append-only party ledger. Perspective is the counterparty's account: debit = the party owes
  * us / we paid it, credit = we owe the party. Balance = SUM(debit) - SUM(credit).
  * Rows are never edited or deleted; a change posts a reversal (reversal_of) plus new lines.
+ * payment_method is set when the movement is a payment (cash, cheque, ...) so reports such as
+ * "cash payments" read one table; cash_category_id groups the movement by expense/income item.
  */
 return new class extends Migration
 {
@@ -24,6 +26,8 @@ return new class extends Migration
             $table->string('source_type', 40);
             $table->uuid('source_id');
             $table->foreignUuid('vehicle_id')->nullable()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable();
+            $table->foreignUuid('cash_category_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->uuid('reversal_of')->nullable()->unique();
             $table->foreignUuid('created_by')->nullable()->index()->constrained('users')->nullOnDelete();
             $table->timestamp('created_at')->useCurrent();
@@ -31,6 +35,7 @@ return new class extends Migration
             $table->index(['party_id', 'occurred_on']);
             $table->index(['source_type', 'source_id']);
             $table->index(['vehicle_id', 'occurred_on']);
+            $table->index(['payment_method', 'occurred_on']);
         });
 
         Schema::table('ledger_entries', function (Blueprint $table) {
@@ -38,6 +43,7 @@ return new class extends Migration
         });
 
         SchemaRules::checkDebitCredit('ledger_entries');
+        SchemaRules::checkPaymentMethod('ledger_entries');
     }
 
     public function down(): void

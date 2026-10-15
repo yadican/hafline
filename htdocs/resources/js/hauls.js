@@ -1,25 +1,5 @@
 import { setStatus } from './components/status.js';
-
-function normalizePlate(value) {
-    return String(value ?? '').toUpperCase().replace(/\s+/g, '');
-}
-
-async function getJson(url, params) {
-    const target = new URL(url, window.location.origin);
-
-    Object.entries(params).forEach(([key, value]) => target.searchParams.set(key, value));
-
-    const response = await fetch(target, {
-        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        credentials: 'same-origin',
-    });
-
-    if (! response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
-
-    return response.json();
-}
+import { bindPrint, bindSearch, getJson, money, normalizePlate, onReady } from './entry-support.js';
 
 function bindPlate(form) {
     const input = form.querySelector('[data-haul-plate]');
@@ -51,8 +31,6 @@ function bindPlate(form) {
     input.addEventListener('autocomplete:select', render);
     input.addEventListener('autocomplete:error', () => setStatus(hint, 'err', 'Plaka listesi alınamadı'));
 }
-
-const money = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function describeQuote(quote, trips) {
     const price = Number(quote.price);
@@ -191,25 +169,7 @@ function bindQuote(form) {
     }
 }
 
-function bindSearch(form) {
-    const fields = () => form.querySelectorAll('input[name], select[name]');
-
-    form.addEventListener('submit', () => {
-        fields().forEach((field) => {
-            if (field.value === '') {
-                field.disabled = true;
-            }
-        });
-    });
-
-    window.addEventListener('pageshow', () => {
-        fields().forEach((field) => {
-            field.disabled = false;
-        });
-    });
-}
-
-function boot() {
+onReady(() => {
     document.querySelectorAll('form[data-haul-entry]').forEach((form) => {
         bindPlate(form);
         bindDumpSites(form);
@@ -217,14 +177,5 @@ function boot() {
     });
 
     document.querySelectorAll('form[data-haul-search]').forEach(bindSearch);
-
-    document.querySelectorAll('[data-haul-print]').forEach((button) => {
-        button.addEventListener('click', () => window.print());
-    });
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
-} else {
-    boot();
-}
+    document.querySelectorAll('[data-haul-print]').forEach(bindPrint);
+});

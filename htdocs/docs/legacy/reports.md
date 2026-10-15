@@ -28,7 +28,7 @@ Eski kaynak: `hafriyat/HAFRİYAT PROGRAMI YEDEK/sakin_silme_hafriyat/hafriyat-do
 
 ### Plaka sahibi kapsamı
 Eski raporların hepsi aracın **güncel** sahibini (`plaka.Plaka_Sahibi_ID`) kullanıyor; snapshot kolonları (`Tasima_Sahibi`, `Yakit_Fisi_Sahibi`, `Plaka_Odeme_Sahibi`) hiçbir raporda okunmuyor. Sonuç: araç el değiştirince eski sahibin geçmişi yeni sahibe yazılıyor.
-Yeni şemada bütün araç hareketlerinde `owner_id` snapshot'ı var (`hauls`, `fuel_receipts`, `vehicle_payments`, `vehicle_receivables`, `vehicle_fines`, `machine_loadings`). Kartlarda `SAHİP(x)` şu demektir:
+Yeni şemada bütün araç hareketlerinde `owner_id` snapshot'ı var (`hauls`, `fuel_receipts`, `vehicle_payments`, `vehicle_receivables`, `vehicle_fines`, `machine_works`). Kartlarda `SAHİP(x)` şu demektir:
 - **Karar (snapshot):** `x.owner_id = :o`. Her kayıt girildiği andaki sahibin raporunda kalır; araç satılınca eski sahibin geçmişi yeni sahibe geçmez.
 - Eski davranış (`x.vehicle_id IN (SELECT id FROM vehicles WHERE owner_id = :o)`) kullanılmaz.
 
@@ -44,7 +44,7 @@ Yeni şemada bütün araç hareketlerinde `owner_id` snapshot'ı var (`hauls`, `
 ### Açık kararlar
 1. ~~Sahip kapsamı~~ → snapshot (`x.owner_id`). Örnek: 34ABC Mart'a kadar Ahmet'in, sonra Mehmet'in; Ocak–Şubat kayıtları Ahmet'in raporunda kalır.
 2. ~~Cezalar~~ → ayrı izlenir, ödenince `paid_on` tarihinde araca borç (yukarıda).
-3. ~~Kasa kapsamı~~ → kasa şirketin kasasıdır; kasadan nakit çıkan/giren her hareket girer: nakit girişleri, araç, **plaka sahibi** (eski adı "şoför ödemesi", `sofor_odeme.Sofor_Odeme_Sofor_ID` = `plaka_sahibi` id'si), şantiye, döküm yeri, personel, diğer ödemeler ve nakit ödenen cezalar. Yalnız `payment_types.kind = 'cash'`. Firma fişleri katılmaz (eski fişlerde her satırda ödeme tipi vardı, faturalar dahil).
+3. ~~Kasa kapsamı~~ → kasa şirketin kasasıdır; kasadan nakit çıkan/giren her hareket girer: nakit girişleri, araç, **plaka sahibi** (eski adı "şoför ödemesi", `sofor_odeme.Sofor_Odeme_Sofor_ID` = `plaka_sahibi` id'si), şantiye, döküm yeri, personel, diğer ödemeler ve nakit ödenen cezalar. Yalnız `payment_method = 'cash'`. Firma fişleri katılmaz (eski fişlerde her satırda ödeme tipi vardı, faturalar dahil).
 
 
 **Rapor yazılırken bakılacak:** 4–7 numaralı kararlar şimdi verilmeyecek. İlgili rapor ekranı yazılırken eski raporun çıktısı ve gerçek veri üzerinden kullanıcıyla birlikte netleştirilecek.
@@ -347,7 +347,7 @@ Eski "Şöför" kelimesi bu raporlarda **plaka sahibi** demektir.
 | Toplam Fiyat | `SUM(Tasima_Dokum_Fiyat)` | `SUM(H.dump_price)` |
 | Ödeme Açıklama | `Dokum_Odeme_Aciklama` | `dump_site_payments.description` |
 | Ödeme Tarih | `Dokum_Odeme_Zaman` | `occurred_on` (sıralı) |
-| Ödeme Tipi | `Odeme_Tipi_Adi` | `payment_types.name` (+ `cheque_no`) |
+| Ödeme Tipi | `Odeme_Tipi_Adi` | `payment_method` etiketi (+ `cheque_no`) |
 | Ödeme Miktarı | `Dokum_Odeme_Miktar` | `amount` |
 | Devir | `Σdöküm(< bas) − Σödeme(< bas)` | `L WHERE party_type='dump_site' AND party_id=:dy AND occurred_on < :bas`: Döküm = `SUM(credit)`, Ödeme = `SUM(debit)`, Devir = `SUM(credit) − SUM(debit)` |
 | Bakiye | `(dönem döküm − dönem ödeme) + devir` | `−(SUM(debit) − SUM(credit))`, `occurred_on <= :bit` (rapor eski işareti korur: pozitif = döküm yerine borçluyuz) |
@@ -450,8 +450,8 @@ Eski "Şöför" kelimesi bu raporlarda **plaka sahibi** demektir.
 | # | sıra | satır no |
 | İşlem Tipi | "Kasa Nakit Girişi" / "<plaka> Plaka Ödeme" / "<şantiye> Ödeme" / "Diğer Ödemeler" | `source_table` etiketi + taraf adı |
 | Açıklama | `*_Aciklama` | `description` |
-| Nakit Miktarı | `*_Miktar` (hep pozitif) | iki kolon: **Giriş** = `cash_entries.debit` + kaynak satırın `credit`'i; **Çıkış** = `cash_entries.credit` + kaynak satırın `debit`'i. Kaynak satırlar yalnız `payment_types.kind = 'cash'` |
-| Ödeme Tipi | "Nakit" ya da `Odeme_Tipi_Adi` | `payment_types.name` ("Nakit"; `bank_id` doluysa banka adı) |
+| Nakit Miktarı | `*_Miktar` (hep pozitif) | iki kolon: **Giriş** = `cash_entries.debit` + kaynak satırın `credit`'i; **Çıkış** = `cash_entries.credit` + kaynak satırın `debit`'i. Kaynak satırlar yalnız `payment_method = 'cash'` |
+| Ödeme Tipi | "Nakit" ya da `Odeme_Tipi_Adi` | "Nakit" (`bank_id` doluysa banka adı) |
 | Zaman | `*_Zaman` | `occurred_on` |
 | Toplam | `ΣMiktar` | Toplam Giriş, Toplam Çıkış, Net, Devir, Kapanış |
 | (yeni) Bakiye | — | yürüyen bakiye |
@@ -467,8 +467,8 @@ WITH kasa AS (
   SELECT le.source_table, le.source_id, le.occurred_on, le.created_at, le.description,
          le.credit AS giris, le.debit AS cikis
   FROM ledger_entries le
-  JOIN payment_types pt ON pt.id = le.payment_type_id AND pt.kind = 'cash'
-  WHERE le.source_table IN ('vehicle_payments', 'site_transactions', 'other_payments',
+  WHERE le.payment_method = 'cash'
+    AND le.source_table IN ('vehicle_payments', 'site_transactions', 'other_payments',
                             'vehicle_owner_payments', 'dump_site_payments', 'employee_payments',
                             'vehicle_fines')
 )
@@ -499,7 +499,7 @@ WITH kasa AS (
 | Alacak | hep boş | `credit` (gelir / hakediş) |
 | Toplam | Σborç, 0 | `SUM(debit)`, `SUM(credit)` |
 | Devir bakiye | dönem toplamı | devir + `SUM(debit − credit)` |
-| (yeni) Ödeme Tipi, Bakiye | — | `payment_types.name`; yürüyen bakiye; üstte Devir |
+| (yeni) Ödeme Tipi, Bakiye | — | `payment_method` etiketi; yürüyen bakiye; üstte Devir |
 
 **Farklar:** `Santiye_Odeme_Tur` (C/G) hiç okunmuyordu, gelirler de Borç'a yazılıyordu (satır 71–75); gerçek devir yoktu; `VGZ` sıralaması kalktı; bitiş günü dahil.
 

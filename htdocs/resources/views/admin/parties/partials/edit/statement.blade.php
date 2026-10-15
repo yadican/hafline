@@ -25,8 +25,28 @@
                             <td>
                                 @if ($entry->source_type === 'haul' && $entry->source && ! $entry->source->trashed())
                                     <a href="{{ route('admin.hauls.edit', $entry->source) }}">{{ $entry->description }}</a>
+                                @elseif ($entry->source_type === 'machine_work' && $entry->source && ! $entry->source->trashed())
+                                    <a href="{{ route('admin.machine-works.edit', $entry->source) }}">{{ $entry->description }}</a>
+                                @elseif ($entry->source_type === 'fuel_receipt' && $entry->source && ! $entry->source->trashed())
+                                    <a href="{{ route('admin.fuel-receipts.edit', $entry->source) }}">{{ $entry->description }}</a>
+                                @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment'], true) && $entry->source && ! $entry->source->trashed())
+                                    @php
+                                        $cariKind = match ($entry->source_type) {
+                                            'company_transaction' => $entry->source->role->value,
+                                            'party_payment' => 'owner_payment',
+                                            'dump_site_payment' => 'dump_payment',
+                                            default => $entry->source_type,
+                                        };
+                                    @endphp
+                                    <a href="{{ route('admin.cari-entries.edit', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $entry->description }}</a>
                                 @else
                                     {{ $entry->description }}
+                                @endif
+                                @if ($entry->payment_method)
+                                    <span class="panel-chip"><i class="{{ $entry->payment_method->icon() }}" aria-hidden="true"></i> {{ $entry->payment_method->label() }}</span>
+                                @endif
+                                @if ($entry->cashCategory)
+                                    <span class="panel-chip">{{ $entry->cashCategory->name }}</span>
                                 @endif
                                 @if ($entry->reversal_of)
                                     <span class="panel-chip">Ters kayıt</span>

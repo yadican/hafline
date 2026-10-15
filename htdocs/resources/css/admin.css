@@ -807,6 +807,23 @@ span.flatpickr-weekday {
     color: #8a847c;
 }
 
+.panel-list .panel-badge-gider,
+.panel-list .panel-badge-gelir,
+.panel-list .panel-badge-ikisi {
+    min-height: 0;
+    padding: 2px 9px 2px 7px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 16px;
+}
+
+.panel-list .panel-badge-gider i[class*="fa-"],
+.panel-list .panel-badge-gelir i[class*="fa-"],
+.panel-list .panel-badge-ikisi i[class*="fa-"] {
+    font-size: 12px;
+}
+
 .panel-list .panel-badge-gunduz,
 .panel-list .panel-badge-gece {
     justify-content: center;

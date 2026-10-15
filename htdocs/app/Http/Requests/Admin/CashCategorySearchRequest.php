@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CashDirection;
 use App\Http\Requests\Concerns\SortsResults;
 use App\Repositories\CashCategoryRepository;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -29,18 +30,19 @@ class CashCategorySearchRequest extends FormRequest
     {
         return [
             'q' => ['nullable', 'string', 'max:100'],
+            'direction' => ['nullable', Rule::enum(CashDirection::class)],
             'active' => ['nullable', Rule::in(['1', '0'])],
             ...$this->sortRules(),
         ];
     }
 
     /**
-     * @return array{q?: string, active?: string}
+     * @return array{q?: string, direction?: string, active?: string}
      */
     public function filters(): array
     {
         return array_filter(
-            $this->safe()->only(['q', 'active']),
+            $this->safe()->only(['q', 'direction', 'active']),
             fn ($value) => $value !== null && $value !== '',
         );
     }

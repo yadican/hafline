@@ -37,6 +37,8 @@ class Ledger
                 'source_type' => $source->getMorphClass(),
                 'source_id' => $source->getKey(),
                 'vehicle_id' => $line->vehicleId,
+                'payment_method' => $line->paymentMethod,
+                'cash_category_id' => $line->cashCategoryId,
                 'created_by' => auth()->id(),
             ]);
         }
@@ -78,6 +80,8 @@ class Ledger
                 'source_type' => $entry->source_type,
                 'source_id' => $entry->source_id,
                 'vehicle_id' => $entry->vehicle_id,
+                'payment_method' => $entry->payment_method,
+                'cash_category_id' => $entry->cash_category_id,
                 'reversal_of' => $entry->id,
                 'created_by' => auth()->id(),
             ]);
@@ -86,7 +90,15 @@ class Ledger
 
     private function lineOf(LedgerEntry $entry): LedgerLine
     {
-        return new LedgerLine($entry->party_id, $entry->occurred_on, $entry->debit, $entry->credit, vehicleId: $entry->vehicle_id);
+        return new LedgerLine(
+            $entry->party_id,
+            $entry->occurred_on,
+            $entry->debit,
+            $entry->credit,
+            vehicleId: $entry->vehicle_id,
+            paymentMethod: $entry->payment_method,
+            cashCategoryId: $entry->cash_category_id,
+        );
     }
 
     /**

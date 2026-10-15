@@ -58,6 +58,35 @@ class Vehicle extends Model
     }
 
     /**
+     * @return HasMany<VehicleRate, $this>
+     */
+    public function rates(): HasMany
+    {
+        return $this->hasMany(VehicleRate::class)->orderByDesc('started_on');
+    }
+
+    /**
+     * @return HasOne<VehicleRate, $this>
+     */
+    public function currentRate(): HasOne
+    {
+        return $this->hasOne(VehicleRate::class)->whereNull('ended_on');
+    }
+
+    public function rateOn(CarbonInterface $date): ?VehicleRate
+    {
+        return $this->hasMany(VehicleRate::class)->covering($date)->first();
+    }
+
+    /**
+     * Machines are billed by the hour through machine work tickets instead of by trip.
+     */
+    public function isHourly(): bool
+    {
+        return (bool) $this->vehicleClass?->hourly;
+    }
+
+    /**
      * @return BelongsTo<VehicleClass, $this>
      */
     public function vehicleClass(): BelongsTo

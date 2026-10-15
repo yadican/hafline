@@ -12,6 +12,8 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/js/admin.js',
                 'resources/js/hauls.js',
+                'resources/js/machine-works.js',
+                'resources/js/fuel-receipts.js',
             ],
             refresh: true,
             fonts: [

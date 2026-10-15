@@ -17,7 +17,8 @@ return new class extends Migration
             $table->date('occurred_on');
             $table->decimal('debit', 14, 2)->default(0);
             $table->decimal('credit', 14, 2)->default(0);
-            $table->foreignUuid('payment_type_id')->nullable()->index()->constrained()->restrictOnDelete();
+            $table->string('payment_method', 20)->nullable()->index();
+            $table->foreignUuid('cash_category_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->string('document_no', 40)->nullable()->index();
             $table->string('description')->nullable();
             $table->foreignUuid('fuel_station_id')->nullable()->index()->constrained()->restrictOnDelete();
@@ -40,6 +41,7 @@ return new class extends Migration
 
         SchemaRules::checkIn('company_transactions', 'role', ['supplier', 'customer', 'fuel', 'market']);
         SchemaRules::checkDebitCredit('company_transactions');
+        SchemaRules::checkPaymentMethod('company_transactions');
         SchemaRules::check('company_transactions', 'fuel_fields', "role = 'fuel' OR (liters IS NULL AND unit_price IS NULL)");
         SchemaRules::check('company_transactions', 'market_fields', "role = 'market' OR (vehicle_id IS NULL AND owner_party_id IS NULL)");
         SchemaRules::check('company_transactions', 'market_station', "role <> 'market' OR fuel_station_id IS NULL");

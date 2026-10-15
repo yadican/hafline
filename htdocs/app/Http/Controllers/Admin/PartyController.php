@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\PartyRole;
 use App\Enums\PartyType;
 use App\Http\Requests\Admin\PartyRequest;
 use App\Http\Requests\Admin\PartySearchRequest;
@@ -35,6 +36,7 @@ class PartyController extends AdminController
         return view('admin.parties.create', [
             'title' => $type === PartyType::Person ? 'Yeni kişi' : 'Yeni şirket',
             'type' => $type,
+            'values' => ['roles' => array_filter([PartyRole::tryFrom((string) $request->query('role'))])],
             'locations' => $this->parties->locationOptions(old('city_id'), old('district_id')),
         ]);
     }

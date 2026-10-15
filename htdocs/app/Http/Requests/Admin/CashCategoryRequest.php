@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CashDirection;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CashCategoryRequest extends FormRequest
 {
@@ -23,7 +25,13 @@ class CashCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:100'],
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('cash_categories', 'name')->ignore($this->route('cash_category'))->withoutTrashed(),
+            ],
+            'direction' => ['required', Rule::enum(CashDirection::class)],
             'active' => ['boolean'],
         ];
     }
@@ -35,6 +43,7 @@ class CashCategoryRequest extends FormRequest
     {
         return [
             'name' => 'kategori adı',
+            'direction' => 'yön',
             'active' => 'aktif',
         ];
     }

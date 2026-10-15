@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    private const ROLES = ['vehicle_owner', 'dump_operator', 'customer', 'supplier', 'fuel', 'market', 'employee'];
+    private const ROLES = ['vehicle_owner', 'dump_operator', 'customer', 'supplier', 'fuel', 'market', 'employee', 'machine_operator'];
 
     public function up(): void
     {

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CashDirection;
 use App\Models\CashCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,6 +20,7 @@ class CashCategoryFactory extends Factory
     {
         return [
             'name' => fake()->unique()->words(2, true),
+            'direction' => CashDirection::Expense,
             'active' => true,
         ];
     }

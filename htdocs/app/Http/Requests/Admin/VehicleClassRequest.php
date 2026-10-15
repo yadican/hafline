@@ -15,7 +15,10 @@ class VehicleClassRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['active' => $this->boolean('active')]);
+        $this->merge([
+            'hourly' => $this->boolean('hourly'),
+            'active' => $this->boolean('active'),
+        ]);
     }
 
     /**
@@ -30,6 +33,7 @@ class VehicleClassRequest extends FormRequest
                 'max:60',
                 Rule::unique('vehicle_classes', 'name')->ignore($this->route('vehicle_class'))->withoutTrashed(),
             ],
+            'hourly' => ['boolean'],
             'active' => ['boolean'],
         ];
     }
@@ -41,6 +45,7 @@ class VehicleClassRequest extends FormRequest
     {
         return [
             'name' => 'sınıf adı',
+            'hourly' => 'saatlik ücretlendirme',
             'active' => 'aktif',
         ];
     }

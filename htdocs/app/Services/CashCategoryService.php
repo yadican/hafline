@@ -12,7 +12,7 @@ class CashCategoryService extends Service
     public function __construct(private CashCategoryRepository $cashCategories) {}
 
     /**
-     * @param  array{q?: string, active?: string}  $filters
+     * @param  array{q?: string, direction?: string, active?: string}  $filters
      */
     public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
     {

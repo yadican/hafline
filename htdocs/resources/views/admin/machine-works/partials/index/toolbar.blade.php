@@ -1,0 +1,29 @@
+<div class="panel-liste-bar">
+    <x-ui.button
+        variant="search"
+        icon="fa-solid fa-filter"
+        class="haul-search-toggle"
+        x-bind:class="{ 'is-open': searchOpen }"
+        x-on:click="searchOpen = ! searchOpen"
+        x-bind:aria-expanded="searchOpen.toString()"
+        aria-controls="machine-work-search"
+        aria-expanded="false"
+    >
+        Arama
+        @if ($filters !== [])
+            <span class="haul-search-count">{{ count($filters) }}</span>
+        @endif
+        <i class="fa-solid fa-chevron-down haul-search-chevron" aria-hidden="true"></i>
+    </x-ui.button>
+    @if ($filters === [])
+        <span class="panel-info">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            Liste performansı için son {{ \App\Repositories\MachineWorkRepository::RECENT_DAYS }} günün kayıtları gösteriliyor.
+        </span>
+    @else
+        <x-ui.button icon="fa-solid fa-xmark" :href="route('admin.machine-works.index')">Filtreleri temizle</x-ui.button>
+    @endif
+    <span class="uyari">{{ number_format($works->total(), 0, ',', '.') }} kayıt</span>
+    <x-ui.button icon="fa-solid fa-print" data-entry-print>Yazdır</x-ui.button>
+    <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.machine-works.create')">Yeni fiş</x-ui.button>
+</div>
