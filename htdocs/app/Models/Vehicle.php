@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\VehicleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -9,9 +10,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['plate', 'owner_id', 'vehicle_class_id', 'driver_name', 'active'])]
+#[Fillable(['plate', 'vehicle_class_id', 'driver_name', 'active'])]
 class Vehicle extends Model
 {
     /** @use HasFactory<VehicleFactory> */
@@ -34,11 +37,24 @@ class Vehicle extends Model
     }
 
     /**
-     * @return BelongsTo<VehicleOwner, $this>
+     * @return HasMany<VehicleOwnership, $this>
      */
-    public function owner(): BelongsTo
+    public function ownerships(): HasMany
     {
-        return $this->belongsTo(VehicleOwner::class, 'owner_id');
+        return $this->hasMany(VehicleOwnership::class)->orderByDesc('started_on');
+    }
+
+    /**
+     * @return HasOne<VehicleOwnership, $this>
+     */
+    public function currentOwnership(): HasOne
+    {
+        return $this->hasOne(VehicleOwnership::class)->whereNull('ended_on');
+    }
+
+    public function ownershipOn(CarbonInterface $date): ?VehicleOwnership
+    {
+        return $this->hasMany(VehicleOwnership::class)->covering($date)->first();
     }
 
     /**

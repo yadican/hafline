@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\Shift;
+use App\Models\DumpSite;
 use App\Models\Haul;
 use App\Models\HaulRoute;
 use App\Models\Vehicle;
@@ -23,11 +24,12 @@ class HaulFactory extends Factory
         return [
             'ticket_no' => fake()->unique()->numerify('T20260#######'),
             'vehicle_id' => Vehicle::factory(),
-            'owner_id' => fn (array $attributes) => Vehicle::query()->find($attributes['vehicle_id'])?->owner_id,
+            'party_id' => fn (array $attributes) => Vehicle::query()->find($attributes['vehicle_id'])?->currentOwnership?->party_id,
             'driver_name' => fn (array $attributes) => Vehicle::query()->find($attributes['vehicle_id'])?->driver_name,
             'route_id' => HaulRoute::factory(),
             'site_id' => fn (array $attributes) => HaulRoute::query()->find($attributes['route_id'])?->site_id,
             'dump_site_id' => fn (array $attributes) => HaulRoute::query()->find($attributes['route_id'])?->dump_site_id,
+            'dump_party_id' => fn (array $attributes) => DumpSite::query()->find($attributes['dump_site_id'])?->party_id,
             'tonnage' => fake()->numberBetween(8, 30),
             'price' => fake()->randomFloat(2, 1500, 5000),
             'dump_price' => fake()->randomFloat(2, 200, 900),

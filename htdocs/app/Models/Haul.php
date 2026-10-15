@@ -9,15 +9,17 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'ticket_no',
     'vehicle_id',
-    'owner_id',
+    'party_id',
     'route_id',
     'site_id',
     'dump_site_id',
+    'dump_party_id',
     'driver_name',
     'tonnage',
     'price',
@@ -40,11 +42,29 @@ class Haul extends Model
     }
 
     /**
-     * @return BelongsTo<VehicleOwner, $this>
+     * The vehicle's owner on the haul date; the haul's earnings are posted to this party.
+     *
+     * @return BelongsTo<Party, $this>
      */
-    public function owner(): BelongsTo
+    public function party(): BelongsTo
     {
-        return $this->belongsTo(VehicleOwner::class, 'owner_id')->withTrashed();
+        return $this->belongsTo(Party::class)->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<Party, $this>
+     */
+    public function dumpParty(): BelongsTo
+    {
+        return $this->belongsTo(Party::class, 'dump_party_id')->withTrashed();
+    }
+
+    /**
+     * @return MorphMany<LedgerEntry, $this>
+     */
+    public function ledgerEntries(): MorphMany
+    {
+        return $this->morphMany(LedgerEntry::class, 'source');
     }
 
     /**

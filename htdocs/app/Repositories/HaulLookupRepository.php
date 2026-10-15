@@ -2,12 +2,13 @@
 
 namespace App\Repositories;
 
+use App\Enums\PartyRole;
 use App\Models\DumpSite;
+use App\Models\Party;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
-use App\Models\VehicleOwner;
 use Illuminate\Database\Eloquent\Collection;
 
 class HaulLookupRepository
@@ -33,11 +34,10 @@ class HaulLookupRepository
      */
     public function owners(): array
     {
-        return VehicleOwner::query()
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get()
-            ->mapWithKeys(fn (VehicleOwner $owner) => [$owner->id => $owner->full_name])
+        return Party::withTrashed()
+            ->withRole(PartyRole::VehicleOwner)
+            ->orderBy('name')
+            ->pluck('name', 'id')
             ->all();
     }
 
@@ -65,7 +65,7 @@ class HaulLookupRepository
         $like = '%'.addcslashes(Vehicle::normalizePlate($term), '%_\\').'%';
 
         return Vehicle::query()
-            ->with(['owner', 'vehicleClass'])
+            ->with(['currentOwnership.party', 'vehicleClass'])
             ->where('active', true)
             ->whereLike('plate_key', $like)
             ->orderBy('plate')

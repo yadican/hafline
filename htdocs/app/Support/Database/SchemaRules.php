@@ -63,6 +63,26 @@ class SchemaRules
         self::check($table, $column, $expression);
     }
 
+    /**
+     * Rows sharing $key may not have overlapping inclusive date ranges; a NULL end is open-ended.
+     */
+    public static function excludeOverlap(string $table, string $key, string $from, string $to): void
+    {
+        if (! self::isPostgres()) {
+            return;
+        }
+
+        DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gist');
+        DB::statement(sprintf(
+            "ALTER TABLE %s ADD CONSTRAINT %s_no_overlap EXCLUDE USING gist (%s WITH =, daterange(%s, %s, '[]') WITH &&)",
+            $table,
+            $table,
+            $key,
+            $from,
+            $to,
+        ));
+    }
+
     public static function checkDebitCredit(string $table): void
     {
         self::check($table, 'debit_credit', '(debit > 0) <> (credit > 0) AND debit >= 0 AND credit >= 0');

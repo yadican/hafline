@@ -4,7 +4,7 @@
     <x-panel.page
         heading="Akaryakıt istasyonları"
         icon="fa-solid fa-gas-pump"
-        description="Yakıt fişlerinde kullanılan istasyonları ve birim fiyatlarını yönetin."
+        description="Yakıt fişlerinde kullanılan istasyonları, bağlı oldukları şantiyeleri ve birim fiyatlarını yönetin."
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Saha' => null, 'Akaryakıt istasyonları' => null]"
     >
         @include('admin.fuel-stations.partials.index.toolbar')

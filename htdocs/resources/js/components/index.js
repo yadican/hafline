@@ -2,6 +2,7 @@ import { bindAutocompletes } from './autocomplete.js';
 import { bindDatePickers } from './date-picker.js';
 import { bindConfirms } from './dialog.js';
 import { bindErrorSummary } from './error-summary.js';
+import { bindLocationSelects } from './location-select.js';
 import { bindMultiSelects } from './multi-select.js';
 import { bindSubmitGuard } from './submit-guard.js';
 
@@ -17,6 +18,7 @@ const binders = [
     bindConfirms,
     bindDatePickers,
     bindMultiSelects,
+    bindLocationSelects,
     bindAutocompletes,
     bindErrorSummary,
 ];

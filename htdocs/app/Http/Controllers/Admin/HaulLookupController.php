@@ -25,7 +25,7 @@ class HaulLookupController extends Controller
         $vehicles = $this->lookups->vehicles($term)->map(fn (Vehicle $vehicle) => [
             'value' => $vehicle->plate,
             'meta' => collect([
-                $vehicle->owner?->full_name,
+                $vehicle->currentOwnership?->party?->name,
                 $vehicle->vehicleClass?->name,
                 $vehicle->driver_name ? 'Şoför: '.$vehicle->driver_name : null,
             ])->filter()->implode(' · '),

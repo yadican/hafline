@@ -1,5 +1,7 @@
 # Eski hafriyat DB → hafline eşleme belgesi
 
+> **Güncel değil (cari yeniden tasarımı):** araç sahibi ve firma tabloları `parties` (+ `persons` / `companies` / `party_roles`) yapısına, sahiplik `vehicle_ownerships` dönemlerine, `owner_id` kolonları `party_id`'ye, `ledger_entries` view'i ise yazılan bir defter tablosuna dönüştü. Aşağıdaki eşlemeler eski şemaya göredir; aktarım yazılırken yeni şemaya göre yeniden ele alınacak.
+
 Bu belge, eski hafriyat veritabanından (MySQL 5.7, `prod.sql`, 56 tablo) yeni hafline şemasına (PostgreSQL) yapılacak **tek seferlik** aktarımın yol haritasıdır. Aktarım komutu yazılırken tek kaynak bu belgedir.
 
 - Kaynak şema: `hafriyat/HAFRİYAT PROGRAMI YEDEK/sakin_silme_hafriyat/hafriyat-docker/data/prod.sql`
@@ -182,7 +184,7 @@ Her tabloda ortak kolonlar (`id`, `created_at`, `updated_at`, `deleted_at`) böl
 | `Yakit_Yeri_ID` | `legacy_id_maps` | — |
 | `Yakit_Yeri_Adi` | `name` | trim |
 | `Yakit_Yeri_Birim_Fiyati` | `unit_price` | round 4 |
-| `yer` | `site_id` | varchar içinde bir `santiye` id'si; sayısal ve eşlenebiliyorsa site, değilse null + rapor |
+| `yer` | `fuel_station_sites` | varchar içinde bir `santiye` id'si; sayısal ve eşlenebiliyorsa tek satırlık bağ, değilse bağ yok + rapor |
 | `Yakit_Yeri_Aktif` | `active` | Y/N |
 
 **`plaka_sahibi` → `vehicle_owners`**
@@ -355,7 +357,7 @@ Not: `site_id` / `dump_site_id` güzergahınkiyle uyuşmuyorsa taşımanın kend
 | `Yakit_Fisi_Plaka_ID` | `vehicle_id` | zorunlu |
 | `Yakit_Fisi_Sahibi` | `owner_id` | map; boşsa aracın sahibi |
 | `Yakit_Fisi_Yakit_Yeri_ID` | `fuel_station_id` | map (nullable) |
-| `Yakit_Fisi_Santiye_ID` | `site_id` | **Eski PHP bu kolonu hiç yazmıyor (boş).** Doluysa map; boşsa yakıt yerinin şantiyesi (`yakit_yeri.yer` → `fuel_stations.site_id`). |
+| `Yakit_Fisi_Santiye_ID` | `site_id` | **Eski PHP bu kolonu hiç yazmıyor (boş).** Doluysa map; boşsa yakıt yerinin şantiyesi (`yakit_yeri.yer` → `fuel_station_sites`; tek bağ varsa o şantiye). |
 | `Yakit_Fisi_Miktar` | `quantity` | round 2 |
 | `Yakit_Fisi_Birim_Fiyati` | `unit_price` | round 4 |
 | — | `amount` | generated (`round(quantity * unit_price, 2)`), yazılmaz |

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Haul;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // ledger_entries.source_type is varchar(40); keep class names out of it.
+        Relation::morphMap([
+            'haul' => Haul::class,
+        ]);
     }
 }

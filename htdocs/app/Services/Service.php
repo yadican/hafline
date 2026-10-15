@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\OperationException;
+use App\Exceptions\OperationRejectedException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -23,6 +24,10 @@ abstract class Service
             DB::commit();
 
             return $result;
+        } catch (OperationRejectedException $exception) {
+            DB::rollBack();
+
+            throw $exception;
         } catch (Throwable $exception) {
             DB::rollBack();
             report($exception);

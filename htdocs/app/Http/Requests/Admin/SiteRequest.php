@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\PartyRole;
+use App\Models\Party;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,7 +17,14 @@ class SiteRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['active' => $this->boolean('active')]);
+        $parties = (array) $this->input('parties', []);
+
+        $this->merge([
+            'active' => $this->boolean('active'),
+            'parties' => collect(PartyRole::forSites())
+                ->mapWithKeys(fn (PartyRole $role) => [$role->value => array_values(array_filter((array) ($parties[$role->value] ?? [])))])
+                ->all(),
+        ]);
     }
 
     /**
@@ -30,7 +39,14 @@ class SiteRequest extends FormRequest
                 'max:255',
                 Rule::unique('sites', 'name')->ignore($this->route('site'))->withoutTrashed(),
             ],
+            'parties' => ['array'],
+            'parties.*' => ['array'],
             'active' => ['boolean'],
+            ...collect(PartyRole::forSites())
+                ->mapWithKeys(fn (PartyRole $role) => [
+                    'parties.'.$role->value.'.*' => ['distinct', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
+                ])
+                ->all(),
         ];
     }
 
@@ -41,6 +57,7 @@ class SiteRequest extends FormRequest
     {
         return [
             'name' => 'şantiye adı',
+            'parties.*.*' => 'firma',
             'active' => 'aktif',
         ];
     }

@@ -25,6 +25,26 @@
         </div>
     </div>
 
+    @php
+        $partyType = request()->route('party') instanceof \App\Models\Party
+            ? request()->route('party')->type
+            : \App\Enums\PartyType::tryFrom((string) request('type'));
+        $onParty = request()->routeIs('admin.parties.*');
+    @endphp
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*')]) id="um-sec-accounts">
+        <button type="button" class="um-title" data-um-toggle="um-sec-accounts">
+            <span class="um-title-text">
+                <i class="fa-solid fa-address-card um-title-icon" aria-hidden="true"></i>
+                <span class="um-title-label">Cari</span>
+            </span>
+            <span class="um-caret" aria-hidden="true"></span>
+        </button>
+        <div class="um-items">
+            <a href="{{ route('admin.persons.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.persons.*') || ($onParty && $partyType === \App\Enums\PartyType::Person)])>Kişiler</a>
+            <a href="{{ route('admin.companies.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.companies.*') || ($onParty && $partyType === \App\Enums\PartyType::Company)])>Şirketler</a>
+        </div>
+    </div>
+
     <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.payment-types.*', 'admin.cash-categories.*', 'admin.banks.*')]) id="um-sec-definitions">
         <button type="button" class="um-title" data-um-toggle="um-sec-definitions">
             <span class="um-title-text">
@@ -40,7 +60,7 @@
         </div>
     </div>
 
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.vehicles.*', 'admin.vehicle-owners.*', 'admin.vehicle-classes.*')]) id="um-sec-fleet">
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.vehicles.*', 'admin.vehicle-classes.*')]) id="um-sec-fleet">
         <button type="button" class="um-title" data-um-toggle="um-sec-fleet">
             <span class="um-title-text">
                 <i class="fa-solid fa-truck um-title-icon" aria-hidden="true"></i>
@@ -49,9 +69,7 @@
             <span class="um-caret" aria-hidden="true"></span>
         </button>
         <div class="um-items">
-            <a href="{{ route('admin.vehicles.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.vehicles.*')])>Araçlar</a>
-            <a href="{{ route('admin.vehicle-owners.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.vehicle-owners.*')])>Araç sahipleri</a>
-            <a href="{{ route('admin.vehicle-classes.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.vehicle-classes.*')])>Araç sınıfları</a>
+            <a href="{{ route('admin.vehicles.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.vehicles.*')])>Araçlar</a>            <a href="{{ route('admin.vehicle-classes.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.vehicle-classes.*')])>Araç sınıfları</a>
         </div>
     </div>
 

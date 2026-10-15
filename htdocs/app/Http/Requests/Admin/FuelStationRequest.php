@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Party;
 use App\Models\Site;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -16,7 +17,10 @@ class FuelStationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['active' => $this->boolean('active')]);
+        $this->merge([
+            'active' => $this->boolean('active'),
+            'site_ids' => array_values(array_filter((array) $this->input('site_ids', []))),
+        ]);
     }
 
     /**
@@ -31,8 +35,10 @@ class FuelStationRequest extends FormRequest
                 'max:255',
                 Rule::unique('fuel_stations', 'name')->ignore($this->route('fuel_station'))->withoutTrashed(),
             ],
+            'party_id' => ['required', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999.9999', 'decimal:0,4'],
-            'site_id' => ['nullable', 'uuid', Rule::exists(Site::class, 'id')->withoutTrashed()],
+            'site_ids' => ['array'],
+            'site_ids.*' => ['distinct', 'uuid', Rule::exists(Site::class, 'id')->withoutTrashed()],
             'active' => ['boolean'],
         ];
     }
@@ -44,8 +50,9 @@ class FuelStationRequest extends FormRequest
     {
         return [
             'name' => 'istasyon adı',
+            'party_id' => 'işletmeci',
             'unit_price' => 'birim fiyat',
-            'site_id' => 'şantiye',
+            'site_ids.*' => 'şantiye',
             'active' => 'aktif',
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\DumpSite;
+use App\Models\Party;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,7 @@ class DumpSiteRepository extends Repository
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
     {
-        $query = $this->whereTerm($this->query()->with('classPrices.vehicleClass')->withCount('routes'), $filters['q'] ?? null, ['name'])
+        $query = $this->whereTerm($this->query()->with(['party', 'classPrices.vehicleClass'])->withCount('routes'), $filters['q'] ?? null, ['name'])
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         return $this->applySort($query, $sort)
@@ -50,6 +51,10 @@ class DumpSiteRepository extends Repository
     {
         return [
             'name' => 'name',
+            'party' => fn (Builder $query, string $direction) => $query->orderBy(
+                Party::withTrashed()->select('name')->whereColumn('parties.id', 'dump_sites.party_id'),
+                $direction,
+            ),
             'routes' => 'routes_count',
         ];
     }

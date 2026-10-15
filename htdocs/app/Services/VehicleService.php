@@ -2,19 +2,24 @@
 
 namespace App\Services;
 
+use App\Enums\PartyRole;
+use App\Models\Party;
 use App\Models\Vehicle;
+use App\Repositories\PartyRepository;
 use App\Repositories\VehicleClassRepository;
-use App\Repositories\VehicleOwnerRepository;
 use App\Repositories\VehicleRepository;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 
 class VehicleService extends Service
 {
     public function __construct(
         private VehicleRepository $vehicles,
-        private VehicleOwnerRepository $owners,
+        private PartyRepository $parties,
         private VehicleClassRepository $classes,
+        private VehicleOwnershipService $ownerships,
     ) {}
 
     /**
@@ -31,18 +36,20 @@ class VehicleService extends Service
     public function searchOptions(): array
     {
         return [
-            'owners' => $this->owners->options(),
+            'owners' => $this->parties->options(PartyRole::VehicleOwner),
             'classes' => $this->classes->options(),
         ];
     }
 
     /**
-     * @return array{owners: array<string, string>, classes: array<string, string>}
+     * Any active party can become an owner; the role is added on assignment.
+     *
+     * @return array{parties: array<string, string>, classes: array<string, string>}
      */
     public function formOptions(?Vehicle $vehicle = null): array
     {
         return [
-            'owners' => $this->owners->options(),
+            'parties' => $this->parties->options(),
             'classes' => $this->classes->options(activeOnly: true, include: $vehicle?->vehicle_class_id),
         ];
     }
@@ -52,8 +59,18 @@ class VehicleService extends Service
      */
     public function create(array $attributes): Vehicle
     {
-        /** @var Vehicle */
-        return $this->transaction(fn () => $this->vehicles->create($attributes));
+        return $this->transaction(function () use ($attributes): Vehicle {
+            /** @var Vehicle $vehicle */
+            $vehicle = $this->vehicles->create(Arr::except($attributes, ['owner_party_id', 'owned_from']));
+
+            $this->ownerships->open(
+                $vehicle,
+                Party::query()->findOrFail($attributes['owner_party_id']),
+                Carbon::parse($attributes['owned_from']),
+            );
+
+            return $vehicle;
+        });
     }
 
     /**

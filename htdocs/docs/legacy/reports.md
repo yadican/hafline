@@ -1,5 +1,7 @@
 # Eski raporlar → yeni rapor kartları
 
+> **Kısmen güncel değil (cari yeniden tasarımı):** sahip ve firma sorguları artık `parties` üzerinden, bakiyeler `ledger_entries` tablosundan (`party_id`, `debit`, `credit`) okunur; `vehicle_owners`, `companies.name`, `owner_id` ve `party_type` geçen formüller rapor yazılırken buna göre çevrilecek. Rapor başlıkları, filtreleri ve düzeni geçerliliğini korur.
+
 Eski hafriyat sistemindeki raporlar yeni sistemin **referansıdır**. Bu belge 30 rapor ve 2 ekranın her biri için bir kart içerir.
 
 - **Korunur:** raporun adı, başlıkları (sütunları), filtreleri, gruplaması ve çıktı düzeni.

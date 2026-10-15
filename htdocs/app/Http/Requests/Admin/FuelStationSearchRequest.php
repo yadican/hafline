@@ -30,18 +30,19 @@ class FuelStationSearchRequest extends FormRequest
         return [
             'q' => ['nullable', 'string', 'max:100'],
             'site' => ['nullable', 'uuid'],
+            'party' => ['nullable', 'uuid'],
             'active' => ['nullable', Rule::in(['1', '0'])],
             ...$this->sortRules(),
         ];
     }
 
     /**
-     * @return array{q?: string, site?: string, active?: string}
+     * @return array{q?: string, site?: string, party?: string, active?: string}
      */
     public function filters(): array
     {
         return array_filter(
-            $this->safe()->only(['q', 'site', 'active']),
+            $this->safe()->only(['q', 'site', 'party', 'active']),
             fn ($value) => $value !== null && $value !== '',
         );
     }

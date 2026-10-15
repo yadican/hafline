@@ -2,7 +2,7 @@
     @forelse ($vehicles as $vehicle)
         <tr>
             <td><span class="panel-plate-text">{{ $vehicle->plate }}</span></td>
-            <td>{{ $vehicle->owner?->full_name ?: '—' }}</td>
+            <td>{{ $vehicle->currentOwnership?->party?->name ?: '—' }}</td>
             <td>{{ $vehicle->vehicleClass?->name ?: '—' }}</td>
             <td>{{ $vehicle->driver_name ?: '—' }}</td>
             <td><x-ui.active-badge :active="$vehicle->active" /></td>

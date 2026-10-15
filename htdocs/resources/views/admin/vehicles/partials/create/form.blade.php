@@ -7,8 +7,10 @@
             <x-form.checkbox name="active" label="Durum" text="Taşıma fişlerinde seçilebilsin" checked />
         </x-form.group>
 
-        <x-form.group legend="Sahip ve şoför" icon="fa-solid fa-id-card" description="Aracın sahibi ve kullanan şoför">
-            <x-form.select name="owner_id" label="Araç sahibi" :options="$options['owners']" placeholder="Sahip seçin" />
+        <x-form.group legend="Sahip ve şoför" icon="fa-solid fa-id-card" description="Taşımaların cari hareketi bu sahibe yazılır">
+            <x-form.select name="owner_party_id" label="Araç sahibi" :options="$options['parties']" placeholder="Cari kart seçin" searchable required />
+            <x-form.input name="owned_from" label="Sahiplik başlangıcı" type="date" :value="today()" required />
+            <p class="panel-hint">Listede yoksa önce <a href="{{ route('admin.parties.create', ['type' => 'person']) }}">kişi</a> veya <a href="{{ route('admin.parties.create', ['type' => 'company']) }}">şirket</a> kartı açın. Sonraki sahip değişiklikleri araç kartından devir ile yapılır.</p>
             <x-form.input name="driver_name" label="Şoför" maxlength="80" />
         </x-form.group>
 

@@ -41,7 +41,7 @@
                 data-haul-dump-site
                 :data-url="route('admin.hauls.lookups.dump-sites')"
             >
-                <x-form.status data-haul-quote>Kayıtlı fiyat: {{ number_format((float) $haul->price + (float) $haul->dump_price, 2, ',', '.') }} TL · güncellenince güncel tarifeyle yeniden hesaplanır</x-form.status>
+                <x-form.status data-haul-quote>Kayıtlı fiyat: {{ number_format((float) $haul->price + (float) $haul->dump_price, 2, ',', '.') }} TL · plaka veya güzergah değişmedikçe korunur</x-form.status>
             </x-form.select>
             <x-form.input name="tonnage" label="Tonaj" type="number" min="0" max="1000" />
         </x-form.group>

@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PartyRole;
+use App\Models\FuelStation;
 use App\Models\HaulRoute;
+use App\Models\Party;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,5 +104,89 @@ class SiteTest extends TestCase
             ->get(route('admin.sites.index', ['sort' => 'routes', 'dir' => 'asc']))
             ->assertOk()
             ->assertSeeInOrder(['BEYKOZ', 'ATAŞEHİR']);
+    }
+
+    public function test_site_links_many_parties_with_roles(): void
+    {
+        $employer = Party::factory()->company()->create(['name' => 'YAPI A.Ş.']);
+        $supplier = Party::factory()->company()->create(['name' => 'KUM TEDARİK']);
+        $both = Party::factory()->company()->create(['name' => 'ÇOK YÖNLÜ LTD']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.sites.store'), [
+                'name' => 'KARTAL',
+                'active' => '1',
+                'parties' => [
+                    'customer' => [$employer->id, $both->id],
+                    'supplier' => [$supplier->id, $both->id],
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $kartal = Site::query()->where('name', 'KARTAL')->firstOrFail();
+        $other = Site::factory()->create(['name' => 'PENDİK']);
+        $this->actingAs($this->admin)
+            ->post(route('admin.sites.store'), ['name' => 'TUZLA', 'parties' => ['supplier' => [$supplier->id]]])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(4, $kartal->parties()->count());
+        $this->assertSame(2, $supplier->sites()->count(), 'A party can work on many sites.');
+        $this->assertTrue($both->fresh()->hasRole(PartyRole::Customer) && $both->fresh()->hasRole(PartyRole::Supplier));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.sites.index', ['sort' => 'parties', 'dir' => 'desc']))
+            ->assertSeeInOrder(['KARTAL', 'TUZLA', 'PENDİK']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.edit', $both))
+            ->assertSee('Şantiyeleri')
+            ->assertSee('Müşteri, Tedarikçi');
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.sites.update', $kartal), ['name' => 'KARTAL', 'parties' => ['customer' => [$employer->id]]])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([$employer->id], $kartal->parties()->pluck('parties.id')->all());
+        $this->assertSame(0, $other->parties()->count());
+    }
+
+    public function test_linked_party_keeps_its_role_and_cannot_be_deleted(): void
+    {
+        $site = Site::factory()->create();
+        $party = Party::factory()->company()->create();
+        $party->assignRole(PartyRole::Customer);
+        $site->parties()->attach($party->id, ['role' => 'customer']);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.parties.update', $party), ['title' => $party->name, 'roles' => []])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue($party->fresh()->hasRole(PartyRole::Customer));
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.parties.destroy', $party))
+            ->assertSessionHas('error');
+        $this->assertNotSoftDeleted($party);
+    }
+
+    public function test_edit_page_shows_dump_sites_and_fuel_stations(): void
+    {
+        $route = HaulRoute::factory()->create();
+        FuelStation::factory()->hasAttached($route->site)->create(['name' => 'OPET MERKEZ']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.sites.edit', $route->site_id))
+            ->assertOk()
+            ->assertSee($route->dumpSite->name)
+            ->assertSee('OPET MERKEZ');
+    }
+
+    public function test_invalid_party_links_are_rejected(): void
+    {
+        $deleted = Party::factory()->create();
+        $deleted->delete();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.sites.store'), ['name' => 'X', 'parties' => ['customer' => [$deleted->id, 'abc']]])
+            ->assertSessionHasErrors(['parties.customer.0', 'parties.customer.1']);
     }
 }

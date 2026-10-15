@@ -22,6 +22,7 @@ class FuelStationController extends AdminController
             'fuelStations' => $this->stations->paginate($filters, $request->sort()),
             'filters' => $filters,
             'sites' => $this->stations->siteOptions(activeOnly: false),
+            'parties' => $this->stations->operatorOptions(),
         ]);
     }
 
@@ -30,6 +31,7 @@ class FuelStationController extends AdminController
         return view('admin.fuel-stations.create', [
             'title' => 'Yeni akaryakıt istasyonu',
             'sites' => $this->stations->siteOptions(),
+            'parties' => $this->stations->partyOptions(),
         ]);
     }
 
@@ -48,6 +50,7 @@ class FuelStationController extends AdminController
             'title' => 'Akaryakıt istasyonunu düzenle',
             'fuelStation' => $fuelStation,
             'sites' => $this->stations->siteOptions($fuelStation),
+            'parties' => $this->stations->partyOptions($fuelStation),
         ]);
     }
 

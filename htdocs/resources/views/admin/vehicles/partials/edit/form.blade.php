@@ -8,8 +8,7 @@
             <x-form.checkbox name="active" label="Durum" text="Taşıma fişlerinde seçilebilsin" />
         </x-form.group>
 
-        <x-form.group legend="Sahip ve şoför" icon="fa-solid fa-id-card" description="Aracın sahibi ve kullanan şoför">
-            <x-form.select name="owner_id" label="Araç sahibi" :options="$options['owners']" placeholder="Sahip seçin" />
+        <x-form.group legend="Şoför" icon="fa-solid fa-id-badge" description="Aracı kullanan şoför">
             <x-form.input name="driver_name" label="Şoför" maxlength="80" />
         </x-form.group>
 

@@ -28,6 +28,7 @@ class SiteController extends AdminController
     {
         return view('admin.sites.create', [
             'title' => 'Yeni şantiye',
+            'parties' => $this->sites->partyOptions(),
         ]);
     }
 
@@ -42,9 +43,13 @@ class SiteController extends AdminController
 
     public function edit(Site $site): View
     {
+        $site->load('parties', 'fuelStations', 'routes.dumpSite');
+
         return view('admin.sites.edit', [
             'title' => 'Şantiyeyi düzenle',
             'site' => $site,
+            'parties' => $this->sites->partyOptions($site),
+            'partyValues' => $this->sites->partyValues($site),
         ]);
     }
 

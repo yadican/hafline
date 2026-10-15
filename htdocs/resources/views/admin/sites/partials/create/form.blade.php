@@ -6,6 +6,8 @@
             <x-form.checkbox name="active" label="Durum" text="Seçim listelerinde gösterilsin" checked />
         </x-form.group>
 
+        @include('admin.sites.partials.form.parties', ['partyValues' => []])
+
         <x-form.actions label="Kaydet" :cancel="route('admin.sites.index')" />
     </x-form.grid>
 </form>

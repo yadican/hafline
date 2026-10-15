@@ -1,6 +1,7 @@
 <div class="panel-liste-bar">
     <x-search.form :action="route('admin.fuel-stations.index')">
         <x-search.text name="q" label="Ara" :value="$filters['q'] ?? null" placeholder="İstasyon adı" maxlength="100" />
+        <x-search.select name="party" label="İşletmeci" placeholder="Tüm işletmeciler" :options="$parties" :value="$filters['party'] ?? null" />
         <x-search.select name="site" label="Şantiye" placeholder="Tüm şantiyeler" :options="$sites" :value="$filters['site'] ?? null" />
         <x-search.select name="active" label="Durum" placeholder="Tüm durumlar" :options="['1' => 'Aktif', '0' => 'Pasif']" :value="$filters['active'] ?? null" />
 

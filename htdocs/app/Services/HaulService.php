@@ -4,14 +4,18 @@ namespace App\Services;
 
 use App\Enums\Shift;
 use App\Exceptions\OperationException;
+use App\Exceptions\OperationRejectedException;
 use App\Models\Haul;
 use App\Models\HaulRoute;
 use App\Models\Vehicle;
 use App\Repositories\HaulLookupRepository;
 use App\Repositories\HaulRepository;
 use App\Repositories\HaulRouteRepository;
+use App\Services\Ledger\HaulLedger;
 use App\Support\Sort;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class HaulService extends Service
@@ -21,6 +25,7 @@ class HaulService extends Service
         private HaulLookupRepository $lookups,
         private HaulRouteRepository $routes,
         private HaulPricing $pricing,
+        private HaulLedger $ledger,
     ) {}
 
     /**
@@ -94,6 +99,14 @@ class HaulService extends Service
     }
 
     /**
+     * The party a haul on this date is earned for, i.e. whoever owned the vehicle that day.
+     */
+    public function ownerOn(Vehicle $vehicle, CarbonInterface $date): ?string
+    {
+        return $vehicle->ownershipOn($date)?->party_id;
+    }
+
+    /**
      * Each trip is stored as its own haul under the same ticket number.
      *
      * @param  array<string, mixed>  $data
@@ -106,18 +119,25 @@ class HaulService extends Service
         return $this->transaction(function () use ($data, $userId, $vehicle, $route): Collection {
             $attributes = [
                 ...$this->attributes($data, $vehicle, $route),
-                'owner_id' => $vehicle->owner_id,
+                ...$this->pricing->quote($vehicle, $route),
+                'dump_party_id' => $route->dumpSite->party_id,
                 'driver_name' => $vehicle->driver_name,
                 'created_by' => $userId,
             ];
 
-            return collect(range(1, (int) $data['trips']))
-                ->map(fn (): Haul => $this->hauls->create($attributes));
+            return collect(range(1, (int) $data['trips']))->map(function () use ($attributes): Haul {
+                /** @var Haul $haul */
+                $haul = $this->hauls->create($attributes);
+                $this->ledger->sync($haul);
+
+                return $haul;
+            });
         });
     }
 
     /**
-     * Prices are re-quoted with the current tariff, as in the legacy entry screen.
+     * Prices are re-quoted only when the vehicle or route changes, so fixing the tonnage or time
+     * of an old ticket does not silently apply today's tariff.
      *
      * @param  array<string, mixed>  $data
      */
@@ -128,13 +148,21 @@ class HaulService extends Service
         return $this->transaction(function () use ($haul, $data, $vehicle, $route): Haul {
             $attributes = $this->attributes($data, $vehicle, $route);
 
+            if ($haul->vehicle_id !== $vehicle->id || $haul->route_id !== $route->id) {
+                $attributes = [...$attributes, ...$this->pricing->quote($vehicle, $route)];
+            }
+
             if ($haul->vehicle_id !== $vehicle->id) {
-                $attributes['owner_id'] = $vehicle->owner_id;
                 $attributes['driver_name'] = $vehicle->driver_name;
+            }
+
+            if ($haul->route_id !== $route->id) {
+                $attributes['dump_party_id'] = $route->dumpSite->party_id;
             }
 
             /** @var Haul $updated */
             $updated = $this->hauls->update($haul, $attributes);
+            $this->ledger->sync($updated);
 
             return $updated;
         });
@@ -142,7 +170,10 @@ class HaulService extends Service
 
     public function delete(Haul $haul): void
     {
-        $this->transaction(fn () => $this->hauls->delete($haul));
+        $this->transaction(function () use ($haul): void {
+            $this->ledger->void($haul);
+            $this->hauls->delete($haul);
+        });
     }
 
     /**
@@ -167,16 +198,23 @@ class HaulService extends Service
      */
     private function attributes(array $data, Vehicle $vehicle, HaulRoute $route): array
     {
+        $hauledAt = Carbon::parse($data['hauled_at']);
+        $party = $this->ownerOn($vehicle, $hauledAt);
+
+        if (! $party) {
+            throw new OperationRejectedException(sprintf('%s aracının %s tarihinde kayıtlı sahibi yok.', $vehicle->plate, $hauledAt->format('d.m.Y')));
+        }
+
         return [
             'ticket_no' => $data['ticket_no'],
             'vehicle_id' => $vehicle->id,
+            'party_id' => $party,
             'route_id' => $route->id,
             'site_id' => $route->site_id,
             'dump_site_id' => $route->dump_site_id,
             'tonnage' => (int) $data['tonnage'],
             'shift' => $data['shift'],
-            'hauled_at' => $data['hauled_at'],
-            ...$this->pricing->quote($vehicle, $route),
+            'hauled_at' => $hauledAt,
         ];
     }
 }

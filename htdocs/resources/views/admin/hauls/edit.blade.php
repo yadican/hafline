@@ -4,7 +4,7 @@
     <x-panel.page
         heading="Taşıma fişini düzenle"
         icon="fa-solid fa-pen-to-square"
-        :description="$haul->ticket_no.' numaralı fişi güncelleyin. Tutar, güncel güzergah fiyatlarıyla yeniden hesaplanır.'"
+        :description="$haul->ticket_no.' numaralı fişi güncelleyin. Plaka veya güzergah değişirse tutar güncel tarifeyle yeniden hesaplanır.'"
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Taşıma fişleri' => route('admin.hauls.index'), 'Düzenle' => null]"
         :back="route('admin.hauls.index')"
     >

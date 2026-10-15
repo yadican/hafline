@@ -8,20 +8,29 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'unit_price', 'site_id', 'active'])]
+#[Fillable(['name', 'party_id', 'unit_price', 'active'])]
 class FuelStation extends Model
 {
     /** @use HasFactory<FuelStationFactory> */
     use HasFactory, HasUuids, SoftDeletes;
 
     /**
-     * @return BelongsTo<Site, $this>
+     * @return BelongsTo<Party, $this>
      */
-    public function site(): BelongsTo
+    public function party(): BelongsTo
     {
-        return $this->belongsTo(Site::class)->withTrashed();
+        return $this->belongsTo(Party::class)->withTrashed();
+    }
+
+    /**
+     * @return BelongsToMany<Site, $this>
+     */
+    public function sites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'fuel_station_sites')->withTrashed()->orderBy('name');
     }
 
     /**

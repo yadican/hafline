@@ -833,7 +833,9 @@ span.flatpickr-weekday {
     font-size: 16px;
 }
 
-.panel-list .is-phone { width: 112px; }
+.panel-list .is-phone { width: 128px; }
+.panel-list .is-id { width: 120px; }
+.panel-list .is-balance { width: 160px; }
 .panel-list .is-date { width: 108px; }
 .panel-list .is-status { width: 84px; }
 .panel-list .is-shift { width: 72px; }
@@ -964,6 +966,39 @@ input.panel-plate::placeholder {
     }
 }
 
+.panel-balance {
+    white-space: nowrap;
+}
+
+.panel-balance abbr {
+    margin-left: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.panel-balance.is-debit abbr { color: #a2452f; }
+.panel-balance.is-credit abbr { color: #3d6340; }
+
+.panel-ledger-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-bottom: 8px;
+    color: var(--ui-muted);
+    font-size: 14px;
+}
+
+.panel-ledger-totals > span > span {
+    margin-left: 4px;
+    color: var(--ui-ink);
+    font-weight: 600;
+}
+
+.panel-subtable tr.is-reversal td {
+    color: var(--ui-muted);
+}
+
 .panel-muted-icon {
     width: 18px;
     margin-right: 4px;
@@ -1035,6 +1070,10 @@ input.panel-plate::placeholder {
 .panel-list th.is-center {
     width: 76px;
     text-align: center;
+}
+
+.panel-list th.is-center.is-count {
+    width: 128px;
 }
 
 .panel-list th.is-actions,

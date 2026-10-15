@@ -9,5 +9,6 @@
         :back="route('admin.sites.index')"
     >
         @include('admin.sites.partials.edit.form')
+        @include('admin.sites.partials.edit.links')
     </x-panel.page>
 @endsection

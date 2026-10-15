@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PartyRole;
 use App\Models\DumpSite;
 use App\Models\HaulRoute;
+use App\Models\Party;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -29,22 +31,32 @@ class DumpSiteTest extends TestCase
 
     public function test_admin_can_create_update_and_delete_a_dump_site(): void
     {
-        $this->actingAs($this->admin)->get(route('admin.dump-sites.create'))->assertOk();
+        $operator = Party::factory()->company()->create();
+        $other = Party::factory()->company()->create();
+
+        $this->actingAs($this->admin)->get(route('admin.dump-sites.create'))->assertOk()->assertSee($operator->name);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.dump-sites.store'), ['name' => 'KEMERBURGAZ', 'active' => '1'])
+            ->post(route('admin.dump-sites.store'), ['name' => 'KEMERBURGAZ', 'party_id' => $operator->id, 'active' => '1'])
             ->assertRedirect(route('admin.dump-sites.index'))
             ->assertSessionHas('success');
 
         $dumpSite = DumpSite::query()->where('name', 'KEMERBURGAZ')->firstOrFail();
+        $this->assertSame($operator->id, $dumpSite->party_id);
+        $this->assertTrue($operator->fresh()->hasRole(PartyRole::DumpOperator));
 
         $this->actingAs($this->admin)->get(route('admin.dump-sites.edit', $dumpSite))->assertOk();
 
         $this->actingAs($this->admin)
-            ->put(route('admin.dump-sites.update', $dumpSite), ['name' => 'KEMERBURGAZ', 'active' => '0'])
+            ->put(route('admin.dump-sites.update', $dumpSite), ['name' => 'KEMERBURGAZ', 'party_id' => $other->id, 'active' => '0'])
             ->assertRedirect(route('admin.dump-sites.index'));
 
         $this->assertFalse($dumpSite->refresh()->active);
+        $this->assertSame($other->id, $dumpSite->party_id);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.dump-sites.index'))
+            ->assertSee($other->name);
 
         $this->actingAs($this->admin)
             ->delete(route('admin.dump-sites.destroy', $dumpSite))
@@ -63,7 +75,7 @@ class DumpSiteTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('admin.dump-sites.store'), ['name' => ''])
-            ->assertSessionHasErrors('name');
+            ->assertSessionHasErrors(['name', 'party_id']);
 
         $this->assertDatabaseCount('dump_sites', 1);
     }

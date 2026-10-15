@@ -7,14 +7,25 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'active'])]
+#[Fillable(['name', 'party_id', 'active'])]
 class DumpSite extends Model
 {
     /** @use HasFactory<DumpSiteFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    /**
+     * The operator whose account is credited with dump fees.
+     *
+     * @return BelongsTo<Party, $this>
+     */
+    public function party(): BelongsTo
+    {
+        return $this->belongsTo(Party::class)->withTrashed();
+    }
 
     /**
      * @return HasMany<HaulRoute, $this>

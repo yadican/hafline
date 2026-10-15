@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Party;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
-use App\Models\VehicleOwner;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,7 +41,8 @@ class VehicleRequest extends FormRequest
                     $fail('Bu plaka başka bir araçta kayıtlı.');
                 }
             }],
-            'owner_id' => ['nullable', 'uuid', Rule::exists(VehicleOwner::class, 'id')->withoutTrashed()],
+            'owner_party_id' => [Rule::excludeIf($this->isUpdate()), 'required', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
+            'owned_from' => [Rule::excludeIf($this->isUpdate()), 'required', 'date', 'before_or_equal:today'],
             'vehicle_class_id' => ['required', 'uuid', Rule::exists(VehicleClass::class, 'id')->withoutTrashed()],
             'driver_name' => ['nullable', 'string', 'max:80'],
             'active' => ['boolean'],
@@ -55,10 +56,19 @@ class VehicleRequest extends FormRequest
     {
         return [
             'plate' => 'plaka',
-            'owner_id' => 'araç sahibi',
+            'owner_party_id' => 'araç sahibi',
+            'owned_from' => 'sahiplik başlangıcı',
             'vehicle_class_id' => 'araç sınıfı',
             'driver_name' => 'şoför',
             'active' => 'aktif',
         ];
+    }
+
+    /**
+     * Ownership changes after creation go through transfers so the history is kept.
+     */
+    private function isUpdate(): bool
+    {
+        return $this->route('vehicle') instanceof Vehicle;
     }
 }

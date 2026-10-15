@@ -7,9 +7,11 @@ use App\Models\Haul;
 use App\Models\Site;
 use App\Models\Vehicle;
 use App\Support\Sort;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\LazyCollection;
 
 class HaulRepository extends Repository
 {
@@ -79,6 +81,18 @@ class HaulRepository extends Repository
     }
 
     /**
+     * @return LazyCollection<int, Haul>
+     */
+    public function forVehicleSince(string $vehicleId, CarbonInterface $from): LazyCollection
+    {
+        return $this->query()
+            ->where('vehicle_id', $vehicleId)
+            ->where('hauled_at', '>=', $from->copy()->startOfDay())
+            ->orderBy('hauled_at')
+            ->lazyById();
+    }
+
+    /**
      * Without filters only the last few days are listed to keep data entry fast.
      *
      * @param  array<string, string>  $filters
@@ -99,7 +113,7 @@ class HaulRepository extends Repository
             ->when($filters['hauled_to'] ?? null, fn (Builder $query, string $to) => $query->where('hauled_at', '<=', Carbon::parse($to)))
             ->when($filters['entered_from'] ?? null, fn (Builder $query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)))
             ->when($filters['entered_to'] ?? null, fn (Builder $query, string $to) => $query->where('created_at', '<=', Carbon::parse($to)))
-            ->when($filters['owner'] ?? null, fn (Builder $query, string $owner) => $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('owner_id', $owner)))
+            ->when($filters['owner'] ?? null, fn (Builder $query, string $owner) => $query->where('party_id', $owner))
             ->when($filters['class'] ?? null, fn (Builder $query, string $class) => $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('vehicle_class_id', $class)))
             ->when($filters['plate'] ?? null, function (Builder $query, string $plate): void {
                 $like = '%'.addcslashes(Vehicle::normalizePlate($plate), '%_\\').'%';

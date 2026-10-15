@@ -190,6 +190,7 @@ class HaulRouteTest extends TestCase
 
         $this->actingAs($this->admin)->put(route('admin.dump-sites.update', $route->dump_site_id), [
             'name' => $route->dumpSite->name,
+            'party_id' => $route->dumpSite->party_id,
             'class_prices' => [$classId => '450'],
             'active' => '1',
         ])->assertSessionHasNoErrors();

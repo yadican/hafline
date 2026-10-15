@@ -9,5 +9,6 @@
         :back="route('admin.vehicles.index')"
     >
         @include('admin.vehicles.partials.edit.form')
+        @include('admin.vehicles.partials.edit.ownerships')
     </x-panel.page>
 @endsection

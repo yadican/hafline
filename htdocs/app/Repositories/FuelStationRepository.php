@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\FuelStation;
-use App\Models\Site;
+use App\Models\Party;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,12 +16,13 @@ class FuelStationRepository extends Repository
     }
 
     /**
-     * @param  array{q?: string, site?: string, active?: string}  $filters
+     * @param  array{q?: string, site?: string, party?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
     {
-        $query = $this->whereTerm($this->query()->with('site'), $filters['q'] ?? null, ['name'])
-            ->when($filters['site'] ?? null, fn (Builder $query, string $site) => $query->where('site_id', $site))
+        $query = $this->whereTerm($this->query()->with(['sites', 'party']), $filters['q'] ?? null, ['name'])
+            ->when($filters['site'] ?? null, fn (Builder $query, string $site) => $query->whereHas('sites', fn (Builder $query) => $query->whereKey($site)))
+            ->when($filters['party'] ?? null, fn (Builder $query, string $party) => $query->where('party_id', $party))
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         return $this->applySort($query, $sort)
@@ -38,8 +39,8 @@ class FuelStationRepository extends Repository
     {
         return [
             'name' => 'name',
-            'site' => fn (Builder $query, string $direction) => $query->orderBy(
-                Site::withTrashed()->select('name')->whereColumn('sites.id', 'fuel_stations.site_id'),
+            'party' => fn (Builder $query, string $direction) => $query->orderBy(
+                Party::withTrashed()->select('name')->whereColumn('parties.id', 'fuel_stations.party_id'),
                 $direction,
             ),
             'unit_price' => 'unit_price',

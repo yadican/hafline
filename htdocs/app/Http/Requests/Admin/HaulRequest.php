@@ -9,6 +9,7 @@ use App\Services\HaulService;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -49,7 +50,8 @@ class HaulRequest extends FormRequest
     }
 
     /**
-     * A closed route stays valid only for the haul already recorded on it.
+     * A closed route stays valid only for the haul already recorded on it; the vehicle must have
+     * an owner on the haul date because that party's account receives the earnings.
      *
      * @return array<int, Closure(Validator): void>
      */
@@ -69,6 +71,21 @@ class HaulRequest extends FormRequest
 
                 if (! $route) {
                     $validator->errors()->add('dump_site_id', 'Bu şantiye ile döküm yeri arasında aktif güzergah yok.');
+                }
+            },
+            function (Validator $validator): void {
+                if ($validator->errors()->hasAny(['plate', 'hauled_at'])) {
+                    return;
+                }
+
+                $vehicle = Vehicle::findByPlate($this->string('plate')->value());
+                $date = Carbon::parse($this->string('hauled_at')->value());
+
+                if ($vehicle && ! app(HaulService::class)->ownerOn($vehicle, $date)) {
+                    $validator->errors()->add('plate', sprintf(
+                        'Bu aracın %s tarihinde kayıtlı sahibi yok. Araç kartından sahiplik geçmişini kontrol edin.',
+                        $date->format('d.m.Y'),
+                    ));
                 }
             },
         ];

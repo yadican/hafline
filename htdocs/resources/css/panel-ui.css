@@ -1565,6 +1565,9 @@ td.um-cell,
 .panel-act:hover i[class*="fa-"] {
 	color: #fff;
 }
+.panel-contents {
+	display: contents;
+}
 .sr-only {
 	position: absolute;
 	width: 1px;

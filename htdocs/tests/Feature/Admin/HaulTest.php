@@ -6,12 +6,15 @@ use App\Models\DumpSite;
 use App\Models\DumpSiteClassPrice;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\LedgerEntry;
+use App\Models\Party;
 use App\Models\RouteClassPrice;
 use App\Models\RouteVehiclePrice;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class HaulTest extends TestCase
@@ -64,8 +67,54 @@ class HaulTest extends TestCase
         $this->assertTrue($hauls->every(fn (Haul $haul) => $haul->vehicle_id === $this->vehicle->id
             && $haul->price === '2500.00'
             && $haul->dump_price === '400.00'
-            && $haul->owner_id === $this->vehicle->owner_id
+            && $haul->party_id === $this->vehicle->currentOwnership->party_id
+            && $haul->dump_party_id === $this->route->dumpSite->party_id
             && $haul->created_by === $this->admin->id));
+    }
+
+    public function test_each_trip_credits_the_owner_and_the_dump_operator(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload(['trips' => 2]));
+
+        $owner = $this->vehicle->currentOwnership->party_id;
+        $operator = $this->route->dumpSite->party_id;
+
+        $this->assertSame(4, LedgerEntry::query()->count());
+        $this->assertSame(5000.0, (float) LedgerEntry::query()->where('party_id', $owner)->sum('credit'));
+        $this->assertSame(800.0, (float) LedgerEntry::query()->where('party_id', $operator)->sum('credit'));
+        $this->assertTrue(LedgerEntry::query()->get()->every(fn (LedgerEntry $entry) => $entry->source_type === 'haul'
+            && $entry->vehicle_id === $this->vehicle->id
+            && $entry->created_by === $this->admin->id
+            && str_starts_with((string) $entry->description, 'Taşıma fişi F-100')));
+    }
+
+    public function test_haul_goes_to_whoever_owned_the_vehicle_on_the_haul_date(): void
+    {
+        $seller = $this->vehicle->currentOwnership->party;
+        $buyer = Party::factory()->create();
+        $this->vehicle->currentOwnership->update(['ended_on' => now()->subDays(3)->toDateString()]);
+        $this->vehicle->ownerships()->create(['party_id' => $buyer->id, 'started_on' => now()->subDays(2)->toDateString()]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload(['ticket_no' => 'OLD', 'hauled_at' => now()->subDays(5)->format('Y-m-d\TH:i')]));
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload(['ticket_no' => 'NEW']));
+
+        $this->assertSame($seller->id, Haul::query()->where('ticket_no', 'OLD')->value('party_id'));
+        $this->assertSame($buyer->id, Haul::query()->where('ticket_no', 'NEW')->value('party_id'));
+    }
+
+    public function test_haul_is_rejected_when_the_vehicle_had_no_owner_that_day(): void
+    {
+        $this->vehicle->currentOwnership->update(['started_on' => now()->subDay()->toDateString()]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.hauls.store'), $this->payload(['hauled_at' => now()->subDays(10)->format('Y-m-d\TH:i')]))
+            ->assertSessionHasErrors('plate');
+
+        $this->assertDatabaseCount('hauls', 0);
+        $this->assertDatabaseCount('ledger_entries', 0);
     }
 
     public function test_vehicle_specific_route_price_wins_over_the_class_price(): void
@@ -154,7 +203,7 @@ class HaulTest extends TestCase
         $this->assertSame($this->route->dump_site_id, $haul->dump_site_id);
     }
 
-    public function test_update_requotes_the_price(): void
+    public function test_update_keeps_the_saved_price_unless_the_vehicle_or_route_changes(): void
     {
         $haul = Haul::factory()->create([
             'vehicle_id' => $this->vehicle->id,
@@ -171,19 +220,57 @@ class HaulTest extends TestCase
             ->assertSessionHas('success');
 
         $haul->refresh();
-        $this->assertSame('2500.00', $haul->price);
+        $this->assertSame('10.00', $haul->price);
         $this->assertSame(22, $haul->tonnage);
+
+        $other = HaulRoute::factory()->create(['site_id' => $this->route->site_id]);
+        RouteClassPrice::query()->create(['route_id' => $other->id, 'vehicle_class_id' => $this->vehicle->vehicle_class_id, 'price' => 3300]);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.hauls.update', $haul), $this->payload([
+                'ticket_no' => $haul->ticket_no,
+                'dump_site_id' => $other->dump_site_id,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $haul->refresh();
+        $this->assertSame('3300.00', $haul->price);
+        $this->assertSame($other->dumpSite->party_id, $haul->dump_party_id);
     }
 
-    public function test_admin_can_delete_a_haul(): void
+    public function test_update_reverses_the_old_ledger_lines_and_posts_new_ones(): void
     {
-        $haul = Haul::factory()->create();
+        $this->actingAs($this->admin)->post(route('admin.hauls.store'), $this->payload());
+        $haul = Haul::query()->sole();
+        $owner = $haul->party_id;
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.hauls.update', $haul), $this->payload(['ticket_no' => 'F-100', 'tonnage' => 30]));
+        $this->assertSame(2, LedgerEntry::query()->count(), 'Changing only the tonnage posts nothing.');
+
+        $other = HaulRoute::factory()->create(['site_id' => $this->route->site_id]);
+        RouteClassPrice::query()->create(['route_id' => $other->id, 'vehicle_class_id' => $this->vehicle->vehicle_class_id, 'price' => 3000]);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.hauls.update', $haul), $this->payload(['ticket_no' => 'F-100', 'dump_site_id' => $other->dump_site_id]));
+
+        $this->assertSame(2, LedgerEntry::query()->whereNotNull('reversal_of')->count());
+        $this->assertSame(-3000.0, (float) LedgerEntry::query()->where('party_id', $owner)->sum(DB::raw('debit - credit')));
+        $this->assertSame(0.0, (float) LedgerEntry::query()->where('party_id', $this->route->dumpSite->party_id)->sum(DB::raw('debit - credit')));
+    }
+
+    public function test_admin_can_delete_a_haul_and_its_ledger_lines_are_reversed(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.hauls.store'), $this->payload());
+        $haul = Haul::query()->sole();
 
         $this->actingAs($this->admin)
             ->delete(route('admin.hauls.destroy', $haul))
             ->assertRedirect(route('admin.hauls.index'));
 
         $this->assertSoftDeleted($haul);
+        $this->assertSame(4, LedgerEntry::query()->count());
+        $this->assertSame(0.0, (float) LedgerEntry::query()->sum(DB::raw('debit - credit')));
     }
 
     public function test_list_shows_recent_hauls_by_default_and_filters_on_search(): void
