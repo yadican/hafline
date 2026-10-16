@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('hauls', function (Blueprint $table) {
+            $table->comment('Taşıma İşlemleri');
             $table->uuid('id')->primary();
             $table->string('ticket_no', 20)->index();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
@@ -41,6 +42,7 @@ return new class extends Migration
         SchemaRules::check('hauls', 'prices', 'price >= 0 AND dump_price >= 0');
 
         Schema::create('haul_dumps', function (Blueprint $table) {
+            $table->comment('Taşıma İşlemlerinin Atık Yerine Boşaltılması');
             $table->uuid('id')->primary();
             $table->foreignUuid('haul_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
@@ -58,6 +60,7 @@ return new class extends Migration
         // Hours a machine worked at a site; party_id is the machine's owner on worked_on. A ticket with
         // an operator_rate also credits the operator (left null for salaried staff).
         Schema::create('machine_works', function (Blueprint $table) {
+            $table->comment('Makine Çalışmaları');
             $table->uuid('id')->primary();
             $table->string('ticket_no', 20)->index();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
@@ -86,6 +89,7 @@ return new class extends Migration
         SchemaRules::check('machine_works', 'operator_rate', 'operator_rate IS NULL OR (operator_rate >= 0 AND operator_id IS NOT NULL)');
 
         Schema::create('fuel_receipts', function (Blueprint $table) {
+            $table->comment('Yakıt Fişleri');
             $table->uuid('id')->primary();
             $table->string('ticket_no', 20)->nullable()->index();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
@@ -116,6 +120,7 @@ return new class extends Migration
         SchemaRules::check('fuel_receipts', 'fuel_party', '(fuel_station_id IS NULL) = (fuel_party_id IS NULL)');
 
         Schema::create('ticket_handovers', function (Blueprint $table) {
+            $table->comment('Bilet Teslimatları');
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignUuid('route_id')->nullable()->constrained('haul_routes')->restrictOnDelete();
@@ -136,6 +141,7 @@ return new class extends Migration
         SchemaRules::checkIn('ticket_handovers', 'shift', self::SHIFTS, nullable: true);
 
         Schema::create('dump_checks', function (Blueprint $table) {
+            $table->comment('Atık Kontrolleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('route_id')->nullable()->constrained('haul_routes')->restrictOnDelete();
             $table->unsignedSmallInteger('haul_count')->nullable();
@@ -153,6 +159,7 @@ return new class extends Migration
         SchemaRules::checkIn('dump_checks', 'shift', self::SHIFTS, nullable: true);
 
         Schema::create('fuel_checks', function (Blueprint $table) {
+            $table->comment('Yakıt Kontrolleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('fuel_station_id')->nullable()->constrained()->restrictOnDelete();
             $table->unsignedSmallInteger('haul_count')->nullable();

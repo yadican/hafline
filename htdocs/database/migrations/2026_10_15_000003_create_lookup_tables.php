@@ -15,6 +15,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cash_categories', function (Blueprint $table) {
+            $table->comment('Nakit Kategorileri');
             $table->uuid('id')->primary();
             $table->string('name', 100)->collation(SchemaRules::turkish());
             $table->string('direction', 10)->default(CashDirection::Both->value);
@@ -29,6 +30,7 @@ return new class extends Migration
         SchemaRules::checkIn('cash_categories', 'direction', CashDirection::values());
 
         Schema::create('banks', function (Blueprint $table) {
+            $table->comment('Bankalar');
             $table->uuid('id')->primary();
             $table->string('name', 100)->collation(SchemaRules::turkish());
             $table->string('representative', 100)->nullable();

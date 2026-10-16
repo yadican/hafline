@@ -9,6 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('examples', function (Blueprint $table) {
+            $table->comment('Örnek Form Alanları');
             $table->string('email')->nullable();
             $table->string('phone', 20)->nullable();
             $table->string('website')->nullable();

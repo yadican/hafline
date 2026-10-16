@@ -10,6 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('dump_site_payments', function (Blueprint $table) {
+            $table->comment('Döküm Sahası Ödemeleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('dump_site_id')->constrained()->restrictOnDelete();
             $table->string('payment_method', 20)->nullable()->index();
@@ -29,6 +30,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('dump_site_payments');
 
         Schema::create('site_transactions', function (Blueprint $table) {
+            $table->comment('Sistem İşlemleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('site_id')->constrained()->restrictOnDelete();
             $table->string('payment_method', 20)->nullable()->index();
@@ -48,6 +50,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('site_transactions');
 
         Schema::create('vehicle_payments', function (Blueprint $table) {
+            $table->comment('Araç Ödemeleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
@@ -68,6 +71,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('vehicle_payments');
 
         Schema::create('vehicle_receivables', function (Blueprint $table) {
+            $table->comment('Araç Alacakları');
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
@@ -88,6 +92,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('vehicle_receivables');
 
         Schema::create('vehicle_fines', function (Blueprint $table) {
+            $table->comment('Araç Cezaları');
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
@@ -115,6 +120,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('vehicle_fines');
 
         Schema::create('party_payments', function (Blueprint $table) {
+            $table->comment('Şirket / Şahıs Ödemeleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('party_id')->constrained()->restrictOnDelete();
             $table->string('payment_method', 20)->nullable()->index();
@@ -135,6 +141,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('party_payments');
 
         Schema::create('other_payments', function (Blueprint $table) {
+            $table->comment('Diğer Ödemeler');
             $table->uuid('id')->primary();
             $table->string('payment_method', 20)->nullable()->index();
             $table->foreignUuid('cash_category_id')->nullable()->index()->constrained()->restrictOnDelete();
@@ -152,6 +159,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('other_payments');
 
         Schema::create('cash_entries', function (Blueprint $table) {
+            $table->comment('Kasa Girişleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('cash_category_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->foreignUuid('bank_id')->nullable()->index()->constrained()->restrictOnDelete();

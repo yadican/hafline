@@ -10,6 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sites', function (Blueprint $table) {
+            $table->comment('Şantiyeler');
             $table->uuid('id')->primary();
             $table->string('name')->collation(SchemaRules::turkish());
             $table->boolean('active')->default(true);
@@ -21,6 +22,7 @@ return new class extends Migration
 
         // The composite FK requires the party to hold the role it is linked with.
         Schema::create('site_parties', function (Blueprint $table) {
+            $table->comment('Şantiyeler - Hesaplar');
             $table->foreignUuid('site_id')->constrained()->cascadeOnDelete();
             $table->uuid('party_id');
             $table->string('role', 20);
@@ -37,6 +39,7 @@ return new class extends Migration
         SchemaRules::checkIn('site_parties', 'role', ['customer', 'supplier', 'fuel', 'market']);
 
         Schema::create('dump_sites', function (Blueprint $table) {
+            $table->comment('Döküm Sahaları');
             $table->uuid('id')->primary();
             $table->string('name')->collation(SchemaRules::turkish());
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
@@ -48,6 +51,7 @@ return new class extends Migration
         });
 
         Schema::create('vehicle_classes', function (Blueprint $table) {
+            $table->comment('Araç Sınıfları');
             $table->uuid('id')->primary();
             $table->string('name', 60)->collation(SchemaRules::turkish());
             $table->boolean('hourly')->default(false);
@@ -59,6 +63,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('vehicle_classes', ['name']);
 
         Schema::create('vehicles', function (Blueprint $table) {
+            $table->comment('Araçlar');
             $table->uuid('id')->primary();
             $table->string('plate', 20);
             $table->string('plate_key', 20);
@@ -73,6 +78,7 @@ return new class extends Migration
 
         // Both dates are inclusive; an open period (ended_on NULL) is the current owner.
         Schema::create('vehicle_ownerships', function (Blueprint $table) {
+            $table->comment('Araç Sahiplikleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
@@ -88,6 +94,7 @@ return new class extends Migration
 
         // Hourly rate periods of machines; same inclusive, contiguous periods as ownerships.
         Schema::create('vehicle_rates', function (Blueprint $table) {
+            $table->comment('Araç Ücretleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('vehicle_id')->constrained()->restrictOnDelete();
             $table->decimal('hourly_rate', 12, 2);
@@ -103,6 +110,7 @@ return new class extends Migration
         SchemaRules::excludeOverlap('vehicle_rates', 'vehicle_id', 'started_on', 'ended_on');
 
         Schema::create('fuel_stations', function (Blueprint $table) {
+            $table->comment('Yakıt İstasyonları');
             $table->uuid('id')->primary();
             $table->string('name')->collation(SchemaRules::turkish());
             $table->foreignUuid('party_id')->index()->constrained()->restrictOnDelete();
@@ -115,6 +123,7 @@ return new class extends Migration
         });
 
         Schema::create('fuel_station_sites', function (Blueprint $table) {
+           $table->comment('Yakıt İstasyonları - Şantiyeler');
             $table->foreignUuid('fuel_station_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('site_id')->index()->constrained()->cascadeOnDelete();
 
@@ -122,6 +131,7 @@ return new class extends Migration
         });
 
         Schema::create('haul_routes', function (Blueprint $table) {
+            $table->comment('Taşıma Rotaları');
             $table->uuid('id')->primary();
             $table->foreignUuid('site_id')->index()->constrained()->restrictOnDelete();
             $table->foreignUuid('dump_site_id')->index()->constrained()->restrictOnDelete();
@@ -135,6 +145,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('haul_routes', ['site_id', 'dump_site_id']);
 
         Schema::create('route_class_prices', function (Blueprint $table) {
+            $table->comment('Rota - Araç Sınıfı Fiyatları');
             $table->uuid('id')->primary();
             $table->foreignUuid('route_id')->index()->constrained('haul_routes')->cascadeOnDelete();
             $table->foreignUuid('vehicle_class_id')->index()->constrained()->restrictOnDelete();
@@ -146,6 +157,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('route_class_prices', ['route_id', 'vehicle_class_id']);
 
         Schema::create('route_vehicle_prices', function (Blueprint $table) {
+            $table->comment('Rota - Araç Fiyatları');
             $table->uuid('id')->primary();
             $table->foreignUuid('route_id')->index()->constrained('haul_routes')->cascadeOnDelete();
             $table->foreignUuid('vehicle_id')->index()->constrained()->restrictOnDelete();
@@ -157,6 +169,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('route_vehicle_prices', ['route_id', 'vehicle_id']);
 
         Schema::create('dump_site_class_prices', function (Blueprint $table) {
+            $table->comment('Atık Yerleri - Araç Sınıfı Fiyatları');
             $table->uuid('id')->primary();
             $table->foreignUuid('dump_site_id')->index()->constrained()->cascadeOnDelete();
             $table->foreignUuid('vehicle_class_id')->index()->constrained()->restrictOnDelete();

@@ -10,6 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('employees', function (Blueprint $table) {
+            $table->comment('Çalışanlar');
             $table->uuid('id')->primary();
             $table->foreignUuid('party_id')->constrained()->restrictOnDelete();
             $table->date('started_on')->nullable();
@@ -25,6 +26,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('employees', ['party_id']);
 
         Schema::create('employee_periods', function (Blueprint $table) {
+            $table->comment('Çalışan Dönemleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('employee_id')->constrained()->restrictOnDelete();
             $table->date('started_on')->nullable();
@@ -38,6 +40,7 @@ return new class extends Migration
         SchemaRules::check('employee_periods', 'dates', 'ended_on IS NULL OR started_on IS NULL OR ended_on >= started_on');
 
         Schema::create('employee_salaries', function (Blueprint $table) {
+            $table->comment('Çalışan Maaşları');
             $table->uuid('id')->primary();
             $table->foreignUuid('employee_id')->index()->constrained()->restrictOnDelete();
             $table->date('period');
@@ -53,6 +56,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('employee_salaries', ['employee_id', 'period']);
 
         Schema::create('employee_payments', function (Blueprint $table) {
+            $table->comment('Çalışan Ödemeleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('employee_id')->constrained()->restrictOnDelete();
             $table->string('payment_method', 20)->nullable()->index();
@@ -72,6 +76,7 @@ return new class extends Migration
         SchemaRules::checkPaymentMethod('employee_payments');
 
         Schema::create('employee_bonuses', function (Blueprint $table) {
+            $table->comment('Çalışan Prim Ödülleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('employee_id')->constrained()->restrictOnDelete();
             $table->decimal('amount', 14, 2);

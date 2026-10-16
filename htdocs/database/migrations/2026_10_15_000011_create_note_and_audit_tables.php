@@ -10,6 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notes', function (Blueprint $table) {
+            $table->comment('Kullanıcı Notları');
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->nullable()->index()->constrained()->nullOnDelete();
             $table->text('body');
@@ -22,6 +23,7 @@ return new class extends Migration
 
         // Append-only: no updated_at / soft deletes.
         Schema::create('audit_logs', function (Blueprint $table) {
+            $table->comment('Sistem Günlükleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->nullable()->index()->constrained()->nullOnDelete();
             $table->string('action', 10);

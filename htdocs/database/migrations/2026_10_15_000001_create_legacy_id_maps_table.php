@@ -13,6 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('legacy_id_maps', function (Blueprint $table) {
+            $table->comment('Eski ID Eşlemeleri');
             $table->uuid('id')->primary();
             $table->string('legacy_table', 64);
             $table->string('legacy_id', 100);

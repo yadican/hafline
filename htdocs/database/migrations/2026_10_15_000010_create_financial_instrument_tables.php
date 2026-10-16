@@ -10,6 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('financial_instruments', function (Blueprint $table) {
+            $table->comment('Finansal Araçlar');
             $table->uuid('id')->primary();
             $table->string('kind', 20);
             $table->string('status', 20)->default('active');
@@ -49,6 +50,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('financial_instruments', ['given_no'], 'given_no IS NOT NULL');
 
         Schema::create('financial_instrument_installments', function (Blueprint $table) {
+            $table->comment('Finansal Araç Ödeme Taksitleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('financial_instrument_id')->constrained(indexName: 'fi_installments_instrument_foreign')->cascadeOnDelete();
             $table->decimal('amount', 14, 2);
@@ -67,6 +69,7 @@ return new class extends Migration
         SchemaRules::check('financial_instrument_installments', 'amount', 'amount > 0');
 
         Schema::create('financial_instrument_attachments', function (Blueprint $table) {
+            $table->comment('Finansal Araç Ekleri');
             $table->uuid('id')->primary();
             $table->foreignUuid('financial_instrument_id')->index('fi_attachments_instrument_index')->constrained(indexName: 'fi_attachments_instrument_foreign')->cascadeOnDelete();
             $table->string('path');

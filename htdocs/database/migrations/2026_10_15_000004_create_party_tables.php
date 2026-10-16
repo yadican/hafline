@@ -16,6 +16,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('company_groups', function (Blueprint $table) {
+            $table->comment('Şirket Grupları');
             $table->uuid('id')->primary();
             $table->uuid('parent_id')->nullable()->index();
             $table->string('name', 100)->collation(SchemaRules::turkish());
@@ -32,6 +33,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('company_groups', ['parent_id', 'name']);
 
         Schema::create('parties', function (Blueprint $table) {
+            $table->comment('Şirket / Şahıs Hesapları');
             $table->uuid('id')->primary();
             $table->string('type', 10);
             $table->string('name', 200)->collation(SchemaRules::turkish());
@@ -54,6 +56,7 @@ return new class extends Migration
         SchemaRules::checkIn('parties', 'type', ['person', 'company']);
 
         Schema::create('persons', function (Blueprint $table) {
+            $table->comment('Şahıs Hesapları');
             $table->foreignUuid('party_id')->primary()->constrained()->cascadeOnDelete();
             $table->string('first_name', 80)->collation(SchemaRules::turkish());
             $table->string('last_name', 80)->collation(SchemaRules::turkish());
@@ -62,6 +65,7 @@ return new class extends Migration
         });
 
         Schema::create('companies', function (Blueprint $table) {
+            $table->comment('Şirket Hesapları');
             $table->foreignUuid('party_id')->primary()->constrained()->cascadeOnDelete();
             $table->foreignUuid('company_group_id')->nullable()->index()->constrained()->restrictOnDelete();
             $table->string('title', 200)->collation(SchemaRules::turkish());
@@ -73,6 +77,7 @@ return new class extends Migration
 
         // No soft deletes: company_transactions references (party_id, role) with a composite FK.
         Schema::create('party_roles', function (Blueprint $table) {
+            $table->comment('Hesap Rolleri (müşteri, tedarikçi, araç sahibi, vb.)');
             $table->uuid('id')->primary();
             $table->foreignUuid('party_id')->constrained()->cascadeOnDelete();
             $table->string('role', 20);

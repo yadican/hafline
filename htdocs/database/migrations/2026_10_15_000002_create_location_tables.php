@@ -13,6 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cities', function (Blueprint $table) {
+            $table->comment('Şehirler');
             $table->uuid('id')->primary();
             $table->unsignedSmallInteger('code')->unique();
             $table->string('name', 100)->collation(SchemaRules::turkish());
@@ -23,6 +24,7 @@ return new class extends Migration
         SchemaRules::uniqueActive('cities', ['name']);
 
         Schema::create('districts', function (Blueprint $table) {
+            $table->comment('İlçeler');
             $table->uuid('id')->primary();
             $table->foreignUuid('city_id')->constrained()->restrictOnDelete();
             $table->unsignedInteger('code')->unique();
@@ -34,6 +36,7 @@ return new class extends Migration
         });
 
         Schema::create('neighborhoods', function (Blueprint $table) {
+            $table->comment('Mahalleler');
             $table->uuid('id')->primary();
             $table->foreignUuid('district_id')->constrained()->restrictOnDelete();
             $table->string('name', 100)->collation(SchemaRules::turkish());

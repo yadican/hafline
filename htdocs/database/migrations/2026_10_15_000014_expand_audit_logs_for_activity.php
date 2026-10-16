@@ -16,6 +16,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('audit_logs', function (Blueprint $table) {
+            $table->comment('Sistem Günlükleri');
             $table->string('method', 10)->nullable();
             $table->string('route')->nullable();
             $table->text('url')->nullable();

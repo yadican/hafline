@@ -10,6 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('company_transactions', function (Blueprint $table) {
+            $table->comment('Şirket İşlemleri');
             $table->uuid('id')->primary();
             $table->uuid('party_id');
             $table->string('role', 20);

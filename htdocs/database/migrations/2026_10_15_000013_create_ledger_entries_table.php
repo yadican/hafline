@@ -17,6 +17,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ledger_entries', function (Blueprint $table) {
+            $table->comment('Muhasebe Defteri');
             $table->uuid('id')->primary();
             $table->foreignUuid('party_id')->constrained()->restrictOnDelete();
             $table->date('occurred_on');
