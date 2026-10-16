@@ -10,7 +10,7 @@
             <td class="is-end">{{ \App\Models\FuelReceipt::formatQuantity($receipt->quantity) }}</td>
             <td class="is-end">{{ number_format((float) $receipt->unit_price, 4, ',', '.') }}</td>
             <td class="panel-tutar">{{ number_format((float) $receipt->amount, 2, ',', '.') }} TL</td>
-            <td>{{ $receipt->issued_on->translatedFormat('j F Y') }}</td>
+            <td>{{ $receipt->issued_on->translatedFormat('j.m.Y') }}</td>
             <td class="is-center"><x-ui.enum-badge :value="$receipt->shift" /></td>
             <x-table.actions
                 :edit="route('admin.fuel-receipts.edit', $receipt)"

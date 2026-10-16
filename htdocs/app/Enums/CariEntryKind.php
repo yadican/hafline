@@ -26,16 +26,16 @@ enum CariEntryKind: string
     public function label(): string
     {
         return match ($this) {
-            self::Supplier => 'Satıcı cari',
-            self::Customer => 'Alıcı cari',
-            self::Fuel => 'Satıcı petrol',
+            self::Supplier => 'Satıcı Cari',
+            self::Customer => 'Alıcı Cari',
+            self::Fuel => 'Satıcı Petrol',
             self::Market => 'Piyasa',
-            self::VehiclePayment => 'Plaka ödeme',
-            self::VehicleReceivable => 'Plaka alacak',
-            self::OwnerPayment => 'Araç sahibi ödemesi',
-            self::DumpPayment => 'Döküm yeri ödemesi',
-            self::Site => 'Şantiye gelir / gider',
-            self::Cash => 'Kasa nakit',
+            self::VehiclePayment => 'Plaka Ödeme',
+            self::VehicleReceivable => 'Plaka Alacak',
+            self::OwnerPayment => 'Araç Sahibi Ödemesi',
+            self::DumpPayment => 'Döküm Yeri Ödemesi',
+            self::Site => 'Şantiye Gelir / Gider',
+            self::Cash => 'Kasa Nakit',
         };
     }
 

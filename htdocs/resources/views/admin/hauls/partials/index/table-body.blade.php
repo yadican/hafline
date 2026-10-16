@@ -10,8 +10,8 @@
             <td>{{ $haul->dumpSite?->name }}</td>
             <td class="panel-tutar">{{ number_format((float) $haul->price, 2, ',', '.') }} TL</td>
             <td class="is-center">{{ $haul->tonnage }}</td>
-            <td>{{ $haul->hauled_at->translatedFormat('j F Y H:i') }}</td>
-            <td>{{ $haul->created_at->translatedFormat('j F Y H:i') }}</td>
+            <td>{{ $haul->hauled_at->translatedFormat('d.m.Y H:i') }}</td>
+            <td>{{ $haul->created_at->translatedFormat('d.m.Y H:i') }}</td>
             <td>{{ $haul->creator?->name ?? '—' }}</td>
             <td class="is-center"><x-ui.enum-badge :value="$haul->shift" /></td>
             <x-table.actions

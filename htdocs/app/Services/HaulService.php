@@ -31,7 +31,7 @@ class HaulService extends Service
     /**
      * @param  array<string, string>  $filters
      */
-    public function paginate(array $filters, ?Sort $sort = null, int $perPage = 30): LengthAwarePaginator
+    public function paginate(array $filters, ?Sort $sort = null, int $perPage = 50): LengthAwarePaginator
     {
         return $this->hauls->search($filters, $sort, $perPage);
     }

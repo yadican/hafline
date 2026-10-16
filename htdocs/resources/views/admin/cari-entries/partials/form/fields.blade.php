@@ -2,7 +2,7 @@
 
 <x-form.group legend="Hareket" icon="fa-solid fa-right-left" description="Eski kasa menüsündeki para girişleri">
     <x-form.field label="İşlem" for="kind">
-        <select id="kind" class="slct" x-model="kind" @disabled(! empty($locked))>
+        <select data-searchable-select id="kind" class="slct" x-model="kind" @disabled(! empty($locked))>
             @foreach ($options['kinds'] as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
             @endforeach
@@ -16,9 +16,9 @@
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
     <div x-show="kind !== 'cash'" x-cloak>
-        <x-form.select name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" />
+        <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" />
     </div>
-    <x-form.select name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
+    <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
     <x-form.input name="description" label="Açıklama" maxlength="255" />
 </x-form.group>
 
@@ -26,7 +26,7 @@
     @foreach (['supplier' => 'Satıcı', 'customer' => 'Alıcı', 'fuel' => 'Akaryakıt firması', 'market' => 'Piyasa firması', 'owner_payment' => 'Araç sahibi'] as $roleKind => $partyLabel)
         <div x-show="kind === '{{ $roleKind }}'" x-cloak>
             <x-form.field :label="$partyLabel" for="party-{{ $roleKind }}" name="party_id">
-                <select id="party-{{ $roleKind }}" name="party_id" class="slct" data-cari-party x-bind:disabled="kind !== '{{ $roleKind }}'">
+                <select data-searchable-select id="party-{{ $roleKind }}" name="party_id" class="slct" data-cari-party x-bind:disabled="kind !== '{{ $roleKind }}'">
                     <option value="">{{ $partyLabel }} seçin</option>
                     @foreach ($options['parties'][$roleKind] ?? [] as $id => $name)
                         <option value="{{ $id }}" @selected((string) old('party_id', $form['party_id'] ?? '') === (string) $id)>{{ $name }}</option>
@@ -53,14 +53,14 @@
         <div class="panel-cari-summary is-idle" data-cari-plate-status aria-live="polite">Plaka girilince araç sahibinin cari durumu gelir</div>
     </div>
     <div x-show="kind === 'dump_payment'" x-cloak>
-        <x-form.select name="dump_site_id" label="Döküm yeri" placeholder="Döküm yeri seçin" :options="$options['dumpSites']" />
+        <x-form.select searchable name="dump_site_id" label="Döküm yeri" placeholder="Döküm yeri seçin" :options="$options['dumpSites']" />
         <x-form.input name="cheque_no" label="Çek no" maxlength="20" />
     </div>
     <div x-show="['supplier', 'customer', 'fuel', 'market', 'site'].includes(kind)" x-cloak>
-        <x-form.select name="site_id" label="Şantiye" placeholder="Şantiye yok" :options="$options['sites']" />
+        <x-form.select searchable name="site_id" label="Şantiye" placeholder="Şantiye yok" :options="$options['sites']" />
     </div>
     <div x-show="['supplier', 'customer', 'fuel'].includes(kind)" x-cloak>
-        <x-form.select name="fuel_station_id" label="Yakıt yeri" placeholder="Yakıt yeri yok" :options="$options['stations']" />
+        <x-form.select searchable name="fuel_station_id" label="Yakıt yeri" placeholder="Yakıt yeri yok" :options="$options['stations']" />
     </div>
     <div x-show="kind === 'fuel'" x-cloak>
         <x-form.input name="liters" label="Litre" type="number" step="0.01" min="0" />

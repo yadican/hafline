@@ -12,8 +12,8 @@
             <td class="is-center">{{ \App\Models\MachineWork::formatHours($work->hours) }}</td>
             <td class="is-end">{{ number_format((float) $work->hourly_rate, 2, ',', '.') }} TL</td>
             <td class="panel-tutar">{{ number_format((float) $work->amount, 2, ',', '.') }} TL</td>
-            <td>{{ $work->worked_on->translatedFormat('j F Y') }}</td>
-            <td>{{ $work->created_at->translatedFormat('j F Y H:i') }}</td>
+            <td>{{ $work->worked_on->translatedFormat('j.m.Y') }}</td>
+            <td>{{ $work->created_at->translatedFormat('j.m.yY H:i') }}</td>
             <td>{{ $work->creator?->name ?? '—' }}</td>
             <td class="is-center"><x-ui.enum-badge :value="$work->shift" /></td>
             <x-table.actions
