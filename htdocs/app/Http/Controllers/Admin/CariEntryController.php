@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\CariEntryKind;
 use App\Http\Requests\Admin\CariEntryRequest;
 use App\Http\Requests\Admin\CariEntrySearchRequest;
+use App\Models\Party;
 use App\Services\CariEntryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -22,6 +23,7 @@ class CariEntryController extends AdminController
             'entries' => $this->entries->paginate($filters),
             'filters' => $filters,
             'kinds' => CariEntryKind::options(),
+            'parties' => Party::query()->orderBy('name')->pluck('name', 'id')->all(),
         ]);
     }
 

@@ -23,6 +23,7 @@ class CariEntrySearchRequest extends FormRequest
     {
         return [
             'kind' => ['nullable', Rule::enum(CariEntryKind::class)],
+            'party' => ['nullable', 'uuid'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
         ];
@@ -34,7 +35,7 @@ class CariEntrySearchRequest extends FormRequest
     public function filters(): array
     {
         return array_filter(
-            $this->safe()->only(['kind', 'from', 'to']),
+            $this->safe()->only(['kind', 'party', 'from', 'to']),
             fn ($value) => $value !== null && $value !== '',
         );
     }

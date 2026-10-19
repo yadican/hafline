@@ -11,6 +11,7 @@ use App\Models\Party;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
+use App\Models\VehicleReceivable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -71,6 +72,59 @@ class CariEntryTest extends TestCase
             ->assertOk()
             ->assertSee('Malzeme')
             ->assertSee('Satıcı cari');
+    }
+
+    public function test_party_filter_returns_only_entries_for_the_selected_party(): void
+    {
+        $selected = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+        $other = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+
+        foreach ([[$selected, 'Seçilen parti hareketi'], [$other, 'Diğer parti hareketi']] as [$party, $description]) {
+            $this->actingAs($this->admin)
+                ->post(route('admin.cari-entries.store'), [
+                    'kind' => 'supplier',
+                    'direction' => 'credit',
+                    'party_id' => $party->id,
+                    'amount' => '100',
+                    'occurred_on' => '2026-06-01',
+                    'description' => $description,
+                ])
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.index', ['party' => $selected->id]))
+            ->assertOk()
+            ->assertSee('Seçilen parti hareketi')
+            ->assertDontSee('Diğer parti hareketi');
+    }
+
+    public function test_party_filter_uses_the_party_uuid_for_vehicle_entries(): void
+    {
+        $selected = Party::factory()->create();
+        $other = Party::factory()->create();
+        $vehicle = Vehicle::factory()->ownedBy($selected, '2026-01-01')->create(['plate' => '34 CR 10']);
+
+        VehiclePayment::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'party_id' => $selected->id,
+            'amount' => 100,
+            'occurred_on' => '2026-06-01',
+            'description' => 'Seçilen araç ödemesi',
+        ]);
+        VehicleReceivable::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'party_id' => $other->id,
+            'amount' => 100,
+            'occurred_on' => '2026-06-01',
+            'description' => 'Diğer araç alacağı',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.index', ['party' => $selected->id]))
+            ->assertOk()
+            ->assertSee('Seçilen araç ödemesi')
+            ->assertDontSee('Diğer araç alacağı');
     }
 
     public function test_vehicle_payment_debits_the_owner_and_delete_reverses_it(): void

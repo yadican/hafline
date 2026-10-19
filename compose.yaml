@@ -6,6 +6,7 @@ networks:
 
 services:
   app:
+    image: hafline-app:latest
     build:
       context: ./docker/php
     container_name: hafline-app

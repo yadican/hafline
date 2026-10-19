@@ -91,33 +91,34 @@ class CariEntryRepository
                 ->leftJoin('parties as p', 'p.id', '=', 't.party_id')
                 ->whereNull('t.deleted_at')
                 ->when($kind, fn (QueryBuilder $query) => $query->where('t.role', $kind))
+                ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where('t.party_id', $party))
                 ->selectRaw('t.id, t.role as kind, p.name as label, t.debit, t.credit, t.occurred_on, t.description, t.payment_method'), $filters);
         }
 
         if ($keep('vehicle_payment')) {
-            $branches[] = $this->money('vehicle_payments', 'vehicle_payment', 'v.plate', 'vehicles as v', 'v.id', 't.vehicle_id', true, $filters);
+            $branches[] = $this->money('vehicle_payments', 'vehicle_payment', 'v.plate', 'vehicles as v', 'v.id', 't.vehicle_id', 't.party_id', true, $filters);
         }
 
         if ($keep('vehicle_receivable')) {
-            $branches[] = $this->money('vehicle_receivables', 'vehicle_receivable', 'v.plate', 'vehicles as v', 'v.id', 't.vehicle_id', false, $filters);
+            $branches[] = $this->money('vehicle_receivables', 'vehicle_receivable', 'v.plate', 'vehicles as v', 'v.id', 't.vehicle_id', 't.party_id', false, $filters);
         }
 
         if ($keep('owner_payment')) {
-            $branches[] = $this->money('party_payments', 'owner_payment', 'p.name', 'parties as p', 'p.id', 't.party_id', true, $filters);
+            $branches[] = $this->money('party_payments', 'owner_payment', 'p.name', 'parties as p', 'p.id', 't.party_id', 't.party_id', true, $filters);
         }
 
         if ($keep('dump_payment')) {
-            $branches[] = $this->money('dump_site_payments', 'dump_payment', 'd.name', 'dump_sites as d', 'd.id', 't.dump_site_id', true, $filters);
+            $branches[] = $this->money('dump_site_payments', 'dump_payment', 'd.name', 'dump_sites as d', 'd.id', 't.dump_site_id', 'd.party_id', true, $filters);
         }
 
-        if ($keep('site')) {
+        if ($keep('site') && ! isset($filters['party'])) {
             $branches[] = $this->dated(DB::table('site_transactions as t')
                 ->leftJoin('sites as s', 's.id', '=', 't.site_id')
                 ->whereNull('t.deleted_at')
                 ->selectRaw("t.id, 'site' as kind, s.name as label, t.debit, t.credit, t.occurred_on, t.description, t.payment_method"), $filters);
         }
 
-        if ($keep('cash')) {
+        if ($keep('cash') && ! isset($filters['party'])) {
             $branches[] = $this->dated(DB::table('cash_entries as t')
                 ->whereNull('t.deleted_at')
                 ->selectRaw("t.id, 'cash' as kind, 'Kasa' as label, t.debit, t.credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);
@@ -126,7 +127,7 @@ class CariEntryRepository
         return $branches;
     }
 
-    private function money(string $table, string $kind, string $label, string $join, string $joinKey, string $foreign, bool $debit, array $filters): QueryBuilder
+    private function money(string $table, string $kind, string $label, string $join, string $joinKey, string $foreign, ?string $partyColumn, bool $debit, array $filters): QueryBuilder
     {
         $amount = 'cast(t.amount as numeric(14,2))';
         $zero = 'cast(0 as numeric(14,2))';
@@ -134,6 +135,7 @@ class CariEntryRepository
         return $this->dated(DB::table($table.' as t')
             ->leftJoin($join, $joinKey, '=', $foreign)
             ->whereNull('t.deleted_at')
+            ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where($partyColumn, $party))
             ->selectRaw("t.id, '{$kind}' as kind, {$label} as label, ".($debit ? $amount : $zero).' as debit, '.($debit ? $zero : $amount).' as credit, t.occurred_on, t.description, t.payment_method'), $filters);
     }
 
