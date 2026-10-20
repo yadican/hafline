@@ -1,8 +1,8 @@
 <div class="panel-liste-bar">
     <x-search.form :action="route('admin.cash-categories.index')">
         <x-search.text name="q" label="Ara" :value="$filters['q'] ?? null" placeholder="Kategori adı" maxlength="100" />
-        <x-search.select name="direction" label="Yön" placeholder="Tüm yönler" :options="\App\Enums\CashDirection::options()" :value="$filters['direction'] ?? null" />
-        <x-search.select name="active" label="Durum" placeholder="Tüm durumlar" :options="['1' => 'Aktif', '0' => 'Pasif']" :value="$filters['active'] ?? null" />
+        <x-search.select searchable hide-search name="direction" label="Yön" placeholder="Tüm yönler" :options="\App\Enums\CashDirection::options()" :value="$filters['direction'] ?? null" />
+        <x-search.select searchable hide-search name="active" label="Durum" placeholder="Tüm durumlar" :options="['1' => 'Aktif', '0' => 'Pasif']" :value="$filters['active'] ?? null" />
 
         <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass">Ara</x-ui.button>
         @if (! empty($filters))

@@ -12,8 +12,8 @@
         <x-search.select name="f[site]" searchable label="Şantiye" placeholder="Tüm şantiyeler" :options="$options['sites']" :value="$filters['site'] ?? null" />
         <x-search.select name="f[dump_site]" searchable label="Döküm yeri" placeholder="Tüm döküm yerleri" :options="$options['dumpSites']" :value="$filters['dump_site'] ?? null" />
         <x-search.select name="f[owner]" searchable label="Plaka sahibi" placeholder="Tüm plaka sahipleri" :options="$options['owners']" :value="$filters['owner'] ?? null" />
-        <x-search.select name="f[class]" searchable label="Sınıf" placeholder="Tüm sınıflar" :options="$options['classes']" :value="$filters['class'] ?? null" />
-        <x-search.select name="f[shift]" searchable label="Vardiya" placeholder="Tüm vardiyalar" :options="$options['shifts']" :value="$filters['shift'] ?? null" />
+        <x-search.select name="f[class]" searchable hide-search label="Sınıf" placeholder="Tüm sınıflar" :options="$options['classes']" :value="$filters['class'] ?? null" />
+        <x-search.select name="f[shift]" searchable hide-search label="Vardiya" placeholder="Tüm vardiyalar" :options="$options['shifts']" :value="$filters['shift'] ?? null" />
         <x-search.select name="f[creator]" searchable label="İşlem yapan" placeholder="Tüm kullanıcılar" :options="$options['creators']" :value="$filters['creator'] ?? null" />
 
         <x-form.input name="f[hauled_from]" label="" type="datetime-local" :value="$filters['hauled_from'] ?? null" placeholder="Taşıma başlangıç" aria-label="Taşıma tarihi (başlangıç)" data-alt-format="d.m.Y H:i" />

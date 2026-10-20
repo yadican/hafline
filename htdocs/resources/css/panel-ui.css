@@ -774,6 +774,11 @@ td.um-cell,
 	gap: 8px;
 	margin: 0;
 }
+/* Searchable (select2) filtreler flex satırında %100 yayılmasın */
+.panel-liste-bar:not(.haul-search-bar) form > .select2-container {
+	flex: 0 0 auto;
+	max-width: 20em;
+}
 .panel-liste-bar input.slct,
 .panel-liste-bar select.slct {
 	box-sizing: border-box;
@@ -791,6 +796,16 @@ td.um-cell,
 .panel-liste-bar select.slct {
 	padding-right: 36px;
 }
+/* Takvim ikonu / temizle butonu ile placeholder çakışmasın */
+.panel-liste-bar .panel-date {
+	width: auto;
+	flex: 0 0 auto;
+}
+.panel-liste-bar .panel-date input.slct {
+	padding-left: 36px;
+	padding-right: 36px;
+	cursor: pointer;
+}
 .panel-liste-bar input.slct:focus,
 .panel-liste-bar select.slct:focus {
 	border-color: var(--ui-ochre);
@@ -799,6 +814,35 @@ td.um-cell,
 }
 .panel-liste-bar .uyari {
 	margin-left: auto;
+}
+
+/* Kompakt liste toolbar: mobilde alanlar ve butonlar tam genişlik */
+@media (max-width: 860px) {
+	.panel-liste-bar:not(.haul-search-bar) {
+		width: 100%;
+	}
+	.panel-liste-bar:not(.haul-search-bar) form {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		width: 100%;
+	}
+	.panel-liste-bar:not(.haul-search-bar) form > input.slct,
+	.panel-liste-bar:not(.haul-search-bar) form > select.slct,
+	.panel-liste-bar:not(.haul-search-bar) form > .panel-date,
+	.panel-liste-bar:not(.haul-search-bar) form > .select2-container {
+		width: 100% !important;
+		max-width: none;
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.panel-liste-bar:not(.haul-search-bar) form > .panel-date input.slct {
+		width: 100%;
+	}
+	.panel-liste-bar:not(.haul-search-bar) form > .panel-btn {
+		width: 100%;
+		justify-content: center;
+	}
 }
 
 .panel-table {
@@ -1831,7 +1875,7 @@ td.um-cell,
 	gap: 20px;
 	background:
 		linear-gradient(115deg, rgba(14, 17, 20, 0.92) 0%, rgba(14, 17, 20, 0.7) 48%, rgba(14, 17, 20, 0.48) 100%),
-		url("../img/login-santiye-bg.jpg") center center / cover no-repeat;
+		url("/img/login-santiye-bg.jpg") center center / cover no-repeat;
 	border: 1px solid var(--ui-border);
 	border-left: 3px solid var(--ui-brand-line);
 	color: #fff;

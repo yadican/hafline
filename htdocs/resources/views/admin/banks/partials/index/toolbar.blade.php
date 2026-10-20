@@ -1,7 +1,7 @@
 <div class="panel-liste-bar">
     <x-search.form :action="route('admin.banks.index')">
         <x-search.text name="q" label="Ara" :value="$filters['q'] ?? null" placeholder="Banka, temsilci, telefon, hesap no" maxlength="100" />
-        <x-search.select name="active" label="Durum" placeholder="Tüm durumlar" :options="['1' => 'Aktif', '0' => 'Pasif']" :value="$filters['active'] ?? null" />
+        <x-search.select searchable hide-search name="active" label="Durum" placeholder="Tüm durumlar" :options="['1' => 'Aktif', '0' => 'Pasif']" :value="$filters['active'] ?? null" />
 
         <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass">Ara</x-ui.button>
         @if (! empty($filters))

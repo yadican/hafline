@@ -1,6 +1,6 @@
 <div class="panel-liste-bar">
     <x-search.form :action="route('admin.cari-entries.index')">
-        <x-search.select searchable name="kind" label="İşlem" placeholder="Tüm işlemler" :options="$kinds" :value="$filters['kind'] ?? null" />
+        <x-search.select searchable hide-search name="kind" label="İşlem" placeholder="Tüm işlemler" :options="$kinds" :value="$filters['kind'] ?? null" />
         <x-search.select searchable name="party" label="Kime" placeholder="İşlem Yapan Cari Hesap" :options="$parties" :value="$filters['party'] ?? null" />
         <x-form.input name="from" label="" type="date" :value="$filters['from'] ?? null" aria-label="Başlangıç" />
         <x-form.input name="to" label="" type="date" :value="$filters['to'] ?? null" aria-label="Bitiş" />

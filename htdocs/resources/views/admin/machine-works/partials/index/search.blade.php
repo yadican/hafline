@@ -9,11 +9,11 @@
         />
         <x-search.text name="f[plate]" label="Plaka" :value="$filters['plate'] ?? null" class="haul-search-plate" maxlength="20" />
 
-        <x-search.select name="f[site]" label="Şantiye" placeholder="Tüm şantiyeler" :options="$options['sites']" :value="$filters['site'] ?? null" />
-        <x-search.select name="f[owner]" label="Makine sahibi" placeholder="Tüm makine sahipleri" :options="$options['owners']" :value="$filters['owner'] ?? null" />
-        <x-search.select name="f[operator]" label="Operatör" placeholder="Tüm operatörler" :options="$options['operators']" :value="$filters['operator'] ?? null" />
-        <x-search.select name="f[shift]" label="Vardiya" placeholder="Tüm vardiyalar" :options="$options['shifts']" :value="$filters['shift'] ?? null" />
-        <x-search.select name="f[creator]" label="İşlem yapan" placeholder="Tüm kullanıcılar" :options="$options['creators']" :value="$filters['creator'] ?? null" />
+        <x-search.select searchable name="f[site]" label="Şantiye" placeholder="Tüm şantiyeler" :options="$options['sites']" :value="$filters['site'] ?? null" />
+        <x-search.select searchable name="f[owner]" label="Makine sahibi" placeholder="Tüm makine sahipleri" :options="$options['owners']" :value="$filters['owner'] ?? null" />
+        <x-search.select searchable name="f[operator]" label="Operatör" placeholder="Tüm operatörler" :options="$options['operators']" :value="$filters['operator'] ?? null" />
+        <x-search.select searchable hide-search name="f[shift]" label="Vardiya" placeholder="Tüm vardiyalar" :options="$options['shifts']" :value="$filters['shift'] ?? null" />
+        <x-search.select searchable name="f[creator]" label="İşlem yapan" placeholder="Tüm kullanıcılar" :options="$options['creators']" :value="$filters['creator'] ?? null" />
 
         <x-form.input name="f[worked_from]" label="" type="date" :value="$filters['worked_from'] ?? null" placeholder="Çalışma başlangıç" aria-label="Çalışma tarihi (başlangıç)" />
         <x-form.input name="f[worked_to]" label="" type="date" :value="$filters['worked_to'] ?? null" placeholder="Çalışma bitiş" aria-label="Çalışma tarihi (bitiş)" />

@@ -209,7 +209,7 @@ button.panel-btn {
     transform: translateY(-50%);
 }
 
-.panel-form-grid .panel-date input.slct {
+.panel-date input.slct {
     padding-right: 36px;
     padding-left: 36px;
     cursor: pointer;
@@ -217,16 +217,16 @@ button.panel-btn {
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.panel-form-grid .panel-date input.slct:hover {
+.panel-date input.slct:hover {
     border-color: var(--ui-brand-line);
 }
 
-.panel-form-grid .panel-date input.slct.active {
+.panel-date input.slct.active {
     border-color: var(--ui-ochre);
     box-shadow: 0 0 0 2px rgba(176, 120, 42, 0.18);
 }
 
-.panel-form-grid .panel-date input.slct::placeholder {
+.panel-date input.slct::placeholder {
     color: #a59e95;
 }
 
