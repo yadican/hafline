@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\VehicleCache;
 use App\Enums\PartyRole;
 use App\Models\Party;
 use App\Models\Vehicle;
@@ -25,9 +26,13 @@ class VehicleService extends Service
     /**
      * @param  array{q?: string, owner?: string, class?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = VehicleCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->vehicles->search($filters, $sort, $perPage);
+        return VehicleCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn () => $this->vehicles->search($filters, $sort, $perPage),
+        );
     }
 
     /**

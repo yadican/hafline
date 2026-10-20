@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\VehicleClassCache;
 use App\Exceptions\OperationRejectedException;
 use App\Models\VehicleClass;
 use App\Repositories\VehicleClassRepository;
@@ -15,9 +16,13 @@ class VehicleClassService extends Service
     /**
      * @param  array{q?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = VehicleClassCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->classes->search($filters, $sort, $perPage);
+        return VehicleClassCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn () => $this->classes->search($filters, $sort, $perPage),
+        );
     }
 
     /**

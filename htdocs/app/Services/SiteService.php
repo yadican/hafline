@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\SiteCache;
 use App\Enums\PartyRole;
 use App\Exceptions\OperationRejectedException;
 use App\Models\Party;
@@ -22,9 +23,13 @@ class SiteService extends Service
     /**
      * @param  array{q?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = SiteCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->sites->search($filters, $sort, $perPage);
+        return SiteCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn() => $this->sites->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -41,7 +46,7 @@ class SiteService extends Service
     public function partyValues(Site $site): array
     {
         return collect(PartyRole::forSites())
-            ->mapWithKeys(fn (PartyRole $role) => [
+            ->mapWithKeys(fn(PartyRole $role) => [
                 $role->value => $site->parties->where('pivot.role', $role->value)->pluck('id')->values()->all(),
             ])
             ->all();
@@ -87,7 +92,7 @@ class SiteService extends Service
             throw new OperationRejectedException('Bu şantiyeye bağlı güzergahlar var. Şantiyeyi silmek yerine pasif yapabilirsiniz.');
         }
 
-        $this->transaction(fn () => $this->sites->delete($site));
+        $this->transaction(fn() => $this->sites->delete($site));
     }
 
     /**
@@ -101,7 +106,7 @@ class SiteService extends Service
             $ids = $parties[$role->value] ?? [];
 
             Party::withTrashed()->whereIn('id', $ids)->get()
-                ->each(fn (Party $party) => $party->assignRole($role));
+                ->each(fn(Party $party) => $party->assignRole($role));
 
             $site->parties()->withPivotValue('role', $role->value)->sync($ids);
         }

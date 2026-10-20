@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\HaulRouteCache;
 use App\Models\HaulRoute;
 use App\Models\RouteVehiclePrice;
 use App\Models\Vehicle;
@@ -28,9 +29,13 @@ class HaulRouteService extends Service
     /**
      * @param  array{site?: string, dump_site?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = HaulRouteCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->routes->search($filters, $sort, $perPage);
+        return HaulRouteCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn() => $this->routes->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -92,7 +97,7 @@ class HaulRouteService extends Service
 
     public function delete(HaulRoute $route): void
     {
-        $this->transaction(fn () => $this->routes->delete($route));
+        $this->transaction(fn() => $this->routes->delete($route));
     }
 
     /**
@@ -101,7 +106,7 @@ class HaulRouteService extends Service
     public function setVehiclePrice(HaulRoute $route, Vehicle $vehicle, string $price): RouteVehiclePrice
     {
         /** @var RouteVehiclePrice */
-        return $this->transaction(fn () => $route->vehiclePrices()->updateOrCreate(
+        return $this->transaction(fn() => $route->vehiclePrices()->updateOrCreate(
             ['vehicle_id' => $vehicle->id],
             ['price' => $price],
         ));
@@ -109,6 +114,6 @@ class HaulRouteService extends Service
 
     public function removeVehiclePrice(RouteVehiclePrice $price): void
     {
-        $this->transaction(fn () => $price->delete());
+        $this->transaction(fn() => $price->delete());
     }
 }

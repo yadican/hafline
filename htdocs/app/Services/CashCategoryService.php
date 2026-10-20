@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\CashCategoryCache;
 use App\Models\CashCategory;
 use App\Repositories\CashCategoryRepository;
 use App\Support\Sort;
@@ -14,9 +15,13 @@ class CashCategoryService extends Service
     /**
      * @param  array{q?: string, direction?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = CashCategoryCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->cashCategories->search($filters, $sort, $perPage);
+        return CashCategoryCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn () => $this->cashCategories->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -24,8 +29,14 @@ class CashCategoryService extends Service
      */
     public function create(array $attributes): CashCategory
     {
-        /** @var CashCategory */
-        return $this->transaction(fn () => $this->cashCategories->create($attributes));
+        return $this->transaction(function () use ($attributes): CashCategory {
+            /** @var CashCategory $cashCategory */
+            $cashCategory = $this->cashCategories->create($attributes);
+
+            CashCategoryCache::flush();
+
+            return $cashCategory;
+        });
     }
 
     /**
@@ -33,12 +44,21 @@ class CashCategoryService extends Service
      */
     public function update(CashCategory $cashCategory, array $attributes): CashCategory
     {
-        /** @var CashCategory */
-        return $this->transaction(fn () => $this->cashCategories->update($cashCategory, $attributes));
+        return $this->transaction(function () use ($cashCategory, $attributes): CashCategory {
+            /** @var CashCategory $updated */
+            $updated = $this->cashCategories->update($cashCategory, $attributes);
+
+            CashCategoryCache::flush();
+
+            return $updated;
+        });
     }
 
     public function delete(CashCategory $cashCategory): void
     {
-        $this->transaction(fn () => $this->cashCategories->delete($cashCategory));
+        $this->transaction(function () use ($cashCategory): void {
+            $this->cashCategories->delete($cashCategory);
+            CashCategoryCache::flush();
+        });
     }
 }

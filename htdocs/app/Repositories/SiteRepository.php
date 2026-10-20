@@ -22,11 +22,11 @@ class SiteRepository extends Repository
     {
         $query = $this->query()->withCount([
             'routes',
-            'parties' => fn (Builder $query) => $query->select(DB::raw('count(distinct parties.id)')),
+            'parties' => fn(Builder $query) => $query->select(DB::raw('count(distinct parties.id)')),
         ]);
 
         $query = $this->whereTerm($query, $filters['q'] ?? null, ['name'])
-            ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
+            ->when(isset($filters['active']), fn(Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         return $this->applySort($query, $sort)
             ->paginate($perPage)
@@ -40,8 +40,8 @@ class SiteRepository extends Repository
     public function options(bool $activeOnly = false, string|array|null $include = null): array
     {
         return $this->query()
-            ->when($activeOnly, fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query->where('active', true)->orWhereIn('id', array_filter((array) $include)),
+            ->when($activeOnly, fn(Builder $query) => $query->where(
+                fn(Builder $query) => $query->where('active', true)->orWhereIn('id', array_filter((array) $include)),
             ))
             ->orderBy('name')
             ->pluck('name', 'id')

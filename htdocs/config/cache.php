@@ -1,11 +1,23 @@
 <?php
 
+use App\Enums\CashDirection;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
+use App\Models\Bank;
+use App\Models\CashCategory;
 use App\Models\Company;
 use App\Models\Party;
 use App\Models\PartyRoleAssignment;
 use App\Models\Person;
+use App\Models\Vehicle;
+use App\Models\VehicleClass;
+use App\Models\VehicleOwnership;
+use App\Models\Site;
+use App\Models\DumpSite;
+use App\Models\DumpSiteClassPrice;
+use App\Models\FuelStation;
+use App\Models\HaulRoute;
+use App\Models\RouteClassPrice;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -130,7 +142,7 @@ return [
     |
     */
 
-    'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
+    'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')) . '-cache-'),
 
     /*
     |--------------------------------------------------------------------------
@@ -156,6 +168,18 @@ return [
         PartyRoleAssignment::class,
         PartyType::class,
         PartyRole::class,
+        CashCategory::class,
+        CashDirection::class,
+        Bank::class,
+        Vehicle::class,
+        VehicleClass::class,
+        VehicleOwnership::class,
+        Site::class,
+        DumpSite::class,
+        DumpSiteClassPrice::class,
+        FuelStation::class,
+        HaulRoute::class,
+        RouteClassPrice::class,
     ],
 
 ];

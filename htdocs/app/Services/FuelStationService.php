@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FuelStationCache;
 use App\Enums\PartyRole;
 use App\Models\FuelStation;
 use App\Repositories\FuelStationRepository;
@@ -22,9 +23,13 @@ class FuelStationService extends Service
     /**
      * @param  array{q?: string, site?: string, party?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = FuelStationCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->stations->search($filters, $sort, $perPage);
+        return FuelStationCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn() => $this->stations->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -92,6 +97,6 @@ class FuelStationService extends Service
 
     public function delete(FuelStation $station): void
     {
-        $this->transaction(fn () => $this->stations->delete($station));
+        $this->transaction(fn() => $this->stations->delete($station));
     }
 }

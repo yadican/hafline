@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\BankCache;
 use App\Models\Bank;
 use App\Repositories\BankRepository;
 use App\Support\Sort;
@@ -14,9 +15,13 @@ class BankService extends Service
     /**
      * @param  array{q?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = BankCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->banks->search($filters, $sort, $perPage);
+        return BankCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn () => $this->banks->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -24,8 +29,14 @@ class BankService extends Service
      */
     public function create(array $attributes): Bank
     {
-        /** @var Bank */
-        return $this->transaction(fn () => $this->banks->create($attributes));
+        return $this->transaction(function () use ($attributes): Bank {
+            /** @var Bank $bank */
+            $bank = $this->banks->create($attributes);
+
+            BankCache::flush();
+
+            return $bank;
+        });
     }
 
     /**
@@ -33,12 +44,21 @@ class BankService extends Service
      */
     public function update(Bank $bank, array $attributes): Bank
     {
-        /** @var Bank */
-        return $this->transaction(fn () => $this->banks->update($bank, $attributes));
+        return $this->transaction(function () use ($bank, $attributes): Bank {
+            /** @var Bank $updated */
+            $updated = $this->banks->update($bank, $attributes);
+
+            BankCache::flush();
+
+            return $updated;
+        });
     }
 
     public function delete(Bank $bank): void
     {
-        $this->transaction(fn () => $this->banks->delete($bank));
+        $this->transaction(function () use ($bank): void {
+            $this->banks->delete($bank);
+            BankCache::flush();
+        });
     }
 }

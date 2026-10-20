@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\DumpSiteCache;
 use App\Enums\PartyRole;
 use App\Exceptions\OperationRejectedException;
 use App\Models\DumpSite;
@@ -26,9 +27,13 @@ class DumpSiteService extends Service
     /**
      * @param  array{q?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = DumpSiteCache::PER_PAGE): LengthAwarePaginator
     {
-        return $this->dumpSites->search($filters, $sort, $perPage);
+        return DumpSiteCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn() => $this->dumpSites->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -89,6 +94,6 @@ class DumpSiteService extends Service
             throw new OperationRejectedException('Bu döküm yerine bağlı güzergahlar var. Döküm yerini silmek yerine pasif yapabilirsiniz.');
         }
 
-        $this->transaction(fn () => $this->dumpSites->delete($dumpSite));
+        $this->transaction(fn() => $this->dumpSites->delete($dumpSite));
     }
 }
