@@ -3,8 +3,8 @@
     @method('PUT')
     <x-form.grid :model="$haulRoute">
         <x-form.group legend="Güzergah" icon="fa-solid fa-route" description="Şantiye, döküm yeri ve kullanım durumu">
-            <x-form.select name="site_id" label="Şantiye" :options="$options['sites']" placeholder="Şantiye seçin" required />
-            <x-form.select name="dump_site_id" label="Döküm yeri" :options="$options['dumpSites']" placeholder="Döküm yeri seçin" required />
+            <x-form.select searchable="true" name="site_id" label="Şantiye" :options="$options['sites']" placeholder="Şantiye seçin" required />
+            <x-form.select searchable="true" name="dump_site_id" label="Döküm yeri" :options="$options['dumpSites']" placeholder="Döküm yeri seçin" required />
             <x-form.money name="price" label="Temel fiyat" placeholder="0,00" />
             <x-form.money name="bonus" label="Prim" placeholder="0,00" />
             <x-form.checkbox name="active" label="Durum" text="Taşıma fişlerinde seçilebilsin" />

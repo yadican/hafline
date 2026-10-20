@@ -1,5 +1,17 @@
 <?php
 
+use App\Enums\PartyRole;
+use App\Enums\PartyType;
+use App\Models\Company;
+use App\Models\Party;
+use App\Models\PartyRoleAssignment;
+use App\Models\Person;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon as IlluminateCarbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 return [
@@ -131,6 +143,19 @@ return [
     |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => [
+        LengthAwarePaginator::class,
+        EloquentCollection::class,
+        Collection::class,
+        IlluminateCarbon::class,
+        Carbon::class,
+        CarbonImmutable::class,
+        Party::class,
+        Person::class,
+        Company::class,
+        PartyRoleAssignment::class,
+        PartyType::class,
+        PartyRole::class,
+    ],
 
 ];

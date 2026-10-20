@@ -111,14 +111,16 @@ class CariEntryRepository
             $branches[] = $this->money('dump_site_payments', 'dump_payment', 'd.name', 'dump_sites as d', 'd.id', 't.dump_site_id', 'd.party_id', true, $filters);
         }
 
-        if ($keep('site') && ! isset($filters['party'])) {
+        if ($keep('site')) {
             $branches[] = $this->dated(DB::table('site_transactions as t')
                 ->leftJoin('sites as s', 's.id', '=', 't.site_id')
                 ->whereNull('t.deleted_at')
+                ->leftJoin('site_parties as sp', 'sp.site_id', '=', 't.site_id')
+                ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where('sp.party_id', $party))
                 ->selectRaw("t.id, 'site' as kind, s.name as label, t.debit, t.credit, t.occurred_on, t.description, t.payment_method"), $filters);
         }
 
-        if ($keep('cash') && ! isset($filters['party'])) {
+        if ($keep('cash')) {
             $branches[] = $this->dated(DB::table('cash_entries as t')
                 ->whereNull('t.deleted_at')
                 ->selectRaw("t.id, 'cash' as kind, 'Kasa' as label, t.debit, t.credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);

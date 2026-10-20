@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\PartyCache;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
 use App\Exceptions\OperationRejectedException;
@@ -37,9 +38,13 @@ class PartyService extends Service
     /**
      * @param  array{q?: string, type?: string, role?: string, active?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
-        return $this->parties->search($filters, $sort, $perPage);
+        return PartyCache::rememberFirstPage(
+            $filters,
+            $sort,
+            fn () => $this->parties->search($filters, $sort, $perPage),
+        );
     }
 
     /**
@@ -106,6 +111,8 @@ class PartyService extends Service
 
             $this->syncRoles($party, $data['roles'] ?? []);
 
+            PartyCache::flush();
+
             return $party;
         });
     }
@@ -125,6 +132,8 @@ class PartyService extends Service
 
             $this->syncRoles($updated, $data['roles'] ?? []);
 
+            PartyCache::flush();
+
             return $updated;
         });
     }
@@ -135,7 +144,10 @@ class PartyService extends Service
             throw new OperationRejectedException('Bu cari kartın araç, döküm yeri veya cari hareket kaydı var; silinemez. Kullanılmayacaksa pasife alın.');
         }
 
-        $this->transaction(fn () => $this->parties->delete($party));
+        $this->transaction(function () use ($party): void {
+            $this->parties->delete($party);
+            PartyCache::flush();
+        });
     }
 
     /**
