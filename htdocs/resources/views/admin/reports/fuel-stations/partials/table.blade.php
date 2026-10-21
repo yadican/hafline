@@ -13,11 +13,12 @@
 <div class="report-matrix">
     <div class="report-heading">
         <h2 class="report-title">{{ $report['title'] }}</h2>
+        <p class="report-subtitle">{{ $report['subtitle'] }}</p>
     </div>
 
-    <x-table.list class="report-table">
+    <x-table.list class="report-table fuel-station-table">
         <thead>
-            <tr>
+            <tr class="report-col-head">
                 <th class="is-center">Sıra</th>
                 <th>Plaka / Araç</th>
                 <th class="is-end">Litre</th>

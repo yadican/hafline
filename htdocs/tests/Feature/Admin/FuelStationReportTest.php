@@ -84,7 +84,8 @@ class FuelStationReportTest extends TestCase
             ]));
 
         $response->assertOk()
-            ->assertSee('ALTUR Yakıt Yeri Raporu', false)
+            ->assertSee('Yakıt Yeri Raporu', false)
+            ->assertSee('ALTUR 2026 Eylül Raporu', false)
             ->assertSee('CAT 955', false)
             ->assertSee('34 L 02', false);
 

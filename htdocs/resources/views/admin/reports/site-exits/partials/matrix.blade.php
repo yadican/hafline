@@ -11,14 +11,14 @@
 @endphp
 
 <div class="site-exit-matrix">
-    <div class="site-exit-heading">
-        <h2 class="site-exit-title">{{ $matrix['title'] }}</h2>
-        <p class="site-exit-subtitle">{{ $matrix['subtitle'] }}</p>
+    <div class="report-heading site-exit-heading">
+        <h2 class="report-title site-exit-title">{{ $matrix['title'] }}</h2>
+        <p class="report-subtitle site-exit-subtitle">{{ $matrix['subtitle'] }}</p>
     </div>
 
-    <x-table.list class="site-exit-table">
+    <x-table.list class="site-exit-table report-matrix-table">
         <thead>
-            <tr>
+            <tr class="report-col-head">
                 <th>Plaka</th>
                 @foreach ($matrix['columns'] as $column)
                     <th class="is-center">{{ $column['label'] }}</th>

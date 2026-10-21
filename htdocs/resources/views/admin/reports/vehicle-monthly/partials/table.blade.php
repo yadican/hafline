@@ -15,17 +15,17 @@
 <div class="report-matrix">
     <div class="report-heading">
         <h2 class="report-title">{{ $report['title'] }}</h2>
-        <p class="report-subtitle">{{ $report['period_label'] }}</p>
+        <p class="report-subtitle">{{ $report['plate'] }} · {{ $report['period_label'] }}</p>
     </div>
 
     <x-table.list class="report-table vehicle-monthly-table">
         <thead>
-            <tr>
-                <th colspan="3" class="is-center">{{ $report['plate'] }}</th>
+            <tr class="report-vehicle-head">
+                <th colspan="3" class="report-vehicle-plate">{{ $report['plate'] }}</th>
                 <th colspan="2" class="is-center">Yapılan İşin Açıklaması</th>
                 <th colspan="2" class="is-center">Cari Hesap Durumu</th>
             </tr>
-            <tr>
+            <tr class="report-col-head">
                 <th class="is-center">Sıra</th>
                 <th>Tarih</th>
                 <th>Açıklama</th>

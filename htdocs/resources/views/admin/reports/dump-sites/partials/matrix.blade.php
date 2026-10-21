@@ -16,9 +16,9 @@
         <p class="report-subtitle">{{ $matrix['subtitle'] }}</p>
     </div>
 
-    <x-table.list class="report-table">
+    <x-table.list class="report-table report-matrix-table">
         <thead>
-            <tr>
+            <tr class="report-col-head">
                 <th>Plaka</th>
                 @foreach ($matrix['columns'] as $column)
                     <th class="is-center">{{ $column['label'] }}</th>

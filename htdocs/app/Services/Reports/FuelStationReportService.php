@@ -36,6 +36,7 @@ class FuelStationReportService extends Service
      * @param  array{fuel_station: string, period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, class?: string|null}  $filters
      * @return array{
      *     title: string,
+     *     subtitle: string,
      *     station_name: string,
      *     period: 'month'|'range',
      *     year: ?int,
@@ -82,7 +83,8 @@ class FuelStationReportService extends Service
         }
 
         return [
-            'title' => $station->name.' Yakıt Yeri Raporu',
+            'title' => 'Yakıt Yeri Raporu',
+            'subtitle' => "{$station->name} {$meta['label']} Raporu",
             'station_name' => $station->name,
             'period' => $meta['period'],
             'year' => $meta['year'],
@@ -154,7 +156,7 @@ class FuelStationReportService extends Service
 
     /**
      * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
-     * @return array{0: Carbon, 1: Carbon, 2: array{period: 'month'|'range', year: ?int, month: ?int, month_label: ?string, from: string, to: string}}
+     * @return array{0: Carbon, 1: Carbon, 2: array{period: 'month'|'range', label: string, year: ?int, month: ?int, month_label: ?string, from: string, to: string}}
      */
     private function resolvePeriod(array $filters): array
     {
@@ -167,6 +169,7 @@ class FuelStationReportService extends Service
                 $toInclusive->copy()->addDay(),
                 [
                     'period' => 'range',
+                    'label' => $from->format('d.m.Y').' – '.$toInclusive->format('d.m.Y'),
                     'year' => null,
                     'month' => null,
                     'month_label' => null,
@@ -179,15 +182,17 @@ class FuelStationReportService extends Service
         $year = (int) $filters['year'];
         $month = (int) $filters['month'];
         $from = Carbon::create($year, $month, 1)->startOfDay();
+        $monthLabel = SiteExitReportService::MONTHS[$month];
 
         return [
             $from,
             $from->copy()->addMonth(),
             [
                 'period' => 'month',
+                'label' => "{$year} {$monthLabel}",
                 'year' => $year,
                 'month' => $month,
-                'month_label' => SiteExitReportService::MONTHS[$month],
+                'month_label' => $monthLabel,
                 'from' => $from->toDateString(),
                 'to' => $from->copy()->endOfMonth()->toDateString(),
             ],
