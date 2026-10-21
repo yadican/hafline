@@ -792,10 +792,14 @@ a.um-title.um-active {
 .panel-liste-bar form.grid .select2-container,
 .panel-liste-bar form.grid .panel-date,
 .panel-liste-bar form.grid .panel-field,
+.panel-liste-bar form.grid .panel-autocomplete,
 .panel-liste-bar form.grid input.slct,
 .panel-liste-bar form.grid select.slct {
 	width: 100%;
 	max-width: none;
+}
+.panel-liste-bar form.grid .panel-autocomplete input.slct {
+	width: 100%;
 }
 .panel-liste-bar form.grid .panel-date input.slct {
 	width: 100%;

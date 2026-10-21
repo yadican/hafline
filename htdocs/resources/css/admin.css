@@ -5,6 +5,8 @@
 @import "select2/dist/css/select2.css";
 @import "./panel-ui.css";
 @import "./hauls.css";
+@import "./reports.css";
+
 
 @source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
 @source "../../storage/framework/views/*.php";

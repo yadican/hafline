@@ -1,0 +1,156 @@
+/* Operasyon raporları (şantiye çıkış, döküm yeri, …) */
+
+.report-filters,
+.site-exit-filters {
+	margin-bottom: 16px;
+}
+
+.report-heading,
+.site-exit-heading {
+	margin: 8px 0 16px;
+	text-align: center;
+}
+
+.report-title,
+.site-exit-title {
+	margin: 0;
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--ui-ink);
+}
+
+.report-subtitle,
+.site-exit-subtitle {
+	margin: 6px 0 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--ui-ink);
+}
+
+.site-exit-report .panel-list-scroll,
+.dump-site-report .panel-list-scroll,
+.fuel-station-report .panel-list-scroll,
+.vehicle-monthly-report .panel-list-scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.vehicle-monthly-table.panel-list {
+	min-width: 960px;
+}
+
+.report-empty-note {
+	padding: 18px 12px;
+	color: var(--ui-muted, #6b6358);
+}
+
+.report-carryover td {
+	font-weight: 600;
+}
+
+.report-footer-meta {
+	display: inline-block;
+	margin-left: 12px;
+	font-weight: 500;
+	font-size: 0.92em;
+}
+
+.vehicle-monthly-table tfoot tr.is-balance th {
+	font-size: 1.05em;
+}
+
+.report-table.panel-list,
+.site-exit-table.panel-list {
+	table-layout: auto;
+	min-width: 640px;
+}
+
+.report-table th,
+.report-table td,
+.site-exit-table th,
+.site-exit-table td {
+	white-space: nowrap;
+}
+
+.report-table th.is-center,
+.report-table td.is-center,
+.site-exit-table th.is-center,
+.site-exit-table td.is-center {
+	text-align: center;
+}
+
+.report-table th.is-end,
+.report-table td.is-end {
+	text-align: right;
+}
+
+.report-table .report-total,
+.report-table tfoot th,
+.site-exit-table .site-exit-total,
+.site-exit-table tfoot th {
+	font-weight: 700;
+}
+
+.report-table thead th,
+.site-exit-table thead th {
+	background: var(--color-ochre-soft, #f3ebe0);
+}
+
+.report-table tbody tr:nth-child(even) td,
+.site-exit-table tbody tr:nth-child(even) td {
+	background: #faf7f2;
+}
+
+.report-table tfoot tr,
+.site-exit-table tfoot tr {
+	background: var(--color-ochre-soft, #f3ebe0);
+}
+
+.report-actions,
+.site-exit-actions {
+	margin-top: 12px;
+	justify-content: flex-start;
+	gap: 8px;
+}
+
+@media print {
+	body:has(.site-exit-report) .app-topbar,
+	body:has(.site-exit-report) .um-cell,
+	body:has(.site-exit-report) .app-footer,
+	body:has(.dump-site-report) .app-topbar,
+	body:has(.dump-site-report) .um-cell,
+	body:has(.dump-site-report) .app-footer,
+	body:has(.fuel-station-report) .app-topbar,
+	body:has(.fuel-station-report) .um-cell,
+	body:has(.fuel-station-report) .app-footer,
+	body:has(.vehicle-monthly-report) .app-topbar,
+	body:has(.vehicle-monthly-report) .um-cell,
+	body:has(.vehicle-monthly-report) .app-footer,
+	.site-exit-report .panel-title,
+	.site-exit-report .site-exit-filters,
+	.site-exit-report .site-exit-actions,
+	.dump-site-report .panel-title,
+	.dump-site-report .report-filters,
+	.dump-site-report .report-actions,
+	.fuel-station-report .panel-title,
+	.fuel-station-report .report-filters,
+	.fuel-station-report .report-actions,
+	.vehicle-monthly-report .panel-title,
+	.vehicle-monthly-report .report-filters,
+	.vehicle-monthly-report .report-actions {
+		display: none !important;
+	}
+
+	.site-exit-report .panel-list-scroll,
+	.dump-site-report .panel-list-scroll,
+	.fuel-station-report .panel-list-scroll,
+	.vehicle-monthly-report .panel-list-scroll {
+		overflow: visible;
+	}
+
+	.report-table.panel-list,
+	.site-exit-table.panel-list {
+		min-width: 0;
+		width: 100%;
+	}
+}

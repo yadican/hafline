@@ -18,6 +18,10 @@ use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MachineWorkController;
 use App\Http\Controllers\Admin\MachineWorkLookupController;
 use App\Http\Controllers\Admin\PartyController;
+use App\Http\Controllers\Admin\Reports\DumpSiteReportController;
+use App\Http\Controllers\Admin\Reports\FuelStationReportController;
+use App\Http\Controllers\Admin\Reports\SiteExitReportController;
+use App\Http\Controllers\Admin\Reports\VehicleMonthlyReportController;
 use App\Http\Controllers\Admin\RouteVehiclePriceController;
 use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\VehicleClassController;
@@ -77,4 +81,13 @@ Route::middleware('auth')->group(function () {
     Route::get('fuel-receipts/lookups/vehicles', [FuelReceiptLookupController::class, 'vehicles'])->name('fuel-receipts.lookups.vehicles');
     Route::get('fuel-receipts/lookups/stations/{fuelStation}', [FuelReceiptLookupController::class, 'station'])->name('fuel-receipts.lookups.station');
     Route::resource('fuel-receipts', FuelReceiptController::class)->except(['show']);
+
+    Route::get('reports/site-exits', [SiteExitReportController::class, 'index'])->name('reports.site-exits');
+    Route::get('reports/site-exits/export', [SiteExitReportController::class, 'export'])->name('reports.site-exits.export');
+    Route::get('reports/dump-sites', [DumpSiteReportController::class, 'index'])->name('reports.dump-sites');
+    Route::get('reports/dump-sites/export', [DumpSiteReportController::class, 'export'])->name('reports.dump-sites.export');
+    Route::get('reports/fuel-stations', [FuelStationReportController::class, 'index'])->name('reports.fuel-stations');
+    Route::get('reports/fuel-stations/export', [FuelStationReportController::class, 'export'])->name('reports.fuel-stations.export');
+    Route::get('reports/vehicle-monthly', [VehicleMonthlyReportController::class, 'index'])->name('reports.vehicle-monthly');
+    Route::get('reports/vehicle-monthly/export', [VehicleMonthlyReportController::class, 'export'])->name('reports.vehicle-monthly.export');
 });

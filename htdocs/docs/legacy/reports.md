@@ -51,7 +51,7 @@ Yeni şemada bütün araç hareketlerinde `owner_id` snapshot'ı var (`hauls`, `
 
 4. **Bankalı nakit satırları** (`cash_entries.bank_id` dolu): kasaya dahil mi, ayrı filtre mi?
 5. **Araç Maliyet "Piyasa":** market fişlerinin `credit` tarafı mı, `credit − debit` mi?
-6. **Boş kolonlar:** "Damper Ölçü" ve "PZ" eski raporlarda hep boştu: kaldırılsın mı, tanımlansın mı?
+6. ~~**Boş kolonlar:** "Damper Ölçü" ve "PZ"~~ → eski raporlarda hep boştu; plaka aylık dökümden kaldırıldı.
 7. **Şantiye Cari Yakıt:** Nakliye brüt tutar ve kamyon yakıtı sahibin hakedişinden düştüğü için Durum kamyon yakıtını iki kez sayar. İleride Yakıt "şirket aracı" ve "sahibe yansıyan" diye ayrılabilir.
 
 ## Envanter
@@ -105,10 +105,8 @@ Eski "Şöför" kelimesi bu raporlarda **plaka sahibi** demektir.
 | Sıra | PHP sayacı | satır no |
 | Tarih | hep boş | detay satırlarında `occurred_on` |
 | Açıklama | taşıma: güzergahın `Santiye_Adi - DY_Adi`; yakıt: `Yakit_Yeri_Adi`; ödeme/alacak: açıklama | taşıma: `sites.name - dump_sites.name` (`H.site_id`, `H.dump_site_id`); yakıt: `fuel_stations.name`; diğer: `description` |
-| Damper Ölçü | hep boş | açık karar 6 |
 | Toplam | taşıma `COUNT`, yakıt `SUM(litre)` | taşıma `COUNT(H)`, yakıt `SUM(F.quantity)` (birim "lt" yazılır) |
 | Dönem Ortalama Birim Fiyatı | `AVG(Tasima_Fiyat)`, `AVG(Yakit_Fisi_Birim_Fiyati)` | `SUM(H.price)/COUNT(H)`, `SUM(F.amount)/NULLIF(SUM(F.quantity),0)` |
-| PZ | hep boş | açık karar 6 |
 | Borç | yakıt tutarı, ödeme tutarı, devir | `L.debit` (`party_type='vehicle'`): `F.amount`, `VP.amount`, ödenmiş `VF.amount` (`paid_on` tarihinde) |
 | Alacak | taşıma tutarı, alacak tutarı | `L.credit`: `H.price`, `VR.amount` |
 | Mazot (alt) | `SUM(litre)` / `SUM(Tasima_Fis_Adet)` | `SUM(F.quantity)` / `COUNT(F)` / `SUM(F.haul_ticket_count)` |
@@ -149,7 +147,7 @@ Eski "Şöför" kelimesi bu raporlarda **plaka sahibi** demektir.
 
 | Başlık | Eski kaynak | Yeni formül |
 |---|---|---|
-| Sıra, Tarih, Açıklama, Damper Ölçü, Toplam, Dönem Ort. Birim Fiyatı, PZ | Araç Aylık Hareket ile aynı | aynı |
+| Sıra, Tarih, Açıklama, Toplam, Dönem Ort. Birim Fiyatı | Araç Aylık Hareket ile aynı | aynı |
 | Borç | yalnız yakıt tutarı | `SUM(F.amount) WHERE F.vehicle_id=:v AND F.site_id=:s`, `GROUP BY fuel_station_id` |
 | Alacak | yalnız taşıma tutarı | `SUM(H.price) WHERE H.vehicle_id=:v AND H.site_id=:s`, `GROUP BY route_id` |
 | Alacak / Borç / Bakiye (alt) | `Σtaşıma`, `Σyakıt`, fark | `ΣH.price`, `ΣF.amount`; "Bakiye" yerine **"Net (Taşıma − Yakıt)"** (gerçek cari bakiye değil) |

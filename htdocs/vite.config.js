@@ -15,7 +15,9 @@ export default defineConfig({
                 'resources/js/machine-works.js',
                 'resources/js/fuel-receipts.js',
                 'resources/js/cari-entries.js',
+                'resources/js/reports.js',
             ],
+
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {

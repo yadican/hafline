@@ -87,6 +87,22 @@
         </div>
     </div>
 
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.reports.*')]) id="um-sec-reports">
+        <button type="button" class="um-title" data-um-toggle="um-sec-reports">
+            <span class="um-title-text">
+                <i class="fa-solid fa-chart-column um-title-icon" aria-hidden="true"></i>
+                <span class="um-title-label">Raporlar</span>
+            </span>
+            <span class="um-caret" aria-hidden="true"></span>
+        </button>
+        <div class="um-items">
+            <a href="{{ route('admin.reports.site-exits') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.site-exits*')])>Şantiye çıkış raporları</a>
+            <a href="{{ route('admin.reports.dump-sites') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.dump-sites*')])>Döküm yeri raporları</a>
+            <a href="{{ route('admin.reports.fuel-stations') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.fuel-stations*')])>Yakıt yeri raporları</a>
+            <a href="{{ route('admin.reports.vehicle-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-monthly*')])>Plaka aylık döküm</a>
+        </div>
+    </div>
+
     <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.examples.*')]) id="um-sec-examples">
         <button type="button" class="um-title" data-um-toggle="um-sec-examples">
             <span class="um-title-text">
