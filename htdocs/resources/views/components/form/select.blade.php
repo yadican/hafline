@@ -1,6 +1,6 @@
 @aware(['model' => null])
 
-@props(['name', 'label', 'options' => [], 'value' => null, 'placeholder' => null, 'multiple' => false, 'searchable' => false])
+@props(['name', 'label', 'options' => [], 'value' => null, 'placeholder' => null, 'multiple' => false, 'searchable' => false, 'hideSearch' => false])
 
 @php
     $selected = old($name, $value ?? data_get($model, $name));
@@ -18,7 +18,11 @@
         id="{{ $name }}"
         name="{{ $multiple ? $name.'[]' : $name }}"
         @if ($multiple) multiple data-multi-select data-placeholder="{{ $placeholder ?? 'Seçin' }}" @endif
-        @if ($searchable && ! $multiple) data-searchable-select data-placeholder="{{ $placeholder ?? 'Seçin' }}" @endif
+        @if ($searchable && ! $multiple)
+            data-searchable-select
+            data-placeholder="{{ $placeholder ?? 'Seçin' }}"
+            @if ($hideSearch) data-hide-search @endif
+        @endif
         {{ $attributes->merge(['class' => 'slct']) }}
     >
         @if (! $multiple && $placeholder !== null)

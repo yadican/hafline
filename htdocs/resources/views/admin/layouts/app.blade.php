@@ -13,19 +13,32 @@
     @vite(['resources/css/admin.css', 'resources/js/admin.js'])
 </head>
 <body class="panel-app">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('um:sidebar-collapsed') === '1') {
+                    document.body.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {}
+        })();
+    </script>
     @include('admin.layouts.header')
 
     <div class="app-menu-backdrop" id="app-menu-backdrop" hidden></div>
     <div class="app-shell">
-        <aside class="um-cell">
+        <aside class="um-cell" id="um-cell">
             @include('admin.layouts.sidebar')
         </aside>
+        <button type="button" class="um-toggle" id="um-toggle" aria-label="Menüyü kapat" aria-expanded="true" title="Menüyü gizle">
+            <i class="fa-solid fa-angles-left um-toggle-icon" aria-hidden="true"></i>
+        </button>
         <div class="app-main-cell">
             @include('admin.layouts.partials.alerts')
             @yield('content')
         </div>
     </div>
     @include('admin.layouts.partials.footer')
+    @include('admin.layouts.partials.menu')
     @stack('scripts')
 </body>
 </html>

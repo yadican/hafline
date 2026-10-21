@@ -1193,9 +1193,12 @@ input.panel-plate::placeholder {
 }
 
 .app-shell > .um-cell {
+    position: relative;
     flex: 0 0 240px;
     width: 240px !important;
     min-width: 240px;
+    overflow: hidden;
+    transition: flex-basis 0.2s ease, width 0.2s ease, min-width 0.2s ease, padding 0.2s ease, opacity 0.15s ease;
 }
 
 .app-shell > .um-cell .um-nav {
@@ -1209,9 +1212,72 @@ input.panel-plate::placeholder {
     background: var(--ui-body);
 }
 
+/* Masaüstü: Metronic tarzı kenar toggle */
+.um-toggle {
+    position: relative;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 26px;
+    align-self: flex-start;
+    width: 26px;
+    height: 26px;
+    margin: 2px -13px 0;
+    padding: 0;
+    border: 1px solid #cfc7bb;
+    border-radius: 6px;
+    background: #fff;
+    color: #6a6560;
+    box-shadow: 0 2px 6px rgba(14, 17, 20, 0.14);
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.um-toggle:hover {
+    background: var(--ui-ochre-soft);
+    color: var(--ui-ochre-dark);
+    border-color: var(--ui-brand-line);
+    box-shadow: 0 2px 8px rgba(14, 17, 20, 0.18);
+}
+
+.um-toggle-icon {
+    display: block;
+    flex-shrink: 0;
+    font-size: 11px;
+    line-height: 1;
+    transition: transform 0.18s ease;
+}
+
 .app-menu-btn,
 .app-menu-backdrop {
     display: none;
+}
+
+@media (min-width: 861px) {
+    body.sidebar-collapsed .app-shell > .um-cell {
+        flex: 0 0 0 !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        opacity: 0;
+        pointer-events: none;
+        border: 0;
+    }
+
+    body.sidebar-collapsed .um-toggle {
+        margin-left: 8px;
+        margin-right: -13px;
+    }
+
+    body.sidebar-collapsed .um-toggle-icon {
+        transform: scaleX(-1);
+    }
+
+    body.sidebar-collapsed .app-shell > .app-main-cell {
+        padding-left: 10px;
+    }
 }
 
 @media (max-width: 860px) {
@@ -1247,6 +1313,10 @@ input.panel-plate::placeholder {
         cursor: pointer;
     }
 
+    .um-toggle {
+        display: none !important;
+    }
+
     .app-brand-logo {
         height: 38px;
     }
@@ -1272,6 +1342,8 @@ input.panel-plate::placeholder {
         max-width: 240px;
         padding: 8px !important;
         overflow: auto;
+        opacity: 1;
+        pointer-events: auto;
         transform: translateX(-105%);
         transition: transform 0.18s ease;
     }

@@ -14,7 +14,7 @@
         <x-form.status data-fuel-plate-hint>Yazmaya başlayın; kayıtlı araçlar listelenir</x-form.status>
     </x-form.autocomplete>
     <x-form.input name="issued_on" label="Tarih" type="date" :value="$receipt ? null : today()" required />
-    <x-form.select name="shift" label="Vardiya" placeholder="Vardiya yok" :options="$options['shifts']" />
+    <x-form.select searchable hide-search name="shift" label="Vardiya" placeholder="Vardiya yok" :options="$options['shifts']" />
 </x-form.group>
 
 <x-form.group legend="Yakıt" icon="fa-solid fa-gas-pump" description="Yakıt yeri, litre ve birim fiyat">

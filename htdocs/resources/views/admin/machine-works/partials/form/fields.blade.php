@@ -14,7 +14,7 @@
         <x-form.status data-machine-plate-hint>Yazmaya başlayın; yalnızca saatlik çalışan araçlar listelenir</x-form.status>
     </x-form.autocomplete>
     <x-form.input name="worked_on" label="Tarih" type="date" :value="$work ? null : today()" required data-machine-date />
-    <x-form.select name="shift" label="Vardiya" :options="$options['shifts']" :value="$work ? null : 'day'" required />
+    <x-form.select searchable hide-search name="shift" label="Vardiya" :options="$options['shifts']" :value="$work ? null : 'day'" required />
 </x-form.group>
 
 <x-form.group legend="Çalışma" icon="fa-solid fa-person-digging" description="Şantiye, operatör, çalışılan saat ve saat ücreti">

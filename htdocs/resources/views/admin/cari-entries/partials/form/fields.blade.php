@@ -70,7 +70,7 @@
         <x-form.input name="document_no" label="Belge no" maxlength="40" />
     </div>
     <div x-show="kind === 'cash'" x-cloak>
-        <x-form.select name="bank_id" label="Banka" placeholder="Banka yok" :options="$options['banks']" />
+        <x-form.select searchable hide-search name="bank_id" label="Banka" placeholder="Banka yok" :options="$options['banks']" />
     </div>
     <p class="panel-hint">Fiş teslimi, yakıt kontrolü, döküm kontrolü, plaka cezası ve personel maaş/pirim bu ekranda yok; kendi kayıtlarıdır. Çek ve senet, ödeme tipi olarak seçilir.</p>
 </x-form.group>
