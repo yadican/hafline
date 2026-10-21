@@ -12,7 +12,7 @@ class VehicleMonthlyReportService extends Service
     public function __construct(private VehicleMonthlyReportRepository $reports) {}
 
     /**
-     * @return array{years: array<int, string>, months: array<int, string>}
+     * @return array{periods: array<string, string>, years: array<int, string>, months: array<int, string>}
      */
     public function formOptions(): array
     {
@@ -24,19 +24,24 @@ class VehicleMonthlyReportService extends Service
         }
 
         return [
+            'periods' => SiteExitReportService::PERIODS,
             'years' => $years,
             'months' => SiteExitReportService::MONTHS,
         ];
     }
 
     /**
-     * @param  array{vehicle: string, year: int, month: int}  $filters
+     * @param  array{vehicle: string, period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
      * @return array{
      *     title: string,
      *     plate: string,
-     *     year: int,
-     *     month: int,
-     *     month_label: string,
+     *     period: 'month'|'range',
+     *     period_label: string,
+     *     year: ?int,
+     *     month: ?int,
+     *     month_label: ?string,
+     *     from: string,
+     *     to: string,
      *     rows: list<array{
      *         type: string,
      *         date: string|null,
@@ -64,16 +69,13 @@ class VehicleMonthlyReportService extends Service
             return null;
         }
 
-        $year = (int) $filters['year'];
-        $month = (int) $filters['month'];
-        $from = Carbon::create($year, $month, 1)->startOfDay();
-        $to = $from->copy()->addMonth();
+        [$from, $toExclusive, $meta] = $this->resolvePeriod($filters);
 
         $rows = [];
         $totalDebit = 0.0;
         $totalCredit = 0.0;
 
-        foreach ($this->reports->haulTotals($vehicle->id, $from, $to) as $haul) {
+        foreach ($this->reports->haulTotals($vehicle->id, $from, $toExclusive) as $haul) {
             $trips = (int) $haul->trips;
             $amount = round((float) $haul->amount, 2);
             $unitPrice = $trips > 0 ? round($amount / $trips, 4) : 0.0;
@@ -92,7 +94,7 @@ class VehicleMonthlyReportService extends Service
             $totalCredit += $amount;
         }
 
-        foreach ($this->reports->fuelTotals($vehicle->id, $from, $to) as $fuel) {
+        foreach ($this->reports->fuelTotals($vehicle->id, $from, $toExclusive) as $fuel) {
             $liters = round((float) $fuel->liters, 2);
             $amount = round((float) $fuel->amount, 2);
             $unitPrice = $liters > 0 ? round($amount / $liters, 4) : 0.0;
@@ -111,7 +113,7 @@ class VehicleMonthlyReportService extends Service
             $totalDebit += $amount;
         }
 
-        foreach ($this->reports->payments($vehicle->id, $from, $to) as $payment) {
+        foreach ($this->reports->payments($vehicle->id, $from, $toExclusive) as $payment) {
             $amount = round((float) $payment->amount, 2);
 
             $rows[] = [
@@ -128,7 +130,7 @@ class VehicleMonthlyReportService extends Service
             $totalDebit += $amount;
         }
 
-        foreach ($this->reports->receivables($vehicle->id, $from, $to) as $receivable) {
+        foreach ($this->reports->receivables($vehicle->id, $from, $toExclusive) as $receivable) {
             $amount = round((float) $receivable->amount, 2);
 
             $rows[] = [
@@ -145,7 +147,7 @@ class VehicleMonthlyReportService extends Service
             $totalCredit += $amount;
         }
 
-        foreach ($this->reports->paidFines($vehicle->id, $from, $to) as $fine) {
+        foreach ($this->reports->paidFines($vehicle->id, $from, $toExclusive) as $fine) {
             $amount = round((float) $fine->amount, 2);
 
             $rows[] = [
@@ -185,16 +187,20 @@ class VehicleMonthlyReportService extends Service
             'credit' => $carryoverCredit,
         ];
 
-        $stats = $this->reports->footerStats($vehicle->id, $from, $to);
+        $stats = $this->reports->footerStats($vehicle->id, $from, $toExclusive);
         $totalDebit = round($totalDebit, 2);
         $totalCredit = round($totalCredit, 2);
 
         return [
             'title' => 'Aylık Plaka Raporu',
             'plate' => $vehicle->plate,
-            'year' => $year,
-            'month' => $month,
-            'month_label' => SiteExitReportService::MONTHS[$month],
+            'period' => $meta['period'],
+            'period_label' => $meta['label'],
+            'year' => $meta['year'],
+            'month' => $meta['month'],
+            'month_label' => $meta['month_label'],
+            'from' => $meta['from'],
+            'to' => $meta['to'],
             'rows' => $rows,
             'trips' => $stats['trips'],
             'fuel_liters' => $stats['liters'],
@@ -207,7 +213,7 @@ class VehicleMonthlyReportService extends Service
     }
 
     /**
-     * @param  array{vehicle: string, year: int, month: int}  $filters
+     * @param  array{vehicle: string, period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
      */
     public function exportCsv(array $filters): ?StreamedResponse
     {
@@ -217,12 +223,19 @@ class VehicleMonthlyReportService extends Service
             return null;
         }
 
-        $filename = sprintf(
-            'plaka-aylik-%s-%04d-%02d.csv',
-            str($report['plate'])->slug('_'),
-            $report['year'],
-            $report['month'],
-        );
+        $filename = $report['period'] === 'month'
+            ? sprintf(
+                'plaka-aylik-%s-%04d-%02d.csv',
+                str($report['plate'])->slug('_'),
+                $report['year'],
+                $report['month'],
+            )
+            : sprintf(
+                'plaka-aylik-%s-%s_%s.csv',
+                str($report['plate'])->slug('_'),
+                $report['from'],
+                $report['to'],
+            );
 
         return response()->streamDownload(function () use ($report): void {
             $handle = fopen('php://output', 'w');
@@ -298,5 +311,50 @@ class VehicleMonthlyReportService extends Service
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
+     * @return array{0: Carbon, 1: Carbon, 2: array{period: 'month'|'range', label: string, year: ?int, month: ?int, month_label: ?string, from: string, to: string}}
+     */
+    private function resolvePeriod(array $filters): array
+    {
+        if (($filters['period'] ?? 'month') === 'range') {
+            $from = Carbon::parse($filters['from'])->startOfDay();
+            $toInclusive = Carbon::parse($filters['to'])->startOfDay();
+
+            return [
+                $from,
+                $toInclusive->copy()->addDay(),
+                [
+                    'period' => 'range',
+                    'label' => $from->format('d.m.Y').' – '.$toInclusive->format('d.m.Y'),
+                    'year' => null,
+                    'month' => null,
+                    'month_label' => null,
+                    'from' => $from->toDateString(),
+                    'to' => $toInclusive->toDateString(),
+                ],
+            ];
+        }
+
+        $year = (int) $filters['year'];
+        $month = (int) $filters['month'];
+        $from = Carbon::create($year, $month, 1)->startOfDay();
+        $monthLabel = SiteExitReportService::MONTHS[$month];
+
+        return [
+            $from,
+            $from->copy()->addMonth(),
+            [
+                'period' => 'month',
+                'label' => "{$year} {$monthLabel}",
+                'year' => $year,
+                'month' => $month,
+                'month_label' => $monthLabel,
+                'from' => $from->toDateString(),
+                'to' => $from->copy()->endOfMonth()->toDateString(),
+            ],
+        ];
     }
 }

@@ -19,7 +19,7 @@
                         colspan="2"
                         icon="fa-solid fa-chart-column"
                         title="Bu dönemde sefer yok."
-                        text="Seçilen döküm yeri, ay ve plaka tipi için taşıma fişi bulunamadı."
+                        text="Seçilen döküm yeri, dönem ve plaka tipi için taşıma fişi bulunamadı."
                     />
                 </tbody>
             </x-table.list>
@@ -30,7 +30,7 @@
                         colspan="2"
                         icon="fa-solid fa-filter"
                         title="Raporu görmek için seçim yapın."
-                        text="Döküm yeri, yıl ve ayı seçip Raporu Göster’e basın. Plaka tipi isteğe bağlıdır."
+                        text="Döküm yeri ve dönemi seçip Raporu Göster’e basın. Plaka tipi isteğe bağlıdır."
                     />
                 </tbody>
             </x-table.list>

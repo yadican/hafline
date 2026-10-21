@@ -175,6 +175,46 @@ class DumpSiteReportTest extends TestCase
         $this->assertSame(1, $matrix['grand_total']);
     }
 
+    public function test_date_range_filters_trips_inclusively(): void
+    {
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-09-01 00:00:00');
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-09-10 12:00:00');
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-09-15 23:30:00');
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-09-16 00:00:00');
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.dump-sites', [
+                'dump_site' => $this->dumpSite->id,
+                'period' => 'range',
+                'from' => '2026-09-01',
+                'to' => '2026-09-15',
+            ]));
+
+        $response->assertOk()
+            ->assertSee('212 01.09.2026 – 15.09.2026 Raporu', false);
+
+        $matrix = $response->viewData('matrix');
+
+        $this->assertSame('range', $matrix['period']);
+        $this->assertSame(3, $matrix['grand_total']);
+    }
+
+    public function test_date_range_defaults_to_previous_month_bounds(): void
+    {
+        $previous = now()->subMonthNoOverflow();
+
+        $filters = $this->actingAs($this->admin)
+            ->get(route('admin.reports.dump-sites', [
+                'period' => 'range',
+            ]))
+            ->assertOk()
+            ->viewData('filters');
+
+        $this->assertSame('range', $filters['period']);
+        $this->assertSame($previous->copy()->startOfMonth()->toDateString(), $filters['from']);
+        $this->assertSame($previous->copy()->endOfMonth()->toDateString(), $filters['to']);
+    }
+
     public function test_csv_export_contains_matrix_rows(): void
     {
         $this->seedHauls();

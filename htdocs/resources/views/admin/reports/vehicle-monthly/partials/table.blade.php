@@ -1,8 +1,11 @@
 @php
     $exportQuery = array_filter([
         'plate' => $filters['plate'] ?? $report['plate'] ?? null,
+        'period' => $filters['period'] ?? 'month',
         'year' => $filters['year'] ?? null,
         'month' => $filters['month'] ?? null,
+        'from' => $filters['from'] ?? null,
+        'to' => $filters['to'] ?? null,
     ], fn ($value) => $value !== null && $value !== '');
 
     $detailRows = collect($report['rows'])->reject(fn (array $row): bool => $row['type'] === 'carryover')->values();
@@ -12,7 +15,7 @@
 <div class="report-matrix">
     <div class="report-heading">
         <h2 class="report-title">{{ $report['title'] }}</h2>
-        <p class="report-subtitle">{{ $report['year'] }} {{ $report['month_label'] }}</p>
+        <p class="report-subtitle">{{ $report['period_label'] }}</p>
     </div>
 
     <x-table.list class="report-table vehicle-monthly-table">
@@ -47,17 +50,17 @@
                             @endif
                         @endif
                     </td>
-                    <td class="panel-tutar">
+                    <td class="panel-tutar is-end">
                         @if ($row['unit_price'] !== null)
                             {{ number_format($row['unit_price'], 2, ',', '.') }} TL
                         @endif
                     </td>
-                    <td class="panel-tutar">
+                    <td class="panel-tutar is-end">
                         @if ($row['debit'] !== null)
                             {{ number_format($row['debit'], 2, ',', '.') }} TL
                         @endif
                     </td>
-                    <td class="panel-tutar">
+                    <td class="panel-tutar is-end">
                         @if ($row['credit'] !== null)
                             {{ number_format($row['credit'], 2, ',', '.') }} TL
                         @endif
@@ -76,12 +79,12 @@
                     <td>{{ $carryover['description'] }}</td>
                     <td></td>
                     <td></td>
-                    <td class="panel-tutar">
+                    <td class="panel-tutar is-end">
                         @if ($carryover['debit'] !== null)
                             {{ number_format($carryover['debit'], 2, ',', '.') }} TL
                         @endif
                     </td>
-                    <td class="panel-tutar">
+                    <td class="panel-tutar is-end">
                         @if ($carryover['credit'] !== null)
                             {{ number_format($carryover['credit'], 2, ',', '.') }} TL
                         @endif
@@ -96,8 +99,8 @@
                     <span class="report-footer-meta">Sefer: {{ $report['trips'] }}</span>
                 </th>
                 <th></th>
-                <th class="panel-tutar">{{ number_format($report['total_debit'], 2, ',', '.') }} TL</th>
-                <th class="panel-tutar">{{ number_format($report['total_credit'], 2, ',', '.') }} TL</th>
+                <th class="panel-tutar is-end">{{ number_format($report['total_debit'], 2, ',', '.') }} TL</th>
+                <th class="panel-tutar is-end">{{ number_format($report['total_credit'], 2, ',', '.') }} TL</th>
             </tr>
             <tr class="report-footer">
                 <th colspan="3"></th>
@@ -114,17 +117,17 @@
             <tr class="report-footer">
                 <th colspan="5"></th>
                 <th class="is-end">Alacak :</th>
-                <th class="panel-tutar">{{ number_format($report['total_credit'], 2, ',', '.') }} TL</th>
+                <th class="panel-tutar is-end">{{ number_format($report['total_credit'], 2, ',', '.') }} TL</th>
             </tr>
             <tr class="report-footer">
                 <th colspan="5"></th>
                 <th class="is-end">Borç :</th>
-                <th class="panel-tutar">{{ number_format($report['total_debit'], 2, ',', '.') }} TL</th>
+                <th class="panel-tutar is-end">{{ number_format($report['total_debit'], 2, ',', '.') }} TL</th>
             </tr>
             <tr class="report-footer is-balance">
                 <th colspan="5"></th>
                 <th class="is-end">Bakiye :</th>
-                <th class="panel-tutar">{{ number_format($report['balance'], 2, ',', '.') }} TL</th>
+                <th class="panel-tutar is-end">{{ number_format($report['balance'], 2, ',', '.') }} TL</th>
             </tr>
         </tfoot>
     </x-table.list>

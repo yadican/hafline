@@ -43,14 +43,14 @@
 .haul-search-bar .panel-field,
 .haul-search-bar .panel-date,
 .haul-search-bar input.slct,
-.haul-search-bar select.slct,
+.haul-search-bar select.slct:not(.select2-hidden-accessible),
 .haul-search-bar .select2-container {
 	width: 100% !important;
 	max-width: none;
 	min-width: 0;
 	flex: none;
 }
-.haul-search-bar select.slct {
+.haul-search-bar select.slct:not(.select2-hidden-accessible) {
 	text-overflow: ellipsis;
 }
 .haul-search-bar .haul-search-plate {

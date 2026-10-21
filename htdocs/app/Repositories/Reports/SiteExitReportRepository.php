@@ -33,7 +33,7 @@ class SiteExitReportRepository
     }
 
     /**
-     * Trip counts for one site in a month, keyed for pivot assembly.
+     * Trip counts for one site in a half-open date window [from, to), keyed for pivot assembly.
      *
      * @return Collection<int, object{vehicle_id: string, route_id: string, plate: string, dump_site_id: string, dump_name: string, trips: int}>
      */

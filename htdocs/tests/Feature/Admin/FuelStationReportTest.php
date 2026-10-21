@@ -164,6 +164,44 @@ class FuelStationReportTest extends TestCase
         $this->assertSame(3000.0, $report['total_amount']);
     }
 
+    public function test_date_range_filters_receipts_inclusively(): void
+    {
+        $this->makeReceipt($this->vehicleA, '2026-09-01', 40, 50);
+        $this->makeReceipt($this->vehicleA, '2026-09-10', 50, 50);
+        $this->makeReceipt($this->vehicleA, '2026-09-15', 60, 50);
+        $this->makeReceipt($this->vehicleA, '2026-09-16', 100, 50);
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.fuel-stations', [
+                'fuel_station' => $this->station->id,
+                'period' => 'range',
+                'from' => '2026-09-01',
+                'to' => '2026-09-15',
+            ]))
+            ->assertOk()
+            ->viewData('report');
+
+        $this->assertSame('range', $report['period']);
+        $this->assertSame(150.0, $report['total_liters']);
+        $this->assertSame(7500.0, $report['total_amount']);
+    }
+
+    public function test_date_range_defaults_to_previous_month_bounds(): void
+    {
+        $previous = now()->subMonthNoOverflow();
+
+        $filters = $this->actingAs($this->admin)
+            ->get(route('admin.reports.fuel-stations', [
+                'period' => 'range',
+            ]))
+            ->assertOk()
+            ->viewData('filters');
+
+        $this->assertSame('range', $filters['period']);
+        $this->assertSame($previous->copy()->startOfMonth()->toDateString(), $filters['from']);
+        $this->assertSame($previous->copy()->endOfMonth()->toDateString(), $filters['to']);
+    }
+
     public function test_csv_export_contains_report_rows(): void
     {
         $this->seedReceipts();

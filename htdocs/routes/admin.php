@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\MachineWorkLookupController;
 use App\Http\Controllers\Admin\PartyController;
 use App\Http\Controllers\Admin\Reports\DumpSiteReportController;
 use App\Http\Controllers\Admin\Reports\FuelStationReportController;
+use App\Http\Controllers\Admin\Reports\OwnerMonthlyReportController;
 use App\Http\Controllers\Admin\Reports\SiteExitReportController;
 use App\Http\Controllers\Admin\Reports\VehicleMonthlyReportController;
 use App\Http\Controllers\Admin\RouteVehiclePriceController;
@@ -90,4 +91,6 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/fuel-stations/export', [FuelStationReportController::class, 'export'])->name('reports.fuel-stations.export');
     Route::get('reports/vehicle-monthly', [VehicleMonthlyReportController::class, 'index'])->name('reports.vehicle-monthly');
     Route::get('reports/vehicle-monthly/export', [VehicleMonthlyReportController::class, 'export'])->name('reports.vehicle-monthly.export');
+    Route::get('reports/owner-monthly', [OwnerMonthlyReportController::class, 'index'])->name('reports.owner-monthly');
+    Route::get('reports/owner-monthly/export', [OwnerMonthlyReportController::class, 'export'])->name('reports.owner-monthly.export');
 });

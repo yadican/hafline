@@ -1,3 +1,3 @@
 @props(['items'])
 
-{{ $items->links('admin.partials.pager') }}
+{{ $items->onEachSide(2)->links('admin.partials.pager') }}

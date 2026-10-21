@@ -33,7 +33,7 @@ class FuelStationReportRepository
     }
 
     /**
-     * Liters and amounts for one station in a month, one row per vehicle.
+     * Liters and amounts for one station in a half-open date window [from, to), one row per vehicle.
      *
      * @return Collection<int, object{vehicle_id: string, plate: string, liters: string, amount: string}>
      */

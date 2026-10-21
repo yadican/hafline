@@ -7,11 +7,19 @@
         @endif
 
         <span class="panel-pager-pages">
-            @foreach ($paginator->getUrlRange(1, $paginator->lastPage()) as $page => $url)
-                @if ($page === $paginator->currentPage())
-                    <span class="panel-pager-num is-current" aria-current="page">{{ $page }}</span>
-                @else
-                    <a class="panel-pager-num" href="{{ $url }}">{{ $page }}</a>
+            @foreach ($elements as $element)
+                @if (is_string($element))
+                    <span class="panel-pager-ellipsis" aria-hidden="true">{{ $element }}</span>
+                @endif
+
+                @if (is_array($element))
+                    @foreach ($element as $page => $url)
+                        @if ((int) $page === $paginator->currentPage())
+                            <span class="panel-pager-num is-current" aria-current="page">{{ $page }}</span>
+                        @else
+                            <a class="panel-pager-num" href="{{ $url }}">{{ $page }}</a>
+                        @endif
+                    @endforeach
                 @endif
             @endforeach
         </span>

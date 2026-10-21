@@ -30,7 +30,7 @@
                         colspan="7"
                         icon="fa-solid fa-filter"
                         title="Raporu görmek için seçim yapın."
-                        text="Plakayı yazıp listeden seçin; yıl ve ayı belirleyip Raporu Göster’e basın."
+                        text="Plakayı yazıp listeden seçin; dönemi belirleyip Raporu Göster’e basın."
                     />
                 </tbody>
             </x-table.list>

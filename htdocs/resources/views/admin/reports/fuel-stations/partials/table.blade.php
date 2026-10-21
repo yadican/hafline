@@ -1,8 +1,11 @@
 @php
     $exportQuery = array_filter([
         'fuel_station' => $filters['fuel_station'] ?? null,
+        'period' => $filters['period'] ?? 'month',
         'year' => $filters['year'] ?? null,
         'month' => $filters['month'] ?? null,
+        'from' => $filters['from'] ?? null,
+        'to' => $filters['to'] ?? null,
         'class' => $filters['class'] ?? null,
     ], fn ($value) => $value !== null && $value !== '');
 @endphp
@@ -29,14 +32,14 @@
                     <td>{{ $row['plate'] }}</td>
                     <td class="is-end">{{ number_format($row['liters'], 2, ',', '.') }} lt</td>
                     <td class="is-end">{{ number_format($row['unit_price'], 2, ',', '.') }} TL</td>
-                    <td class="panel-tutar">{{ number_format($row['amount'], 2, ',', '.') }} TL</td>
+                    <td class="panel-tutar is-end">{{ number_format($row['amount'], 2, ',', '.') }} TL</td>
                 </tr>
             @empty
                 <x-table.empty
                     colspan="5"
                     icon="fa-solid fa-gas-pump"
                     title="Bu dönemde yakıt fişi yok."
-                    text="Seçilen yakıt yeri, ay ve araç tipi için yakıt fişi bulunamadı."
+                    text="Seçilen yakıt yeri, dönem ve araç tipi için yakıt fişi bulunamadı."
                 />
             @endforelse
         </tbody>
@@ -46,7 +49,7 @@
                     <th colspan="2">Toplam</th>
                     <th class="is-end">{{ number_format($report['total_liters'], 2, ',', '.') }} lt</th>
                     <th></th>
-                    <th class="panel-tutar">{{ number_format($report['total_amount'], 2, ',', '.') }} TL</th>
+                    <th class="panel-tutar is-end">{{ number_format($report['total_amount'], 2, ',', '.') }} TL</th>
                 </tr>
             </tfoot>
         @endif

@@ -19,7 +19,7 @@
                         colspan="2"
                         icon="fa-solid fa-chart-column"
                         title="Bu dönemde sefer yok."
-                        text="Seçilen şantiye, ay ve plaka tipi için taşıma fişi bulunamadı."
+                        text="Seçilen şantiye, dönem ve plaka tipi için taşıma fişi bulunamadı."
                     />
                 </tbody>
             </x-table.list>
@@ -30,7 +30,7 @@
                         colspan="2"
                         icon="fa-solid fa-filter"
                         title="Raporu görmek için seçim yapın."
-                        text="Şantiye, yıl ve ayı seçip Raporu Göster’e basın. Plaka tipi isteğe bağlıdır."
+                        text="Şantiye ve dönemi seçip Raporu Göster’e basın. Plaka tipi isteğe bağlıdır."
                     />
                 </tbody>
             </x-table.list>

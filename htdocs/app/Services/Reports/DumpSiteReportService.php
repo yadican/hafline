@@ -12,7 +12,7 @@ class DumpSiteReportService extends Service
     public function __construct(private DumpSiteReportRepository $reports) {}
 
     /**
-     * @return array{dumpSites: array<string, string>, years: array<int, string>, months: array<int, string>, classes: array<string, string>}
+     * @return array{dumpSites: array<string, string>, periods: array<string, string>, years: array<int, string>, months: array<int, string>, classes: array<string, string>}
      */
     public function formOptions(): array
     {
@@ -25,6 +25,7 @@ class DumpSiteReportService extends Service
 
         return [
             'dumpSites' => $this->reports->dumpSites(),
+            'periods' => SiteExitReportService::PERIODS,
             'years' => $years,
             'months' => SiteExitReportService::MONTHS,
             'classes' => $this->reports->vehicleClasses(),
@@ -32,14 +33,17 @@ class DumpSiteReportService extends Service
     }
 
     /**
-     * @param  array{dump_site: string, year: int, month: int, class?: string|null}  $filters
+     * @param  array{dump_site: string, period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, class?: string|null}  $filters
      * @return array{
      *     title: string,
      *     subtitle: string,
      *     dump_site_name: string,
-     *     year: int,
-     *     month: int,
-     *     month_label: string,
+     *     period: 'month'|'range',
+     *     year: ?int,
+     *     month: ?int,
+     *     month_label: ?string,
+     *     from: string,
+     *     to: string,
      *     columns: list<array{id: string, label: string}>,
      *     rows: list<array{plate: string, counts: array<string, int>, total: int}>,
      *     column_totals: array<string, int>,
@@ -54,13 +58,10 @@ class DumpSiteReportService extends Service
             return null;
         }
 
-        $year = (int) $filters['year'];
-        $month = (int) $filters['month'];
-        $from = Carbon::create($year, $month, 1)->startOfDay();
-        $to = $from->copy()->addMonth();
+        [$from, $toExclusive, $meta] = $this->resolvePeriod($filters);
         $classId = $filters['class'] ?? null;
 
-        $counts = $this->reports->tripCounts($dumpSite->id, $from, $to, $classId !== '' ? $classId : null);
+        $counts = $this->reports->tripCounts($dumpSite->id, $from, $toExclusive, $classId !== '' ? $classId : null);
 
         $columnsByRoute = [];
         $rowsByVehicle = [];
@@ -115,15 +116,16 @@ class DumpSiteReportService extends Service
             $grandTotal += $sum;
         }
 
-        $monthLabel = SiteExitReportService::MONTHS[$month];
-
         return [
             'title' => 'Dökümyeri Raporu',
-            'subtitle' => "{$dumpSite->name} {$year} {$monthLabel} Raporu",
+            'subtitle' => "{$dumpSite->name} {$meta['label']} Raporu",
             'dump_site_name' => $dumpSite->name,
-            'year' => $year,
-            'month' => $month,
-            'month_label' => $monthLabel,
+            'period' => $meta['period'],
+            'year' => $meta['year'],
+            'month' => $meta['month'],
+            'month_label' => $meta['month_label'],
+            'from' => $meta['from'],
+            'to' => $meta['to'],
             'columns' => $columns,
             'rows' => $rows,
             'column_totals' => $columnTotals,
@@ -132,7 +134,7 @@ class DumpSiteReportService extends Service
     }
 
     /**
-     * @param  array{dump_site: string, year: int, month: int, class?: string|null}  $filters
+     * @param  array{dump_site: string, period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, class?: string|null}  $filters
      */
     public function exportCsv(array $filters): ?StreamedResponse
     {
@@ -142,12 +144,19 @@ class DumpSiteReportService extends Service
             return null;
         }
 
-        $filename = sprintf(
-            'dokumyeri-%s-%04d-%02d.csv',
-            str($matrix['dump_site_name'])->slug('_'),
-            $matrix['year'],
-            $matrix['month'],
-        );
+        $filename = $matrix['period'] === 'month'
+            ? sprintf(
+                'dokumyeri-%s-%04d-%02d.csv',
+                str($matrix['dump_site_name'])->slug('_'),
+                $matrix['year'],
+                $matrix['month'],
+            )
+            : sprintf(
+                'dokumyeri-%s-%s_%s.csv',
+                str($matrix['dump_site_name'])->slug('_'),
+                $matrix['from'],
+                $matrix['to'],
+            );
 
         return response()->streamDownload(function () use ($matrix): void {
             $handle = fopen('php://output', 'w');
@@ -182,5 +191,50 @@ class DumpSiteReportService extends Service
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
+     * @return array{0: Carbon, 1: Carbon, 2: array{period: 'month'|'range', label: string, year: ?int, month: ?int, month_label: ?string, from: string, to: string}}
+     */
+    private function resolvePeriod(array $filters): array
+    {
+        if (($filters['period'] ?? 'month') === 'range') {
+            $from = Carbon::parse($filters['from'])->startOfDay();
+            $toInclusive = Carbon::parse($filters['to'])->startOfDay();
+
+            return [
+                $from,
+                $toInclusive->copy()->addDay(),
+                [
+                    'period' => 'range',
+                    'label' => $from->format('d.m.Y').' – '.$toInclusive->format('d.m.Y'),
+                    'year' => null,
+                    'month' => null,
+                    'month_label' => null,
+                    'from' => $from->toDateString(),
+                    'to' => $toInclusive->toDateString(),
+                ],
+            ];
+        }
+
+        $year = (int) $filters['year'];
+        $month = (int) $filters['month'];
+        $from = Carbon::create($year, $month, 1)->startOfDay();
+        $monthLabel = SiteExitReportService::MONTHS[$month];
+
+        return [
+            $from,
+            $from->copy()->addMonth(),
+            [
+                'period' => 'month',
+                'label' => "{$year} {$monthLabel}",
+                'year' => $year,
+                'month' => $month,
+                'month_label' => $monthLabel,
+                'from' => $from->toDateString(),
+                'to' => $from->copy()->endOfMonth()->toDateString(),
+            ],
+        ];
     }
 }

@@ -20,7 +20,7 @@ class VehicleMonthlyReportRepository
     }
 
     /**
-     * Haul aggregates for one vehicle in a month, one row per route.
+     * Haul aggregates for one vehicle in a half-open date window [from, to), one row per route.
      *
      * @return Collection<int, object{route_id: string, site_name: string, dump_site_name: string, trips: string, amount: string}>
      */
@@ -47,7 +47,7 @@ class VehicleMonthlyReportRepository
     }
 
     /**
-     * Fuel aggregates for one vehicle in a month, one row per station.
+     * Fuel aggregates for one vehicle in a half-open date window [from, to), one row per station.
      *
      * @return Collection<int, object{fuel_station_id: string, station_name: string, liters: string, amount: string, receipts: string}>
      */
@@ -104,7 +104,7 @@ class VehicleMonthlyReportRepository
     }
 
     /**
-     * Paid fines posted on paid_on within the month.
+     * Paid fines posted on paid_on within the half-open date window [from, to).
      *
      * @return Collection<int, object{id: string, paid_on: string, description: string|null, amount: string}>
      */
@@ -122,7 +122,7 @@ class VehicleMonthlyReportRepository
     }
 
     /**
-     * Net ledger balance (debit − credit) before the month start for this vehicle.
+     * Net ledger balance (debit − credit) before the period start for this vehicle.
      */
     public function carryoverBalance(string $vehicleId, Carbon $before): float
     {

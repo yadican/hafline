@@ -1,8 +1,11 @@
 @php
     $exportQuery = array_filter([
         'dump_site' => $filters['dump_site'] ?? null,
+        'period' => $filters['period'] ?? 'month',
         'year' => $filters['year'] ?? null,
         'month' => $filters['month'] ?? null,
+        'from' => $filters['from'] ?? null,
+        'to' => $filters['to'] ?? null,
         'class' => $filters['class'] ?? null,
     ], fn ($value) => $value !== null && $value !== '');
 @endphp
@@ -38,7 +41,7 @@
                     :colspan="count($matrix['columns']) + 2"
                     icon="fa-solid fa-chart-column"
                     title="Bu dönemde sefer yok."
-                    text="Seçilen döküm yeri, ay ve plaka tipi için taşıma fişi bulunamadı."
+                    text="Seçilen döküm yeri, dönem ve plaka tipi için taşıma fişi bulunamadı."
                 />
             @endforelse
         </tbody>

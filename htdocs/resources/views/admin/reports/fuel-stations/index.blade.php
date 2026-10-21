@@ -19,7 +19,7 @@
                         colspan="5"
                         icon="fa-solid fa-gas-pump"
                         title="Bu dönemde yakıt fişi yok."
-                        text="Seçilen yakıt yeri, ay ve araç tipi için yakıt fişi bulunamadı."
+                        text="Seçilen yakıt yeri, dönem ve araç tipi için yakıt fişi bulunamadı."
                     />
                 </tbody>
             </x-table.list>
@@ -30,7 +30,7 @@
                         colspan="5"
                         icon="fa-solid fa-filter"
                         title="Raporu görmek için seçim yapın."
-                        text="Yakıt yeri, yıl ve ayı seçip Raporu Göster’e basın. Araç tipi isteğe bağlıdır."
+                        text="Yakıt yeri ve dönemi seçip Raporu Göster’e basın. Araç tipi isteğe bağlıdır."
                     />
                 </tbody>
             </x-table.list>

@@ -231,6 +231,53 @@ class VehicleMonthlyReportTest extends TestCase
         $this->assertSame(4000.0, $report['total_debit']);
     }
 
+    public function test_date_range_filters_entries_inclusively(): void
+    {
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-01 00:00:00', 1000);
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-10 12:00:00', 1200);
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-15 23:30:00', 1300);
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-16 00:00:00', 9999);
+
+        $this->makeReceipt($this->vehicle, '2026-09-01', 40, 50);
+        $this->makeReceipt($this->vehicle, '2026-09-15', 60, 50);
+        $this->makeReceipt($this->vehicle, '2026-09-16', 100, 50);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-monthly', [
+                'plate' => '34 ABR 69',
+                'period' => 'range',
+                'from' => '2026-09-01',
+                'to' => '2026-09-15',
+            ]));
+
+        $response->assertOk()
+            ->assertSee('01.09.2026 – 15.09.2026', false);
+
+        $report = $response->viewData('report');
+
+        $this->assertSame('range', $report['period']);
+        $this->assertSame(3, $report['trips']);
+        $this->assertSame(100.0, $report['fuel_liters']);
+        $this->assertSame(3500.0, $report['total_credit']);
+        $this->assertSame(5000.0, $report['total_debit']);
+    }
+
+    public function test_date_range_defaults_to_previous_month_bounds(): void
+    {
+        $previous = now()->subMonthNoOverflow();
+
+        $filters = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-monthly', [
+                'period' => 'range',
+            ]))
+            ->assertOk()
+            ->viewData('filters');
+
+        $this->assertSame('range', $filters['period']);
+        $this->assertSame($previous->copy()->startOfMonth()->toDateString(), $filters['from']);
+        $this->assertSame($previous->copy()->endOfMonth()->toDateString(), $filters['to']);
+    }
+
     public function test_soft_deleted_rows_are_excluded(): void
     {
         $haul = $this->makeHaul($this->vehicle, $this->routeA, '2026-09-05 08:00:00', 2000);

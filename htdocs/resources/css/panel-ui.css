@@ -1834,7 +1834,7 @@ a.um-title.um-active {
 	align-items: center;
 	justify-content: center;
 	flex-wrap: wrap;
-	gap: 0.2rem;
+	gap: 0.35rem 0.2rem;
 	margin: 6px 0 0;
 	padding: 4px 2px;
 	font-family: "DM Sans", Geneva, Verdana, Arial, Helvetica, sans-serif;
@@ -1843,11 +1843,14 @@ a.um-title.um-active {
 .panel-pager-pages {
 	display: inline-flex;
 	align-items: center;
+	flex-wrap: wrap;
+	justify-content: center;
 	gap: 0.16rem;
 	margin: 0 0.18rem;
 }
 .panel-pager-btn,
-.panel-pager-num {
+.panel-pager-num,
+.panel-pager-ellipsis {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1865,6 +1868,19 @@ a.um-title.um-active {
 	line-height: 1;
 	cursor: pointer;
 	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.panel-pager-btn {
+	min-width: auto;
+	padding: 0 0.85rem;
+	flex-shrink: 0;
+}
+.panel-pager-ellipsis {
+	border-color: transparent;
+	background: transparent;
+	cursor: default;
+	min-width: 28px;
+	padding: 0;
+	color: #9a948c;
 }
 .panel-pager-btn i[class*="fa-"],
 .panel-pager-num i[class*="fa-"] {
@@ -1890,6 +1906,33 @@ a.um-title.um-active {
 	border-color: #e4dfd7;
 	cursor: default;
 	opacity: 0.85;
+}
+.panel-pager-btn.is-disabled:hover {
+	background: #f3f0eb;
+	border-color: #e4dfd7;
+	color: #a8a39c;
+}
+@media (max-width: 640px) {
+	.panel-pager {
+		gap: 0.25rem;
+	}
+	.panel-pager-pages {
+		margin: 0 0.1rem;
+		gap: 0.12rem;
+	}
+	.panel-pager-btn,
+	.panel-pager-num {
+		min-width: 34px;
+		height: 34px;
+		font-size: 14px;
+	}
+	.panel-pager-btn {
+		padding: 0 0.55rem;
+	}
+	.panel-pager-ellipsis {
+		min-width: 20px;
+		height: 34px;
+	}
 }
 
 /* —— Ana sayfa dashboard —— */
