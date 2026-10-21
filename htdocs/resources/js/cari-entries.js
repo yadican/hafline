@@ -3,6 +3,37 @@ import { getJson, money, normalizePlate, onReady } from './entry-support.js';
 const PARTY_KINDS = ['supplier', 'customer', 'fuel', 'market', 'owner_payment'];
 const PLATE_KINDS = ['vehicle_payment', 'vehicle_receivable'];
 
+// Kasa hareketlerinin party alanı yok; tür cash iken filtreyi kapat.
+function bindSearchToolbar(form) {
+    const kind = form.querySelector('[name="kind"]');
+    const party = form.querySelector('[name="party"]');
+
+    if (! kind || ! party) {
+        return;
+    }
+
+    const sync = () => {
+        const locked = kind.value === 'cash';
+        const $ = window.jQuery;
+
+        if ($ && locked) {
+            $(party).val(null).trigger('change');
+        }
+
+        if ($) {
+            $(party).prop('disabled', locked);
+        } else {
+            party.disabled = locked;
+            if (locked) {
+                party.value = '';
+            }
+        }
+    };
+
+    kind.addEventListener('change', sync);
+    sync();
+}
+
 function amount(value) {
     return `${money.format(Math.abs(value))} TL`;
 }
@@ -167,4 +198,6 @@ onReady(() => {
         bindParty(form);
         bindPlate(form);
     });
+
+    document.querySelectorAll('form[data-cari-entry-search]').forEach(bindSearchToolbar);
 });

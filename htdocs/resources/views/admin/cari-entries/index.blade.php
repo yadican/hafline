@@ -14,3 +14,7 @@
         <x-table.pager :items="$entries" />
     </x-panel.page>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/cari-entries.js')
+@endpush

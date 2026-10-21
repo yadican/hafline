@@ -34,9 +34,16 @@ class CariEntrySearchRequest extends FormRequest
      */
     public function filters(): array
     {
-        return array_filter(
+        $filters = array_filter(
             $this->safe()->only(['kind', 'party', 'from', 'to']),
             fn ($value) => $value !== null && $value !== '',
         );
+
+        // Kasa hareketlerinin party_id'si yok; seçim gönderilse bile yok sayılır.
+        if (($filters['kind'] ?? null) === CariEntryKind::Cash->value) {
+            unset($filters['party']);
+        }
+
+        return $filters;
     }
 }

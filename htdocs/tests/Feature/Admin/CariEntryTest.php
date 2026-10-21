@@ -170,6 +170,36 @@ class CariEntryTest extends TestCase
         $this->assertSame(0, LedgerEntry::query()->count());
     }
 
+    public function test_cash_search_disables_party_and_drops_it_from_filters(): void
+    {
+        $party = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+
+        CashEntry::query()->create([
+            'debit' => 100,
+            'credit' => 0,
+            'occurred_on' => '2026-06-03',
+            'description' => 'Kasa nakit hareketi',
+        ]);
+
+        $html = $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.index', [
+                'kind' => 'cash',
+                'party' => $party->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Kasa nakit hareketi')
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/<select\b[^>]*\bname="party"[^>]*\bdisabled\b|<\s*select\b[^>]*\bdisabled\b[^>]*\bname="party"/i',
+            $html,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/<option[^>]*value="'.$party->id.'"[^>]*selected/i',
+            $html,
+        );
+    }
+
     public function test_party_lookup_returns_the_current_balance(): void
     {
         $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => 'Satıcı petrol']);

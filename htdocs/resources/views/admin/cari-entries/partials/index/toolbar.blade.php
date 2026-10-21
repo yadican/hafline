@@ -1,7 +1,12 @@
+@php($partyLocked = ($filters['kind'] ?? null) === 'cash')
 <div class="panel-liste-bar">
-    <x-search.form :action="route('admin.cari-entries.index')">
+    <x-search.form :action="route('admin.cari-entries.index')" data-cari-entry-search>
         <x-search.select searchable hide-search name="kind" label="İşlem" placeholder="Tüm işlemler" :options="$kinds" :value="$filters['kind'] ?? null" />
-        <x-search.select searchable name="party" label="Kime" placeholder="İşlem Yapan Cari Hesap" :options="$parties" :value="$filters['party'] ?? null" />
+        @if ($partyLocked)
+            <x-search.select searchable name="party" label="Kime" placeholder="İşlem Yapan Cari Hesap" :options="$parties" :value="null" disabled />
+        @else
+            <x-search.select searchable name="party" label="Kime" placeholder="İşlem Yapan Cari Hesap" :options="$parties" :value="$filters['party'] ?? null" />
+        @endif
         <x-form.input name="from" label="" type="date" :value="$filters['from'] ?? null" aria-label="Başlangıç" />
         <x-form.input name="to" label="" type="date" :value="$filters['to'] ?? null" aria-label="Bitiş" />
         <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass">Ara</x-ui.button>
