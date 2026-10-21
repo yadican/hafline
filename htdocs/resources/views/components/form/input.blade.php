@@ -36,9 +36,11 @@
         'date' => 'fa-solid fa-calendar-days',
         default => null,
     };
+
+    $control = $attributes->except('class')->merge(['class' => 'slct']);
 @endphp
 
-<x-form.field :label="$label" :for="$name">
+<x-form.field :label="$label" :for="$name" {{ $attributes->only('class') }}>
     @if ($pickerIcon)
         <div class="panel-date" data-picker-wrap>
             <i class="{{ $pickerIcon }} panel-date-icon" aria-hidden="true"></i>
@@ -49,7 +51,7 @@
                 value="{{ $current }}"
                 data-picker="{{ $type }}"
                 autocomplete="off"
-                {{ $attributes->merge(['class' => 'slct']) }}
+                {{ $control }}
             >
             <button type="button" class="panel-date-clear" data-picker-clear aria-label="Temizle" @if (blank($current)) hidden @endif>
                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -61,7 +63,7 @@
             name="{{ $name }}"
             type="{{ $type }}"
             value="{{ $current }}"
-            {{ $attributes->merge(['class' => 'slct']) }}
+            {{ $control }}
         >
     @endif
     {{ $slot }}

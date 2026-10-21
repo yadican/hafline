@@ -49,9 +49,9 @@ export function bindMultiSelects(root = document) {
         }
 
         // Liste toolbar'ında native select gibi içerik genişliğinde kalsın;
-        // form grid / haul-search gibi dolu satırlarda %100 kalsın.
+        // Tailwind form.grid / haul-search satırlarında %100 kalsın.
         const inCompactToolbar = $select.closest('.panel-liste-bar').length > 0
-            && $select.closest('.haul-search-bar, .panel-form-grid, .panel-arama-grid, .panel-field').length === 0;
+            && $select.closest('.haul-search-bar, .panel-form-grid, .panel-arama-grid, .panel-field, form.grid').length === 0;
 
         $select.select2({
             width: inCompactToolbar ? 'resolve' : '100%',

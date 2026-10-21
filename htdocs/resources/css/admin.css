@@ -9,6 +9,10 @@
 @source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
 @source "../../storage/framework/views/*.php";
 @source "../views/admin/**/*.blade.php";
+@source "../views/components/**/*.blade.php";
+/* Panel toolbar grid: always ship 1–12 spans/cols (don't rely on content scan) */
+@source inline("{sm:,md:,lg:,}col-span-{{1..12},full}");
+@source inline("{sm:,md:,lg:,}grid-cols-{1..12}");
 
 @theme {
     --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;

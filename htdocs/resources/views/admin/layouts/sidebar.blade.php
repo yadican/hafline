@@ -1,15 +1,11 @@
 <div class="um-nav" id="um-nav">
-    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.dashboard')]) id="um-sec-home">
-        <button type="button" class="um-title" data-um-toggle="um-sec-home">
+    <div class="um-section" id="um-sec-home">
+        <a href="{{ route('admin.dashboard') }}" @class(['um-title', 'um-active' => request()->routeIs('admin.dashboard')])>
             <span class="um-title-text">
                 <i class="fa-solid fa-gauge um-title-icon" aria-hidden="true"></i>
-                <span class="um-title-label">Genel</span>
+                <span class="um-title-label">Gösterge paneli</span>
             </span>
-            <span class="um-caret" aria-hidden="true"></span>
-        </button>
-        <div class="um-items">
-            <a href="{{ route('admin.dashboard') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.dashboard')])>Gösterge paneli</a>
-        </div>
+        </a>
     </div>
 
     <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*', 'admin.machine-works.*', 'admin.fuel-receipts.*')]) id="um-sec-tickets">
