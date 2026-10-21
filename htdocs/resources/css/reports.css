@@ -35,18 +35,22 @@
 .vehicle-site-monthly-report.panel-wrap,
 .vehicle-balance-report.panel-wrap,
 .owner-monthly-report.panel-wrap,
+.owner-balance-report.panel-wrap,
 .vehicle-monthly-report .panel,
 .vehicle-site-monthly-report .panel,
 .vehicle-balance-report .panel,
 .owner-monthly-report .panel,
+.owner-balance-report .panel,
 .vehicle-monthly-report .panel-body,
 .vehicle-site-monthly-report .panel-body,
 .vehicle-balance-report .panel-body,
 .owner-monthly-report .panel-body,
+.owner-balance-report .panel-body,
 .vehicle-monthly-report .report-matrix,
 .vehicle-site-monthly-report .report-matrix,
 .vehicle-balance-report .report-matrix,
-.owner-monthly-report .report-matrix {
+.owner-monthly-report .report-matrix,
+.owner-balance-report .report-matrix {
 	max-width: 100%;
 	min-width: 0;
 }
@@ -54,7 +58,8 @@
 .vehicle-monthly-report .panel-body,
 .vehicle-site-monthly-report .panel-body,
 .vehicle-balance-report .panel-body,
-.owner-monthly-report .panel-body {
+.owner-monthly-report .panel-body,
+.owner-balance-report .panel-body {
 	overflow-x: clip;
 }
 
@@ -64,7 +69,8 @@
 .vehicle-monthly-report .panel-list-scroll,
 .vehicle-site-monthly-report .panel-list-scroll,
 .vehicle-balance-report .panel-list-scroll,
-.owner-monthly-report .panel-list-scroll {
+.owner-monthly-report .panel-list-scroll,
+.owner-balance-report .panel-list-scroll {
 	max-width: 100%;
 	width: 100%;
 	overflow-x: auto;
@@ -74,7 +80,8 @@
 .vehicle-monthly-table.panel-list,
 .vehicle-site-monthly-table.panel-list,
 .vehicle-balance-table.panel-list,
-.owner-monthly-table.panel-list {
+.owner-monthly-table.panel-list,
+.owner-balance-table.panel-list {
 	width: max-content;
 	max-width: none;
 	min-width: 100%;

@@ -103,6 +103,7 @@
             <a href="{{ route('admin.reports.vehicle-site-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-site-monthly*')])>Plaka şantiye döküm</a>
             <a href="{{ route('admin.reports.vehicle-balance') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-balance*')])>Plaka bakiye</a>
             <a href="{{ route('admin.reports.owner-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.owner-monthly*')])>Plaka sahibi aylık döküm</a>
+            <a href="{{ route('admin.reports.owner-balance') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.owner-balance*')])>Plaka sahibi bakiye</a>
         </div>
     </div>
 
