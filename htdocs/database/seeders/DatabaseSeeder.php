@@ -15,15 +15,6 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@hafline.net',
         ]);
 
-        $this->call([
-            LocationSeeder::class,
-            VehicleClassSeeder::class,
-            CashCategorySeeder::class,
-            ExampleSeeder::class,
-            HaulSeeder::class,
-            MachineWorkSeeder::class,
-            FuelReceiptSeeder::class,
-            MediumDataSeeder::class,
-        ]);
+        $this->call(LoadTestSeeder::class);
     }
 }
