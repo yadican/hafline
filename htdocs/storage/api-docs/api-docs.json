@@ -125,6 +125,367 @@
                 ]
             }
         },
+        "/api/v1/field-sessions": {
+            "post": {
+                "tags": [
+                    "FieldSessions"
+                ],
+                "summary": "Lock site, dump site and shift for the field operator session",
+                "description": "Pick values from GET /hauls/options (sites, shifts) and GET /hauls/dump-sites?site_id=… then POST them here to lock the operator session on the server.",
+                "operationId": "fieldSessionsLock",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "site_id",
+                                    "dump_site_id",
+                                    "shift"
+                                ],
+                                "properties": {
+                                    "site_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                                    },
+                                    "dump_site_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                                    },
+                                    "shift": {
+                                        "type": "string",
+                                        "example": "day",
+                                        "enum": [
+                                            "day",
+                                            "night"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Session locked"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/field-sessions/current": {
+            "get": {
+                "tags": [
+                    "FieldSessions"
+                ],
+                "summary": "Get the operator active field session",
+                "operationId": "fieldSessionsCurrent",
+                "responses": {
+                    "200": {
+                        "description": "Active session or null data"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "FieldSessions"
+                ],
+                "summary": "Close the active field session",
+                "operationId": "fieldSessionsClose",
+                "responses": {
+                    "200": {
+                        "description": "Session closed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/options": {
+            "get": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Sites and shifts for a field session",
+                "operationId": "haulsOptions",
+                "responses": {
+                    "200": {
+                        "description": "Session option lists"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/dump-sites": {
+            "get": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Dump sites with an active route for the given site",
+                "operationId": "haulsDumpSites",
+                "parameters": [
+                    {
+                        "name": "site_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dump site list"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/scan": {
+            "post": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Upload a plate photo, store it privately, and run OCR",
+                "operationId": "haulsScan",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file",
+                                    "field_session_id"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "field_session_id": {
+                                        "description": "Active field session id",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Scan result"
+                    },
+                    "422": {
+                        "description": "Invalid image or missing session"
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    },
+                    "502": {
+                        "description": "OCR unavailable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls": {
+            "post": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Create a haul from a confirmed plate scan",
+                "description": "Site/dump/shift come from the locked field session. Send only plate, scan_id and field_session_id.",
+                "operationId": "haulsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "plate",
+                                    "scan_id",
+                                    "field_session_id"
+                                ],
+                                "properties": {
+                                    "plate": {
+                                        "type": "string",
+                                        "example": "34 ABC 123"
+                                    },
+                                    "scan_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "field_session_id": {
+                                        "description": "id from POST /field-sessions",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Haul created with print payload"
+                    },
+                    "422": {
+                        "description": "Validation failed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/session": {
+            "get": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Today hauls for the locked site / dump / shift session",
+                "description": "Requires an open field session. List is filtered automatically by that session site_id, dump_site_id and shift.",
+                "operationId": "haulsSession",
+                "responses": {
+                    "200": {
+                        "description": "Session context + haul list"
+                    },
+                    "422": {
+                        "description": "No active field session"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/{haul}": {
+            "get": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Print DTO for a haul",
+                "operationId": "haulsShow",
+                "parameters": [
+                    {
+                        "name": "haul",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Print payload"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/{haul}/photo": {
+            "get": {
+                "tags": [
+                    "Hauls"
+                ],
+                "summary": "Private haul photo (signed URL)",
+                "operationId": "haulsPhoto",
+                "parameters": [
+                    {
+                        "name": "haul",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "expires",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "signature",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JPEG image"
+                    },
+                    "403": {
+                        "description": "Invalid signature"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
         "/api/v1/me": {
             "get": {
                 "tags": [
@@ -345,6 +706,14 @@
         {
             "name": "Dashboard",
             "description": "Dashboard summary"
+        },
+        {
+            "name": "Hauls",
+            "description": "Field haul scan and ticket creation"
+        },
+        {
+            "name": "FieldSessions",
+            "description": "Locked site / dump / shift session for field operators"
         }
     ]
 }

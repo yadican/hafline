@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'ocr' => [
+        'scan_url' => env('OCR_SCAN_URL', 'http://host.docker.internal:8000/api/v1/ocr/scan-plate'),
+        'timeout' => (int) env('OCR_TIMEOUT', 30),
+    ],
+
 ];

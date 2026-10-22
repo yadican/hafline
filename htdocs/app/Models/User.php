@@ -36,6 +36,14 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Roles/permissions are seeded on the web guard; API JWT auth must resolve the same set.
+     */
+    public function getDefaultGuardName(): string
+    {
+        return 'web';
+    }
+
+    /**
      * The login field accepts an e-mail address or a username; passive users cannot sign in.
      *
      * @return array<string, mixed>

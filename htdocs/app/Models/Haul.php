@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'shift',
     'hauled_at',
     'created_by',
+    'field_haul_session_id',
 ])]
 class Haul extends Model
 {
@@ -97,6 +98,14 @@ class Haul extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<FieldHaulSession, $this>
+     */
+    public function fieldSession(): BelongsTo
+    {
+        return $this->belongsTo(FieldHaulSession::class, 'field_haul_session_id');
     }
 
     /**

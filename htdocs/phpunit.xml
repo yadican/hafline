@@ -33,5 +33,6 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="JWT_SECRET" value="testing-jwt-secret-key-not-for-production"/>
+        <env name="OCR_SCAN_URL" value="http://ocr.test/api/v1/ocr/scan-plate"/>
     </php>
 </phpunit>

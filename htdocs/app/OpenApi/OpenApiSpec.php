@@ -16,6 +16,8 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Auth', description: 'Authentication')]
 #[OA\Tag(name: 'Profile', description: 'Authenticated user profile')]
 #[OA\Tag(name: 'Dashboard', description: 'Dashboard summary')]
+#[OA\Tag(name: 'Hauls', description: 'Field haul scan and ticket creation')]
+#[OA\Tag(name: 'FieldSessions', description: 'Locked site / dump / shift session for field operators')]
 #[OA\SecurityScheme(
     securityScheme: 'bearerAuth',
     type: 'http',
