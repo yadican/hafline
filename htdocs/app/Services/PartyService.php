@@ -19,6 +19,7 @@ class PartyService extends Service
     public function __construct(
         private PartyRepository $parties,
         private LocationRepository $locations,
+        private EmployeeService $employees,
     ) {}
 
     /**
@@ -110,6 +111,7 @@ class PartyService extends Service
                 : $party->company()->create($this->companyAttributes($data));
 
             $this->syncRoles($party, $data['roles'] ?? []);
+            $this->employees->ensureForParty($party->fresh(['roleAssignments']));
 
             PartyCache::flush();
 
@@ -131,6 +133,7 @@ class PartyService extends Service
                 : $party->company()->updateOrCreate([], $this->companyAttributes($data));
 
             $this->syncRoles($updated, $data['roles'] ?? []);
+            $this->employees->ensureForParty($updated->fresh(['roleAssignments']));
 
             PartyCache::flush();
 
@@ -159,6 +162,7 @@ class PartyService extends Service
     {
         $roles = collect($requested)
             ->map(fn (string $role) => PartyRole::from($role))
+            ->filter(fn (PartyRole $role) => $role->allowedFor($party->type))
             ->merge($this->parties->lockedRoles($party))
             ->map(fn (PartyRole $role) => $role->value)
             ->unique();

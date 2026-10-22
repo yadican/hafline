@@ -14,7 +14,6 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('party_id')->constrained()->restrictOnDelete();
             $table->date('started_on')->nullable();
-            $table->string('vehicle_info')->nullable();
             $table->string('occupation')->nullable();
             $table->decimal('salary', 14, 2)->default(0);
             $table->string('bank_account_no', 100)->nullable();

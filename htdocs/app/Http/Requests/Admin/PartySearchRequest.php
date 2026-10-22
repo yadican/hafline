@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\PartyRole;
+use App\Enums\PartyType;
 use App\Http\Requests\Concerns\SortsResults;
 use App\Repositories\PartyRepository;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -28,9 +29,15 @@ class PartySearchRequest extends FormRequest
      */
     public function rules(): array
     {
+        $type = PartyType::tryFrom((string) $this->route('type')) ?? PartyType::Person;
+        $allowedRoles = array_map(
+            fn (PartyRole $role) => $role->value,
+            PartyRole::forType($type),
+        );
+
         return [
             'q' => ['nullable', 'string', 'max:100'],
-            'role' => ['nullable', Rule::enum(PartyRole::class)],
+            'role' => ['nullable', Rule::in($allowedRoles)],
             'active' => ['nullable', Rule::in(['1', '0'])],
             ...$this->sortRules(),
         ];

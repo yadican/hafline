@@ -131,6 +131,17 @@ button.panel-btn {
     font-weight: 600;
 }
 
+.panel-choice:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
+.panel-choice-lock {
+    margin-left: 4px;
+    color: var(--ui-muted, #8a7f70);
+    font-size: 12px;
+}
+
 .panel-choice input[type="checkbox"],
 .panel-choice input[type="radio"] {
     flex: 0 0 auto;

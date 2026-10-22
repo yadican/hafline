@@ -29,16 +29,40 @@
 <x-form.group legend="Roller ve durum" icon="fa-solid fa-tags" description="Bu kartın işletmedeki rolleri">
     <x-form.field label="Roller" name="roles">
         <div class="panel-choices">
-            @foreach (\App\Enums\PartyRole::cases() as $role)
-                @php($isLocked = in_array($role->value, $locked, true))
-                <label class="panel-choice" @if ($isLocked) title="Bu role bağlı kayıtlar olduğu için kaldırılamaz" @endif>
-                    <input type="checkbox" name="roles[]" value="{{ $role->value }}" @checked(in_array($role->value, $selectedRoles, true)) @disabled($isLocked)>
+            @foreach (\App\Enums\PartyRole::forType($type) as $role)
+                @php
+                    $isLocked = in_array($role->value, $locked, true);
+                    $needsConfirm = $role->requiresAssignmentConfirm() && ! $isLocked;
+                @endphp
+                <label class="panel-choice" @if ($isLocked) title="{{ $role->lockedHint() }}" @endif>
+                    <input
+                        type="checkbox"
+                        name="roles[]"
+                        value="{{ $role->value }}"
+                        @checked(in_array($role->value, $selectedRoles, true))
+                        @disabled($isLocked)
+                        @if ($needsConfirm)
+                            data-role-confirm
+                            data-role-confirm-title="{{ $role->assignmentConfirmTitle() }}"
+                            data-role-confirm-text="{{ $role->assignmentConfirmText() }}"
+                            data-role-confirm-button="Evet, aç"
+                            data-role-confirm-icon="fa-solid fa-triangle-exclamation"
+                        @endif
+                    >
                     {{ $role->label() }}
+                    @if ($isLocked)
+                        <span class="panel-choice-lock" aria-hidden="true"><i class="fa-solid fa-lock"></i></span>
+                    @endif
                 </label>
             @endforeach
         </div>
     </x-form.field>
-    <p class="panel-hint">Roller; araç, döküm yeri, akaryakıt istasyonu veya şantiye bağlandığında kendiliğinden eklenir. "Makine operatörü" rolü verilen kişiler makine çalışma fişinde seçilebilir. Roller ve bağ sürdükçe kaldırılamaz.</p>
+    <p class="panel-hint">
+        Roller Cari’den verilir; araç, döküm, istasyon veya şantiye bağında kendiliğinden de eklenir.
+        @if ($isPerson)
+            <strong>Personel</strong> gibi sert roller yalnızca kişi kartlarında açılır; işaretlenince ilgili kart oluşur ve Cari’den kaldırılamaz — kaldırma yalnızca o modülün ekranından yapılır.
+        @endif
+    </p>
 </x-form.group>
 
 <x-form.group legend="İletişim Mobil" icon="fa-solid fa-phone" description="Telefon, e-posta">

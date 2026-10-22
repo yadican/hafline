@@ -100,3 +100,34 @@ export function bindConfirms(root = document) {
         });
     });
 }
+
+/**
+ * Cari role checkboxes that open domain cards (e.g. Personel) ask for confirmation first.
+ */
+export function bindRoleAssignmentConfirms(root = document) {
+    root.querySelectorAll('input[type="checkbox"][data-role-confirm]').forEach((input) => {
+        if (input.dataset.roleConfirmBound === '1') {
+            return;
+        }
+
+        input.dataset.roleConfirmBound = '1';
+        input.addEventListener('change', async () => {
+            if (! input.checked) {
+                return;
+            }
+
+            const confirmed = await confirm({
+                title: input.dataset.roleConfirmTitle || 'Emin misiniz?',
+                text: input.dataset.roleConfirmText || '',
+                button: input.dataset.roleConfirmButton || 'Evet, aç',
+                icon: input.dataset.roleConfirmIcon || 'fa-solid fa-triangle-exclamation',
+                buttonIcon: 'fa-solid fa-check',
+                tone: 'danger',
+            });
+
+            if (! confirmed) {
+                input.checked = false;
+            }
+        });
+    });
+}

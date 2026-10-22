@@ -1,6 +1,7 @@
 import { bindAutocompletes } from './autocomplete.js';
 import { bindDatePickers } from './date-picker.js';
-import { bindConfirms } from './dialog.js';
+import { bindConfirms, bindRoleAssignmentConfirms } from './dialog.js';
+import { bindEmployeeBalances } from './employee-balance.js';
 import { bindErrorSummary } from './error-summary.js';
 import { bindLocationSelects } from './location-select.js';
 import { bindMultiSelects } from './multi-select.js';
@@ -16,10 +17,12 @@ export { showFlash, toast } from './toast.js';
 const binders = [
     bindSubmitGuard,
     bindConfirms,
+    bindRoleAssignmentConfirms,
     bindDatePickers,
     bindMultiSelects,
     bindLocationSelects,
     bindAutocompletes,
+    bindEmployeeBalances,
     bindErrorSummary,
 ];
 

@@ -132,6 +132,10 @@ class PartyRepository extends Repository
             $roles[] = PartyRole::Fuel;
         }
 
+        if (DB::table('employees')->where('party_id', $party->id)->whereNull('deleted_at')->exists()) {
+            $roles[] = PartyRole::Employee;
+        }
+
         if (DB::table('machine_works')->where('operator_id', $party->id)->exists()) {
             $roles[] = PartyRole::MachineOperator;
         }

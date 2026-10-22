@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\EmployeeOccupation;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
 use App\Enums\Shift;
@@ -18,6 +19,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\CariEntryService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -310,19 +312,33 @@ class MediumDataSeeder extends Seeder
      */
     private function payroll($staff): void
     {
-        $occupations = ['Şoför', 'Operatör', 'Muhasebe', 'Ofis', 'Saha sorumlusu', 'Puantör'];
+        $occupations = EmployeeOccupation::cases();
+        $from = now()->subMonths(11)->startOfMonth();
+        $last = now()->startOfMonth()->subMonth();
+        $periods = [];
+        $cursor = $from->copy();
+
+        while ($cursor->lte($last)) {
+            $periods[] = $cursor->toDateString();
+            $cursor->addMonth();
+        }
 
         foreach ($staff->values() as $index => $person) {
+            if (DB::table('employees')->where('party_id', $person->id)->whereNull('deleted_at')->exists()) {
+                continue;
+            }
+
             $employeeId = (string) Str::uuid7();
-            $salary = fake()->randomElement([28000, 35000, 42000, 55000]);
+            $baseSalary = fake()->randomElement([28000, 35000, 42000, 55000]);
+            $startedOn = $from->copy()->addDays(5)->toDateString();
+            $currentBase = $baseSalary;
 
             DB::table('employees')->insert([
                 'id' => $employeeId,
                 'party_id' => $person->id,
-                'started_on' => '2026-01-06',
-                'vehicle_info' => $index % 2 === 0 ? '34 plaka' : null,
-                'occupation' => $occupations[$index % count($occupations)],
-                'salary' => $salary,
+                'started_on' => $startedOn,
+                'occupation' => $occupations[$index % count($occupations)]->value,
+                'salary' => $baseSalary,
                 'bank_account_no' => fake()->numerify('TR########################'),
                 'active' => true,
                 'created_at' => now(),
@@ -332,50 +348,59 @@ class MediumDataSeeder extends Seeder
             DB::table('employee_periods')->insert([
                 'id' => (string) Str::uuid7(),
                 'employee_id' => $employeeId,
-                'started_on' => '2026-01-06',
+                'started_on' => $startedOn,
                 'ended_on' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            foreach (['2026-08-01', '2026-09-01'] as $period) {
+            foreach ($periods as $monthIndex => $period) {
+                if ($monthIndex === 6) {
+                    $currentBase = round($currentBase * 1.08, 2);
+                }
+
+                $days = fake()->numberBetween(20, 26);
+                $earned = round($currentBase / 30 * $days, 2);
+
                 DB::table('employee_salaries')->insert([
                     'id' => (string) Str::uuid7(),
                     'employee_id' => $employeeId,
                     'period' => $period,
-                    'base_salary' => $salary,
-                    'worked_days' => 22,
-                    'earned_salary' => $salary,
+                    'base_salary' => $currentBase,
+                    'worked_days' => $days,
+                    'earned_salary' => $earned,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-            }
 
-            DB::table('employee_payments')->insert([
-                'id' => (string) Str::uuid7(),
-                'employee_id' => $employeeId,
-                'payment_method' => PaymentMethod::BankTransfer->value,
-                'amount' => $salary,
-                'period' => '2026-09-01',
-                'occurred_on' => '2026-09-05',
-                'description' => 'Eylül maaşı',
-                'created_by' => $this->userId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            if ($index % 2 === 0) {
-                DB::table('employee_bonuses')->insert([
+                DB::table('employee_payments')->insert([
                     'id' => (string) Str::uuid7(),
                     'employee_id' => $employeeId,
-                    'amount' => fake()->randomElement([2500, 4000, 7500]),
-                    'occurred_on' => '2026-09-15',
-                    'description' => 'Saha pirimi',
+                    'payment_method' => PaymentMethod::BankTransfer->value,
+                    'amount' => $earned,
+                    'period' => $period,
+                    'occurred_on' => Carbon::parse($period)->day(5)->toDateString(),
+                    'description' => Carbon::parse($period)->translatedFormat('F Y').' maaşı',
                     'created_by' => $this->userId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                if ($index % 2 === 0 && $monthIndex % 2 === 1) {
+                    DB::table('employee_bonuses')->insert([
+                        'id' => (string) Str::uuid7(),
+                        'employee_id' => $employeeId,
+                        'amount' => fake()->randomElement([2500, 4000, 7500]),
+                        'occurred_on' => Carbon::parse($period)->day(15)->toDateString(),
+                        'description' => 'Saha pirimi',
+                        'created_by' => $this->userId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
+
+            DB::table('employees')->where('id', $employeeId)->update(['salary' => $currentBase]);
         }
     }
 

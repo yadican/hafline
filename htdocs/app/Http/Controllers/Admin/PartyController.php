@@ -32,11 +32,13 @@ class PartyController extends AdminController
     public function create(Request $request): View
     {
         $type = PartyType::tryFrom((string) $request->query('type')) ?? PartyType::Person;
+        $role = PartyRole::tryFrom((string) $request->query('role'));
+        $prefilled = $role !== null && $role->allowedFor($type) ? [$role] : [];
 
         return view('admin.parties.create', [
             'title' => $type === PartyType::Person ? 'Yeni kişi' : 'Yeni şirket',
             'type' => $type,
-            'values' => ['roles' => array_filter([PartyRole::tryFrom((string) $request->query('role'))])],
+            'values' => ['roles' => $prefilled],
             'locations' => $this->parties->locationOptions(old('city_id'), old('district_id')),
         ]);
     }

@@ -7,6 +7,10 @@ use App\Http\Controllers\Admin\CariEntryLookupController;
 use App\Http\Controllers\Admin\CashCategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DumpSiteController;
+use App\Http\Controllers\Admin\EmployeeBonusController;
+use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\EmployeePaymentController;
+use App\Http\Controllers\Admin\EmployeeSalaryController;
 use App\Http\Controllers\Admin\ExampleController;
 use App\Http\Controllers\Admin\FuelReceiptController;
 use App\Http\Controllers\Admin\FuelReceiptLookupController;
@@ -23,6 +27,8 @@ use App\Http\Controllers\Admin\Reports\CompanyBalanceReportController;
 use App\Http\Controllers\Admin\Reports\CompanyLedgerReportController;
 use App\Http\Controllers\Admin\Reports\DumpSitePaymentReportController;
 use App\Http\Controllers\Admin\Reports\DumpSiteReportController;
+use App\Http\Controllers\Admin\Reports\EmployeeAnnualReportController;
+use App\Http\Controllers\Admin\Reports\EmployeeMonthlyReportController;
 use App\Http\Controllers\Admin\Reports\FuelStationMonthlyReportController;
 use App\Http\Controllers\Admin\Reports\FuelStationReportController;
 use App\Http\Controllers\Admin\Reports\MonthlyVoucherReportController;
@@ -85,6 +91,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('haul-routes.vehicle-prices', RouteVehiclePriceController::class)->only(['store', 'destroy'])->scoped();
     Route::resource('fuel-stations', FuelStationController::class)->except(['show']);
 
+    Route::get('employees/{employee}/balance', [EmployeeController::class, 'balance'])->name('employees.balance');
+    Route::resource('employees', EmployeeController::class)->except(['show']);
+    Route::get('employee-salaries', [EmployeeSalaryController::class, 'index'])->name('employee-salaries.index');
+    Route::post('employee-salaries', [EmployeeSalaryController::class, 'store'])->name('employee-salaries.store');
+    Route::resource('employee-payments', EmployeePaymentController::class)->except(['show']);
+    Route::resource('employee-bonuses', EmployeeBonusController::class)->except(['show']);
+
     Route::get('hauls/lookups/dump-sites', [HaulLookupController::class, 'dumpSites'])->name('hauls.lookups.dump-sites');
     Route::get('hauls/lookups/quote', [HaulLookupController::class, 'quote'])->name('hauls.lookups.quote');
     Route::get('hauls/lookups/vehicles', [HaulLookupController::class, 'vehicles'])->name('hauls.lookups.vehicles');
@@ -141,4 +154,8 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/site-expense/export', [SiteExpenseReportController::class, 'export'])->name('reports.site-expense.export');
     Route::get('reports/cash-movements', [CashMovementReportController::class, 'index'])->name('reports.cash-movements');
     Route::get('reports/cash-movements/export', [CashMovementReportController::class, 'export'])->name('reports.cash-movements.export');
+    Route::get('reports/employee-monthly', [EmployeeMonthlyReportController::class, 'index'])->name('reports.employee-monthly');
+    Route::get('reports/employee-monthly/export', [EmployeeMonthlyReportController::class, 'export'])->name('reports.employee-monthly.export');
+    Route::get('reports/employee-annual', [EmployeeAnnualReportController::class, 'index'])->name('reports.employee-annual');
+    Route::get('reports/employee-annual/export', [EmployeeAnnualReportController::class, 'export'])->name('reports.employee-annual.export');
 });

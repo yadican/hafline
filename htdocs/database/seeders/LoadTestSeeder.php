@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PartyRole;
 use App\Services\CariEntryService;
 use App\Services\Ledger\FuelReceiptLedger;
 use App\Services\Ledger\HaulLedger;
@@ -9,6 +10,7 @@ use App\Services\Ledger\MachineWorkLedger;
 use Database\Seeders\LoadTest\CariStage;
 use Database\Seeders\LoadTest\CatalogStage;
 use Database\Seeders\LoadTest\OperationsStage;
+use Database\Seeders\LoadTest\PayrollStage;
 use Database\Seeders\LoadTest\Support\Progress;
 use Illuminate\Database\Seeder;
 
@@ -56,6 +58,8 @@ class LoadTestSeeder extends Seeder
 
         (new CariStage($progress, $cari))->run($catalog, $from, $to);
 
+        (new PayrollStage($progress))->run($catalog, $from, $to);
+
         $progress->stage('Özet');
         $progress->note('Şantiye: '.$catalog->allSites()->count());
         $progress->note('Döküm: '.$catalog->allDumpSites()->count());
@@ -63,6 +67,7 @@ class LoadTestSeeder extends Seeder
         $progress->note('İstasyon: '.$catalog->allStations()->count());
         $progress->note('Araç: '.$catalog->allVehicles()->count()
             .' ('.$catalog->haulVehicles()->count().' kamyon + '.$catalog->machines()->count().' makine)');
+        $progress->note('Personel (Employee rolü): '.$catalog->partiesFor(PartyRole::Employee)->count());
         $progress->done('1 yıllık load test verisi hazır');
     }
 }

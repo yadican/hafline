@@ -52,6 +52,14 @@ class Party extends Model
     }
 
     /**
+     * @return HasOne<Employee, $this>
+     */
+    public function employee(): HasOne
+    {
+        return $this->hasOne(Employee::class);
+    }
+
+    /**
      * @return HasMany<PartyRoleAssignment, $this>
      */
     public function roleAssignments(): HasMany

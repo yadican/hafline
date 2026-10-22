@@ -51,7 +51,16 @@ class PartyRequest extends FormRequest
             'address' => ['nullable', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'roles' => ['array'],
-            'roles.*' => [Rule::enum(PartyRole::class)],
+            'roles.*' => [
+                Rule::enum(PartyRole::class),
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $role = PartyRole::tryFrom((string) $value);
+
+                    if ($role !== null && ! $role->allowedFor($this->partyType())) {
+                        $fail("{$role->label()} yalnızca kişi cari kartlarına verilebilir.");
+                    }
+                },
+            ],
             'active' => ['boolean'],
         ];
     }

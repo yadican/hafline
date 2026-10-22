@@ -244,4 +244,54 @@ class PartyTest extends TestCase
             ->delete(route('admin.parties.destroy', $company))
             ->assertRedirect(route('admin.companies.index'));
     }
+
+    public function test_person_only_roles_are_hidden_on_company_forms(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.create', ['type' => 'company']))
+            ->assertOk()
+            ->assertDontSee('value="employee"', false)
+            ->assertDontSee('value="machine_operator"', false)
+            ->assertSee('value="customer"', false);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.create', ['type' => 'person']))
+            ->assertOk()
+            ->assertSee('value="employee"', false)
+            ->assertSee('value="machine_operator"', false);
+    }
+
+    public function test_company_cannot_be_assigned_person_only_roles(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.parties.store'), [
+                'type' => 'company',
+                'title' => 'YANLIŞ PERSONEL A.Ş.',
+                'roles' => [PartyRole::Employee->value],
+                'active' => '1',
+            ])
+            ->assertSessionHasErrors('roles.0');
+
+        $this->assertDatabaseCount('parties', 0);
+
+        $company = Party::factory()->company()->create();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.parties.update', $company), [
+                'title' => 'YANLIŞ PERSONEL A.Ş.',
+                'roles' => [PartyRole::MachineOperator->value],
+            ])
+            ->assertSessionHasErrors('roles.0');
+
+        $this->assertFalse($company->fresh()->hasRole(PartyRole::MachineOperator));
+    }
+
+    public function test_company_create_ignores_incompatible_role_query(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.create', ['type' => 'company', 'role' => PartyRole::Employee->value]))
+            ->assertOk()
+            ->assertDontSee('value="employee"', false)
+            ->assertDontSee('value="machine_operator"', false);
+    }
 }

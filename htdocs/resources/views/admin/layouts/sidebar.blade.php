@@ -87,6 +87,24 @@
         </div>
     </div>
 
+    <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.employees.*', 'admin.employee-salaries.*', 'admin.employee-payments.*', 'admin.employee-bonuses.*', 'admin.reports.employee-monthly*', 'admin.reports.employee-annual*')]) id="um-sec-personnel">
+        <button type="button" class="um-title" data-um-toggle="um-sec-personnel">
+            <span class="um-title-text">
+                <i class="fa-solid fa-id-badge um-title-icon" aria-hidden="true"></i>
+                <span class="um-title-label">Personel</span>
+            </span>
+            <span class="um-caret" aria-hidden="true"></span>
+        </button>
+        <div class="um-items">
+            <a href="{{ route('admin.employees.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.employees.*')])>Personel kartları</a>
+            <a href="{{ route('admin.employee-salaries.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.employee-salaries.*')])>Maaş kartları</a>
+            <a href="{{ route('admin.employee-payments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.employee-payments.*')])>Ödeme girişi</a>
+            <a href="{{ route('admin.employee-bonuses.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.employee-bonuses.*')])>Prim girişi</a>
+            <a href="{{ route('admin.reports.employee-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.employee-monthly*')])>Aylık döküm</a>
+            <a href="{{ route('admin.reports.employee-annual') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.employee-annual*')])>Yıllık ödeme</a>
+        </div>
+    </div>
+
     <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.reports.*')]) id="um-sec-reports">
         <button type="button" class="um-title" data-um-toggle="um-sec-reports">
             <span class="um-title-text">
