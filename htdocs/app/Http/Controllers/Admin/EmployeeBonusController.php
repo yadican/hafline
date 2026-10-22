@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class EmployeeBonusController extends AdminController
 {
+    protected ?string $permissionResource = 'employee-bonus';
+
     public function __construct(private EmployeeBonusService $bonuses) {}
 
     public function index(EmployeeBonusSearchRequest $request): View

@@ -29,7 +29,7 @@ class VehiclePeriodicReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->vehicle = Vehicle::factory()->create(['plate' => '34 AAA 01']);
         $site = Site::factory()->create(['name' => 'TOPKAPI']);
         $dump = DumpSite::factory()->create(['name' => '212']);

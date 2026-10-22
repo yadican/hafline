@@ -46,7 +46,7 @@ class VehicleBalanceReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->owner = Party::factory()->create();
         $dumpSite = DumpSite::factory()->create(['name' => '212']);
 

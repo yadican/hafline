@@ -19,7 +19,7 @@ class DuplicateSubmissionTest extends TestCase
     {
         parent::setUp();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->yonetici()->create())
             ->withCookie(config('session.cookie'), Str::random(40));
     }
 

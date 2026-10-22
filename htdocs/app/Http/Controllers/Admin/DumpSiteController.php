@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class DumpSiteController extends AdminController
 {
+    protected ?string $permissionResource = 'dump-site';
+
     public function __construct(private DumpSiteService $dumpSites) {}
 
     public function index(DumpSiteSearchRequest $request): View

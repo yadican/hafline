@@ -52,7 +52,7 @@ class OwnerMonthlyReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->owner = Party::factory()->create(['name' => 'Ahmet Yılmaz']);
         $this->otherOwner = Party::factory()->create(['name' => 'Mehmet Demir']);
         $this->dumpSite = DumpSite::factory()->create(['name' => '212']);

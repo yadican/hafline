@@ -10,6 +10,13 @@ use Illuminate\Http\RedirectResponse;
 
 class VehicleOwnershipController extends AdminController
 {
+    protected ?string $permissionResource = 'vehicle';
+
+    protected array $permissionMap = [
+        'store' => 'edit-vehicle',
+        'destroy' => 'edit-vehicle',
+    ];
+
     public function __construct(private VehicleOwnershipService $ownerships) {}
 
     public function store(VehicleOwnershipRequest $request, Vehicle $vehicle): RedirectResponse

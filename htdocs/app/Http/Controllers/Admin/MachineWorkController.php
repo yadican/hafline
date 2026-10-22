@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class MachineWorkController extends AdminController
 {
+    protected ?string $permissionResource = 'machine-work';
+
     public function __construct(private MachineWorkService $works) {}
 
     public function index(MachineWorkSearchRequest $request): View

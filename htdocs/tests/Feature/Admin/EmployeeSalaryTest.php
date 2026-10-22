@@ -21,7 +21,7 @@ class EmployeeSalaryTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
     }
 
     public function test_guest_is_redirected(): void

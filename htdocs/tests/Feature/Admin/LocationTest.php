@@ -26,7 +26,7 @@ class LocationTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->istanbul = City::query()->create(['code' => 34, 'name' => 'İstanbul']);
         $this->tuzla = $this->istanbul->districts()->create(['code' => 1835, 'name' => 'Tuzla']);
         $this->aydinli = $this->tuzla->neighborhoods()->create(['name' => 'Aydınlı', 'type' => 'mahalle', 'postal_code' => '34953']);

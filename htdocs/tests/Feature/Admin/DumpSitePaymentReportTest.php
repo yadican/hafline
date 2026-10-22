@@ -42,7 +42,7 @@ class DumpSitePaymentReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->dumpSite = DumpSite::factory()->create(['name' => '212']);
         $site = Site::factory()->create(['name' => 'TOPKAPI']);
         $this->route = HaulRoute::factory()->create([

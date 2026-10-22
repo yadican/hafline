@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class SiteController extends AdminController
 {
+    protected ?string $permissionResource = 'site';
+
     public function __construct(private SiteService $sites) {}
 
     public function index(SiteSearchRequest $request): View

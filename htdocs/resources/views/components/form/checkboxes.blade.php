@@ -1,9 +1,9 @@
 @aware(['model' => null])
 
-@props(['name', 'label', 'options' => []])
+@props(['name', 'label', 'options' => [], 'value' => null])
 
 @php
-    $selected = collect(old($name, data_get($model, $name, [])))
+    $selected = collect(old($name, $value ?? data_get($model, $name, [])))
         ->map(fn ($item) => $item instanceof \BackedEnum ? $item->value : $item)
         ->all();
 @endphp

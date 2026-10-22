@@ -32,7 +32,7 @@ class MachineWorkTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->owner = Party::factory()->create();
         $this->machine = Vehicle::factory()
             ->ownedBy($this->owner, '2026-01-01')

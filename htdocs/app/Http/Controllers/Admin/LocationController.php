@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\District;
 use App\Repositories\LocationRepository;
 use Illuminate\Http\JsonResponse;
 
-class LocationController extends Controller
+class LocationController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-party';
+
     public function __construct(private LocationRepository $locations) {}
 
     public function districts(City $city): JsonResponse

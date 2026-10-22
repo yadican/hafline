@@ -20,7 +20,7 @@ class EmployeePaymentTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
     }
 
     public function test_admin_can_create_update_and_delete_a_payment(): void

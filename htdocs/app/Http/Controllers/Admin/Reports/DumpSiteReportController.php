@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DumpSiteReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-dump-sites';
+
     public function __construct(private DumpSiteReportService $reports) {}
 
     public function index(DumpSiteReportRequest $request): View

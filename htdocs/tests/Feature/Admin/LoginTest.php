@@ -12,9 +12,9 @@ class LoginTest extends TestCase
 
     public function test_user_can_login_with_email(): void
     {
-        $user = User::factory()->create(['email' => 'admin@hafline.test']);
+        $user = User::factory()->yonetici()->create(['email' => 'admin@hafline.test']);
 
-        $this->post(route('admin.login.store'), ['login' => 'admin@hafline.test', 'password' => 'password'])
+        $this->post(route('admin.login.store'), ['login' => 'admin@hafline.test', 'password' => 'HafLine34!'])
             ->assertRedirect();
 
         $this->assertAuthenticatedAs($user);
@@ -22,9 +22,9 @@ class LoginTest extends TestCase
 
     public function test_user_can_login_with_username(): void
     {
-        $user = User::factory()->create(['username' => 'santiye1', 'email' => null]);
+        $user = User::factory()->yonetici()->create(['username' => 'santiye1']);
 
-        $this->post(route('admin.login.store'), ['login' => 'santiye1', 'password' => 'password'])
+        $this->post(route('admin.login.store'), ['login' => 'santiye1', 'password' => 'HafLine34!'])
             ->assertRedirect();
 
         $this->assertAuthenticatedAs($user);
@@ -32,13 +32,13 @@ class LoginTest extends TestCase
 
     public function test_wrong_password_and_passive_user_are_rejected(): void
     {
-        User::factory()->create(['username' => 'santiye1']);
-        User::factory()->create(['username' => 'pasif', 'active' => false]);
+        User::factory()->yonetici()->create(['username' => 'santiye1']);
+        User::factory()->yonetici()->create(['username' => 'pasif', 'active' => false]);
 
         $this->post(route('admin.login.store'), ['login' => 'santiye1', 'password' => 'yanlis'])
             ->assertSessionHasErrors('login');
 
-        $this->post(route('admin.login.store'), ['login' => 'pasif', 'password' => 'password'])
+        $this->post(route('admin.login.store'), ['login' => 'pasif', 'password' => 'HafLine34!'])
             ->assertSessionHasErrors('login');
 
         $this->assertGuest();

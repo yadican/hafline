@@ -36,7 +36,7 @@ class DumpSiteReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->dumpSite = DumpSite::factory()->create(['name' => '212']);
 
         $siteA = Site::factory()->create(['name' => 'HASÜLGEN KARAYOLLARI']);

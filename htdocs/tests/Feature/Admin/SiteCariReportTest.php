@@ -40,7 +40,7 @@ class SiteCariReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->owner = Party::factory()->create(['name' => 'Ahmet']);
         $dump = DumpSite::factory()->create(['name' => '212']);
         $this->siteA = Site::factory()->create(['name' => 'BAKIRKÖY']);

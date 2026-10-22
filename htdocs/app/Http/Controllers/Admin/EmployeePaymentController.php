@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class EmployeePaymentController extends AdminController
 {
+    protected ?string $permissionResource = 'employee-payment';
+
     public function __construct(private EmployeePaymentService $payments) {}
 
     public function index(EmployeePaymentSearchRequest $request): View

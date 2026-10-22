@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@hafline.net',
         ]);
 
+        $this->call(RolePermissionSeeder::class);
         $this->call(LoadTestSeeder::class);
     }
 }

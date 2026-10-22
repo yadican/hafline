@@ -10,6 +10,63 @@ use Illuminate\Http\RedirectResponse;
 abstract class AdminController extends Controller
 {
     /**
+     * Spatie resource slug for CRUD mapping (e.g. bank → view-bank, create-bank).
+     */
+    protected ?string $permissionResource = null;
+
+    /**
+     * Fixed ability for every method (reports, lookups).
+     */
+    protected ?string $permissionAbility = null;
+
+    /**
+     * Per-method ability overrides (e.g. index => view-users).
+     *
+     * @var array<string, string>
+     */
+    protected array $permissionMap = [];
+
+    /**
+     * @param  string  $method
+     * @param  array<int|string, mixed>  $parameters
+     */
+    public function callAction($method, $parameters)
+    {
+        $this->authorizeIncoming($method);
+
+        return $this->{$method}(...array_values($parameters));
+    }
+
+    protected function authorizeIncoming(string $method): void
+    {
+        if (isset($this->permissionMap[$method])) {
+            $this->authorize($this->permissionMap[$method]);
+
+            return;
+        }
+
+        if ($this->permissionAbility !== null) {
+            $this->authorize($this->permissionAbility);
+
+            return;
+        }
+
+        if ($this->permissionResource === null) {
+            return;
+        }
+
+        $permission = match ($method) {
+            'index', 'show', 'balance' => "view-{$this->permissionResource}",
+            'create', 'store' => "create-{$this->permissionResource}",
+            'edit', 'update' => "edit-{$this->permissionResource}",
+            'destroy' => "delete-{$this->permissionResource}",
+            default => "view-{$this->permissionResource}",
+        };
+
+        $this->authorize($permission);
+    }
+
+    /**
      * @param  callable(): mixed  $action
      * @param  array<string, mixed>  $parameters
      */

@@ -36,7 +36,7 @@ class CompanyLedgerReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create([
             'name' => 'ALPHA TEDARİK',
         ]);

@@ -36,7 +36,7 @@ class SiteExitReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->site = Site::factory()->create(['name' => 'ABDULLAH MERTER']);
 
         $dumpA = DumpSite::factory()->create(['name' => 'BOLLUCA']);

@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DumpSitePaymentReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-dump-site-payments';
+
     public function __construct(private DumpSitePaymentReportService $reports) {}
 
     public function index(DumpSitePaymentReportRequest $request): View

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Models\Party;
 use App\Models\Vehicle;
 use App\Services\PartyService;
@@ -11,8 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Throwable;
 
-class CariEntryLookupController extends Controller
+class CariEntryLookupController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-cari-entry';
+
     public function __construct(private PartyService $parties) {}
 
     /**

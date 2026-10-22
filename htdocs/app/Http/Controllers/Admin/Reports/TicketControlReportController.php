@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketControlReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-ticket-control';
+
     public function __construct(private TicketControlReportService $reports) {}
 
     public function index(TicketControlReportRequest $request): View

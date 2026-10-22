@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeMonthlyReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-employee-monthly';
+
     public function __construct(private EmployeeMonthlyReportService $reports) {}
 
     public function index(EmployeeMonthlyReportRequest $request): View

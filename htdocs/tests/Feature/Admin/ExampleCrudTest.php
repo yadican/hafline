@@ -19,7 +19,7 @@ class ExampleCrudTest extends TestCase
 
     public function test_admin_can_create_update_and_delete_an_example(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
 
         $this->actingAs($admin)
             ->post(route('admin.examples.store'), [
@@ -53,7 +53,7 @@ class ExampleCrudTest extends TestCase
 
     public function test_admin_can_search_and_filter_the_example_list(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
 
         Example::factory()->create(['title' => 'Saha notu', 'active' => true, 'shift' => 'day']);
         Example::factory()->create(['title' => 'Depo sayımı', 'active' => false, 'shift' => 'night']);
@@ -78,7 +78,7 @@ class ExampleCrudTest extends TestCase
 
     public function test_list_sorts_by_title_and_keeps_the_sort_in_the_search_form(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
 
         Example::factory()->create(['title' => 'Beta kaydı']);
         Example::factory()->create(['title' => 'Alfa kaydı']);
@@ -98,7 +98,7 @@ class ExampleCrudTest extends TestCase
 
     public function test_invalid_example_is_not_stored(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
 
         $this->actingAs($admin)
             ->from(route('admin.examples.create'))

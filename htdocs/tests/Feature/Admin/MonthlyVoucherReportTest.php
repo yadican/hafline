@@ -30,7 +30,7 @@ class MonthlyVoucherReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $site = Site::factory()->create(['name' => 'TOPKAPI']);
         $dump = DumpSite::factory()->create(['name' => '212']);
         $this->route = HaulRoute::factory()->create([

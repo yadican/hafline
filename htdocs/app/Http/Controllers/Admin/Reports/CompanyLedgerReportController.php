@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CompanyLedgerReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-company-ledger';
+
     public function __construct(private CompanyLedgerReportService $reports) {}
 
     public function index(CompanyLedgerReportRequest $request): View

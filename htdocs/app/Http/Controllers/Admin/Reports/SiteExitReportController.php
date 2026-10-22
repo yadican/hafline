@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SiteExitReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-site-exits';
+
     public function __construct(private SiteExitReportService $reports) {}
 
     public function index(SiteExitReportRequest $request): View

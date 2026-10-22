@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Models\Party;
 use App\Models\Vehicle;
 use App\Services\MachineWorkService;
@@ -11,8 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Throwable;
 
-class MachineWorkLookupController extends Controller
+class MachineWorkLookupController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-machine-work';
+
     public function __construct(private MachineWorkService $works) {}
 
     public function machines(Request $request): JsonResponse

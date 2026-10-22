@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VehicleCostReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-vehicle-cost';
+
     public function __construct(private VehicleCostReportService $reports) {}
 
     public function index(VehicleCostReportRequest $request): View

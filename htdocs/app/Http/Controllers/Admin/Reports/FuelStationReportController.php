@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FuelStationReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-fuel-stations';
+
     public function __construct(private FuelStationReportService $reports) {}
 
     public function index(FuelStationReportRequest $request): View

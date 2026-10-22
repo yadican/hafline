@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class VehicleClassController extends AdminController
 {
+    protected ?string $permissionResource = 'vehicle-class';
+
     public function __construct(private VehicleClassService $classes) {}
 
     public function index(VehicleClassSearchRequest $request): View

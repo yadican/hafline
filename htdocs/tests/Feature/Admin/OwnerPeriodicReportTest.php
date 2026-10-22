@@ -35,7 +35,7 @@ class OwnerPeriodicReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->owner = Party::factory()->person()->withRole(PartyRole::VehicleOwner)->create([
             'name' => 'AHMET YILMAZ',
         ]);

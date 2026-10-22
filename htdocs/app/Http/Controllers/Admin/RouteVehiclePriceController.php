@@ -10,6 +10,13 @@ use Illuminate\Http\RedirectResponse;
 
 class RouteVehiclePriceController extends AdminController
 {
+    protected ?string $permissionResource = 'haul-route';
+
+    protected array $permissionMap = [
+        'store' => 'edit-haul-route',
+        'destroy' => 'edit-haul-route',
+    ];
+
     public function __construct(private HaulRouteService $routes) {}
 
     public function store(RouteVehiclePriceRequest $request, HaulRoute $haulRoute): RedirectResponse

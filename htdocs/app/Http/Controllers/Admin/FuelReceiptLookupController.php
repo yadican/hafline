@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Models\FuelStation;
 use App\Models\Vehicle;
 use App\Repositories\HaulLookupRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class FuelReceiptLookupController extends Controller
+class FuelReceiptLookupController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-fuel-receipt';
+
     public function __construct(private HaulLookupRepository $lookups) {}
 
     public function vehicles(Request $request): JsonResponse

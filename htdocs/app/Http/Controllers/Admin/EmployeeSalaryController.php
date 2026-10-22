@@ -10,6 +10,8 @@ use Illuminate\View\View;
 
 class EmployeeSalaryController extends AdminController
 {
+    protected ?string $permissionResource = 'employee-salary';
+
     public function __construct(private EmployeeSalaryService $salaries) {}
 
     public function index(EmployeeSalaryIndexRequest $request): View

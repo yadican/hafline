@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class BankController extends AdminController
 {
+    protected ?string $permissionResource = 'bank';
+
     public function __construct(private BankService $banks) {}
 
     public function index(BankSearchRequest $request): View

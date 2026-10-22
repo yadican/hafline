@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -31,6 +32,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('HafLine34!'), // password
             'remember_token' => Str::random(10),
+            'active' => true,
         ];
     }
 
@@ -42,5 +44,16 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * Assign the seeded yonetici role (all permissions).
+     */
+    public function yonetici(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            (new RolePermissionSeeder)->run();
+            $user->syncRoles(['yonetici']);
+        });
     }
 }

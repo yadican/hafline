@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MonthlyVoucherReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-monthly-vouchers';
+
     public function __construct(private MonthlyVoucherReportService $reports) {}
 
     public function index(MonthlyVoucherReportRequest $request): View

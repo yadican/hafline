@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CashMovementReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-cash-movements';
+
     public function __construct(private CashMovementReportService $reports) {}
 
     public function index(CashMovementReportRequest $request): View

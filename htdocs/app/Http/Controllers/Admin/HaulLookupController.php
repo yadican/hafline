@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
 use App\Repositories\HaulLookupRepository;
 use App\Services\HaulService;
@@ -10,8 +9,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-class HaulLookupController extends Controller
+class HaulLookupController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-haul';
+
     public function __construct(private HaulLookupRepository $lookups) {}
 
     public function vehicles(Request $request): JsonResponse

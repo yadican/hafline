@@ -17,7 +17,7 @@ class BankTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
     }
 
     public function test_guest_is_redirected_from_the_bank_list(): void

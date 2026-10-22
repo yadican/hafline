@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Services\DashboardService;
 use Illuminate\View\View;
 
-class DashboardController extends Controller
+class DashboardController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-dashboard';
+
     public function __construct(private DashboardService $dashboard) {}
 
     public function index(): View

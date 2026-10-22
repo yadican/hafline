@@ -33,7 +33,7 @@ class CashMovementReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->site = Site::factory()->create(['name' => 'BAKIRKÖY']);
         $this->owner = Party::factory()->create(['name' => 'Ahmet']);
         $this->vehicle = Vehicle::factory()->ownedBy($this->owner, '2026-01-01')->create([

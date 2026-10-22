@@ -17,7 +17,7 @@ class UserActivityLogTest extends TestCase
 
     public function test_form_submission_stores_every_posted_field_with_the_request(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
 
         $this->actingAs($admin)
             ->post(route('admin.examples.store'), [
@@ -68,7 +68,7 @@ class UserActivityLogTest extends TestCase
 
     public function test_update_keeps_the_record_before_and_after_alongside_the_posted_fields(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
         $example = Example::factory()->create(['title' => 'Saha notu', 'note' => 'İlk kayıt']);
 
         $this->actingAs($admin)
@@ -96,7 +96,7 @@ class UserActivityLogTest extends TestCase
 
     public function test_rejected_form_is_logged_with_the_posted_fields_and_errors(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->yonetici()->create();
 
         $this->actingAs($admin)
             ->post(route('admin.examples.store'), [
@@ -118,11 +118,11 @@ class UserActivityLogTest extends TestCase
 
     public function test_login_records_the_account_without_the_password(): void
     {
-        $user = User::factory()->create(['username' => 'santiye1', 'email' => null]);
+        $user = User::factory()->yonetici()->create(['username' => 'santiye1']);
 
         $this->post(route('admin.login.store'), [
             'login' => 'santiye1',
-            'password' => 'password',
+            'password' => 'HafLine34!',
         ])->assertRedirect();
 
         $log = AuditLog::query()->sole();
@@ -136,7 +136,7 @@ class UserActivityLogTest extends TestCase
 
     public function test_failed_login_is_logged_without_a_user_or_password(): void
     {
-        User::factory()->create(['username' => 'santiye1']);
+        User::factory()->yonetici()->create(['username' => 'santiye1']);
 
         $this->post(route('admin.login.store'), [
             'login' => 'santiye1',
@@ -153,7 +153,7 @@ class UserActivityLogTest extends TestCase
 
     public function test_opening_a_page_does_not_write_an_activity_row(): void
     {
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->yonetici()->create())
             ->get(route('admin.examples.index'))
             ->assertOk();
 
@@ -164,7 +164,7 @@ class UserActivityLogTest extends TestCase
     {
         $token = '0123456789abcdef0123456789abcdef';
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->yonetici()->create())
             ->withCookie(config('session.cookie'), Str::random(40));
 
         $payload = ['title' => 'Saha notu', PreventDuplicateSubmissions::FIELD => $token];

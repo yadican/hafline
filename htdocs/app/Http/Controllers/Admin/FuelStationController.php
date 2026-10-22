@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class FuelStationController extends AdminController
 {
+    protected ?string $permissionResource = 'fuel-station';
+
     public function __construct(private FuelStationService $stations) {}
 
     public function index(FuelStationSearchRequest $request): View

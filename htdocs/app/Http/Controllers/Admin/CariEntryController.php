@@ -12,6 +12,8 @@ use Illuminate\View\View;
 
 class CariEntryController extends AdminController
 {
+    protected ?string $permissionResource = 'cari-entry';
+
     public function __construct(private CariEntryService $entries) {}
 
     public function index(CariEntrySearchRequest $request): View

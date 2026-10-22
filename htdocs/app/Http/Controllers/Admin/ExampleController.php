@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class ExampleController extends AdminController
 {
+    protected ?string $permissionResource = 'example';
+
     public function __construct(private ExampleService $examples) {}
 
     public function index(ExampleSearchRequest $request): View

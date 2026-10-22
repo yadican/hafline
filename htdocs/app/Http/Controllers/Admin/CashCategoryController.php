@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class CashCategoryController extends AdminController
 {
+    protected ?string $permissionResource = 'cash-category';
+
     public function __construct(private CashCategoryService $cashCategories) {}
 
     public function index(CashCategorySearchRequest $request): View

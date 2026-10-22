@@ -22,7 +22,7 @@ class VehicleRateTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->machine = Vehicle::factory()->create(['vehicle_class_id' => VehicleClass::factory()->hourly()]);
     }
 

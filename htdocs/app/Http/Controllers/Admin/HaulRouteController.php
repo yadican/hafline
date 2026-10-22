@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class HaulRouteController extends AdminController
 {
+    protected ?string $permissionResource = 'haul-route';
+
     public function __construct(private HaulRouteService $routes) {}
 
     public function index(HaulRouteSearchRequest $request): View

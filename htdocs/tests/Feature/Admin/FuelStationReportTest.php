@@ -33,7 +33,7 @@ class FuelStationReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->station = FuelStation::factory()->create([
             'name' => 'ALTUR',
             'unit_price' => 50.00,

@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class FuelReceiptController extends AdminController
 {
+    protected ?string $permissionResource = 'fuel-receipt';
+
     public function __construct(private FuelReceiptService $receipts) {}
 
     public function index(FuelReceiptSearchRequest $request): View

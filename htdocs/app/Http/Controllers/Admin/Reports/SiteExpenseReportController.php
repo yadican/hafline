@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SiteExpenseReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-site-expense';
+
     public function __construct(private SiteExpenseReportService $reports) {}
 
     public function index(SiteExpenseReportRequest $request): View

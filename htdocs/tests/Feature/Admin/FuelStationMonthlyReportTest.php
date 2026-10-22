@@ -28,7 +28,7 @@ class FuelStationMonthlyReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->station = FuelStation::factory()->create(['name' => 'SHELL']);
         $this->tir = VehicleClass::factory()->create(['name' => 'TIR']);
         $this->vehicleA = Vehicle::factory()->create([

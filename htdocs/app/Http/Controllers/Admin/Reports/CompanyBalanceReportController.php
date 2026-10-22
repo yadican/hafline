@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CompanyBalanceReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-company-balance';
+
     public function __construct(private CompanyBalanceReportService $reports) {}
 
     public function index(CompanyBalanceReportRequest $request): View

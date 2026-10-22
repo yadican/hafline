@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SiteCariReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-site-cari';
+
     public function __construct(private SiteCariReportService $reports) {}
 
     public function index(SiteCariReportRequest $request): View

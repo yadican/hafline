@@ -14,6 +14,8 @@ use Illuminate\View\View;
 
 class PartyController extends AdminController
 {
+    protected ?string $permissionResource = 'party';
+
     public function __construct(private PartyService $parties) {}
 
     public function index(PartySearchRequest $request, string $type): View

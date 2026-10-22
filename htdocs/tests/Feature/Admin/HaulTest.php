@@ -31,7 +31,7 @@ class HaulTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->vehicle = Vehicle::factory()->create(['plate' => '34 ABC 123']);
         $this->route = HaulRoute::factory()->create();
 

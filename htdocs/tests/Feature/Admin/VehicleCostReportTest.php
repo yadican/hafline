@@ -43,7 +43,7 @@ class VehicleCostReportTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->yonetici()->create();
         $this->owner = Party::factory()->create(['name' => 'Fahri Doğan']);
         $this->otherOwner = Party::factory()->create(['name' => 'Mehmet Demir']);
         $this->marketFirm = Party::factory()->company()->withRole(PartyRole::Market)->create([

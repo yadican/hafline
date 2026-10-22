@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OwnerMonthlyReportController extends AdminController
 {
+    protected ?string $permissionAbility = 'view-report-owner-monthly';
+
     public function __construct(private OwnerMonthlyReportService $reports) {}
 
     public function index(OwnerMonthlyReportRequest $request): View
