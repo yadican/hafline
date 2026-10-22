@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\ApiPermissions;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Spatie\Permission\PermissionRegistrar;
@@ -37,7 +38,11 @@ class RolePermissionSeeder extends Seeder
             'example',
         ];
 
-        $permissions = ['view-dashboard'];
+        $permissions = [
+            'view-dashboard',
+            'view-web-audit-log',
+            'view-api-audit-log',
+        ];
 
         foreach ($resources as $resource) {
             foreach (['view', 'create', 'edit', 'delete'] as $action) {
@@ -99,6 +104,20 @@ class RolePermissionSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        $this->seedWebCatalog();
+        $this->seedApiCatalog();
+        $this->purgeLegacyApiOnWebGuard();
+
+        $admin = User::query()->where('email', 'admin@hafline.net')->first();
+        if ($admin !== null) {
+            $admin->syncRoles(
+                Role::query()->where('name', 'yonetici')->where('guard_name', 'web')->get()
+            );
+        }
+    }
+
+    private function seedWebCatalog(): void
+    {
         $permissions = self::permissionNames();
 
         foreach ($permissions as $permission) {
@@ -118,10 +137,42 @@ class RolePermissionSeeder extends Seeder
             ['id' => (string) Str::uuid7()]
         );
         $role->syncPermissions($permissions);
+    }
 
-        $admin = User::query()->where('email', 'admin@hafline.net')->first();
-        if ($admin !== null) {
-            $admin->syncRoles(['yonetici']);
+    private function seedApiCatalog(): void
+    {
+        foreach (ApiPermissions::all() as $permission) {
+            Permission::firstOrCreate(
+                ['name' => $permission, 'guard_name' => ApiPermissions::GUARD],
+                ['id' => (string) Str::uuid7()]
+            );
+        }
+
+        $apiOperator = Role::firstOrCreate(
+            ['name' => 'api-operator', 'guard_name' => ApiPermissions::GUARD],
+            ['id' => (string) Str::uuid7()]
+        );
+        $apiOperator->syncPermissions(ApiPermissions::all());
+    }
+
+    /**
+     * Earlier mistake: api-operator / operate-field-haul lived on the web guard.
+     */
+    private function purgeLegacyApiOnWebGuard(): void
+    {
+        Permission::query()
+            ->where('guard_name', 'web')
+            ->whereIn('name', ['operate-field-haul', ApiPermissions::FIELD_HAUL_OPERATE])
+            ->delete();
+
+        $legacy = Role::query()
+            ->where('guard_name', 'web')
+            ->where('name', 'api-operator')
+            ->first();
+
+        if ($legacy !== null) {
+            $legacy->syncPermissions([]);
+            $legacy->delete();
         }
     }
 }

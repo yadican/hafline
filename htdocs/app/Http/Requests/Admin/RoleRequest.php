@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Role;
+use App\Support\ApiPermissions;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,13 +22,20 @@ class RoleRequest extends FormRequest
     {
         /** @var Role|null $role */
         $role = $this->route('role');
+        $guard = $role?->guard_name ?? $this->input('guard_name', 'web');
 
         return [
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('roles', 'name')->ignore($role?->id),
+                Rule::unique('roles', 'name')
+                    ->where(fn ($query) => $query->where('guard_name', $guard))
+                    ->ignore($role?->id),
+            ],
+            'guard_name' => [
+                $role ? 'prohibited' : 'required',
+                Rule::in(['web', ApiPermissions::GUARD]),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'max:255'],
@@ -41,6 +49,7 @@ class RoleRequest extends FormRequest
     {
         return [
             'name' => 'rol adı',
+            'guard_name' => 'guard',
             'permissions' => 'izinler',
             'permissions.*' => 'izin',
         ];

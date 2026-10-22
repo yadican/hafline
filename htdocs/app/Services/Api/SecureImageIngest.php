@@ -9,7 +9,8 @@ use Illuminate\Validation\ValidationException;
 
 class SecureImageIngest
 {
-    public const MAX_BYTES = 5_242_880;
+    /** Phone field photos before server-side downscale (must stay under PHP upload_max_filesize). */
+    public const MAX_BYTES = 15_728_640;
 
     /** Reject absurd uploads before decode. */
     public const MAX_EDGE = 4096;
@@ -17,7 +18,7 @@ class SecureImageIngest
     /** Longest side after resize — plate OCR + field photos stay readable, disk stays small. */
     public const STORE_EDGE = 1600;
 
-    public const JPEG_QUALITY = 72;
+    public const JPEG_QUALITY = 88;
 
     /**
      * @var list<string>
@@ -32,7 +33,7 @@ class SecureImageIngest
      */
     public function ingest(UploadedFile $file, string $fieldSessionId): array
     {
-        $this->assertUpload($file);
+        $this->assertAcceptable($file);
 
         $binary = file_get_contents($file->getRealPath());
 
@@ -204,14 +205,16 @@ class SecureImageIngest
         return [$binary === false ? null : $binary, 'png', 'image/png'];
     }
 
-    private function assertUpload(UploadedFile $file): void
+    public function assertAcceptable(UploadedFile $file): void
     {
         if (! $file->isValid()) {
             throw ValidationException::withMessages(['file' => 'Dosya yüklenemedi.']);
         }
 
         if ($file->getSize() === false || $file->getSize() < 1 || $file->getSize() > self::MAX_BYTES) {
-            throw ValidationException::withMessages(['file' => 'Dosya boyutu 5 MB ile sınırlıdır.']);
+            throw ValidationException::withMessages([
+                'file' => 'Dosya boyutu '.(int) (self::MAX_BYTES / 1024 / 1024).' MB ile sınırlıdır.',
+            ]);
         }
 
         $mime = $file->getMimeType() ?: '';

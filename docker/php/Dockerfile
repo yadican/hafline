@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
 
 # Xdebug: PHPStorm host'ta 9003 dinler; container host.docker.internal üzerinden bağlanır
 COPY xdebug.ini /usr/local/etc/php/conf.d/zz-xdebug.ini
+COPY uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

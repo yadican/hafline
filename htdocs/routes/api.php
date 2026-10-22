@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FieldHaulSessionController;
 use App\Http\Controllers\Api\HaulController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Support\ApiPermissions;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -19,19 +20,21 @@ Route::prefix('v1')->group(function () {
         Route::get('me', [ProfileController::class, 'show'])->name('api.me');
         Route::get('dashboard', [DashboardController::class, 'show'])->name('api.dashboard');
 
-        Route::post('field-sessions', [FieldHaulSessionController::class, 'store'])->name('api.field-sessions.store');
-        Route::get('field-sessions/current', [FieldHaulSessionController::class, 'current'])->name('api.field-sessions.current');
-        Route::delete('field-sessions/current', [FieldHaulSessionController::class, 'destroy'])->name('api.field-sessions.destroy');
+        Route::middleware('permission:'.ApiPermissions::FIELD_HAUL_OPERATE.','.ApiPermissions::GUARD)->group(function () {
+            Route::post('field-sessions', [FieldHaulSessionController::class, 'store'])->name('api.field-sessions.store');
+            Route::get('field-sessions/current', [FieldHaulSessionController::class, 'current'])->name('api.field-sessions.current');
+            Route::delete('field-sessions/current', [FieldHaulSessionController::class, 'destroy'])->name('api.field-sessions.destroy');
 
-        Route::get('hauls/options', [HaulController::class, 'options'])->name('api.hauls.options');
-        Route::get('hauls/dump-sites', [HaulController::class, 'dumpSites'])->name('api.hauls.dump-sites');
-        Route::get('hauls/session', [HaulController::class, 'session'])->name('api.hauls.session');
-        Route::get('hauls/{haul}', [HaulController::class, 'show'])->name('api.hauls.show');
-        Route::post('hauls/scan', [HaulController::class, 'scan'])
-            ->middleware('throttle:20,1')
-            ->name('api.hauls.scan');
-        Route::post('hauls', [HaulController::class, 'store'])
-            ->middleware('throttle:30,1')
-            ->name('api.hauls.store');
+            Route::get('hauls/options', [HaulController::class, 'options'])->name('api.hauls.options');
+            Route::get('hauls/dump-sites', [HaulController::class, 'dumpSites'])->name('api.hauls.dump-sites');
+            Route::get('hauls/session', [HaulController::class, 'session'])->name('api.hauls.session');
+            Route::get('hauls/{haul}', [HaulController::class, 'show'])->name('api.hauls.show');
+            Route::post('hauls/scan', [HaulController::class, 'scan'])
+                ->middleware('throttle:20,1')
+                ->name('api.hauls.scan');
+            Route::post('hauls', [HaulController::class, 'store'])
+                ->middleware('throttle:30,1')
+                ->name('api.hauls.store');
+        });
     });
 });

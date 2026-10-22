@@ -40,6 +40,7 @@ class UserActivityLogTest extends TestCase
         $example = Example::query()->where('title', 'Saha notu')->firstOrFail();
 
         $this->assertSame($admin->id, $log->user_id);
+        $this->assertSame('web', $log->channel);
         $this->assertSame('created', $log->action);
         $this->assertNull($log->auditable_type);
         $this->assertNull($log->auditable_id);
@@ -64,6 +65,8 @@ class UserActivityLogTest extends TestCase
         $this->assertArrayNotHasKey('password', $log->payload);
         $this->assertArrayNotHasKey('_token', $log->payload);
         $this->assertSame('Kayıt oluşturuldu.', $log->context['messages']['success']);
+        $this->assertSame('redirect', $log->response['type']);
+        $this->assertSame(route('admin.examples.index'), $log->response['location']);
     }
 
     public function test_update_keeps_the_record_before_and_after_alongside_the_posted_fields(): void
@@ -151,10 +154,30 @@ class UserActivityLogTest extends TestCase
         $this->assertArrayHasKey('login', $log->context['errors']);
     }
 
-    public function test_opening_a_page_does_not_write_an_activity_row(): void
+    public function test_opening_a_page_writes_a_viewed_activity_row(): void
     {
-        $this->actingAs(User::factory()->yonetici()->create())
+        $admin = User::factory()->yonetici()->create();
+
+        $this->actingAs($admin)
             ->get(route('admin.examples.index'))
+            ->assertOk();
+
+        $log = AuditLog::query()->sole();
+
+        $this->assertSame('viewed', $log->action);
+        $this->assertSame('web', $log->channel);
+        $this->assertSame('GET', $log->method);
+        $this->assertSame('admin.examples.index', $log->route);
+        $this->assertSame($admin->id, $log->user_id);
+        $this->assertSame(200, $log->status);
+    }
+
+    public function test_audit_log_screens_are_not_recorded(): void
+    {
+        $admin = User::factory()->yonetici()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.web-audit-logs.index'))
             ->assertOk();
 
         $this->assertSame(0, AuditLog::query()->count());

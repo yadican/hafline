@@ -11,6 +11,24 @@ class AuditLog extends Model
 {
     public const UPDATED_AT = null;
 
+    public const CHANNEL_WEB = 'web';
+
+    public const CHANNEL_API = 'api';
+
+    /**
+     * @var array<string, string>
+     */
+    public const ACTION_LABELS = [
+        'created' => 'Oluşturma',
+        'updated' => 'Güncelleme',
+        'deleted' => 'Silme',
+        'restored' => 'Geri alma',
+        'login' => 'Giriş',
+        'logout' => 'Çıkış',
+        'submitted' => 'Gönderim',
+        'viewed' => 'Görüntüleme',
+    ];
+
     use HasUuids;
 
     protected $guarded = [];
@@ -24,8 +42,14 @@ class AuditLog extends Model
             'old_values' => 'array',
             'new_values' => 'array',
             'payload' => 'array',
+            'response' => 'array',
             'context' => 'array',
         ];
+    }
+
+    public function actionLabel(): string
+    {
+        return self::ACTION_LABELS[$this->action] ?? $this->action;
     }
 
     /**

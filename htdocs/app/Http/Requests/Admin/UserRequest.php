@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\Shift;
 use App\Models\User;
+use App\Support\ApiPermissions;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,7 @@ class UserRequest extends FormRequest
         $this->merge([
             'active' => $this->boolean('active'),
             'roles' => $this->input('roles', []),
+            'api_roles' => $this->input('api_roles', []),
             'site_id' => $this->filled('site_id') ? $this->input('site_id') : null,
             'shift' => $this->filled('shift') ? $this->input('shift') : null,
         ]);
@@ -56,6 +58,8 @@ class UserRequest extends FormRequest
             'shift' => ['nullable', Rule::enum(Shift::class)],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
+            'api_roles' => ['nullable', 'array'],
+            'api_roles.*' => ['string', Rule::exists('roles', 'name')->where('guard_name', ApiPermissions::GUARD)],
         ];
     }
 
@@ -76,9 +80,27 @@ class UserRequest extends FormRequest
     /**
      * @return list<string>
      */
-    public function roleNames(): array
+    public function webRoleNames(): array
     {
         return array_values(array_unique($this->validated('roles') ?? []));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function apiRoleNames(): array
+    {
+        return array_values(array_unique($this->validated('api_roles') ?? []));
+    }
+
+    /**
+     * @deprecated Use webRoleNames()
+     *
+     * @return list<string>
+     */
+    public function roleNames(): array
+    {
+        return $this->webRoleNames();
     }
 
     /**
@@ -94,8 +116,10 @@ class UserRequest extends FormRequest
             'active' => 'aktif',
             'site_id' => 'şantiye',
             'shift' => 'vardiya',
-            'roles' => 'roller',
-            'roles.*' => 'rol',
+            'roles' => 'web roller',
+            'roles.*' => 'web rol',
+            'api_roles' => 'api roller',
+            'api_roles.*' => 'api rol',
         ];
     }
 }

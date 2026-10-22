@@ -37,8 +37,10 @@ class RoleController extends AdminController
 
         return view('admin.roles.create', [
             'title' => 'Yeni rol',
-            'permissionGroups' => PermissionGroups::grouped(guard: 'web'),
+            'webPermissionGroups' => PermissionGroups::grouped(guard: 'web'),
+            'apiPermissionGroups' => PermissionGroups::grouped(guard: 'api'),
             'selectedPermissions' => old('permissions', []),
+            'selectedGuard' => old('guard_name', 'web'),
         ]);
     }
 
@@ -50,7 +52,7 @@ class RoleController extends AdminController
                 $role = Role::create([
                     'id' => (string) Str::uuid7(),
                     'name' => $request->validated('name'),
-                    'guard_name' => 'web',
+                    'guard_name' => $request->validated('guard_name'),
                 ]);
 
                 $this->syncRolePermissions($role, $request->validated('permissions', []));

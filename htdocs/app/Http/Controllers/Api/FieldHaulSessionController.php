@@ -55,8 +55,6 @@ class FieldHaulSessionController extends Controller
     )]
     public function current(Request $request): JsonResponse
     {
-        $this->authorize('view-haul');
-
         $payload = $this->fieldHauls->currentSession($request->user());
 
         return response()->json(['data' => $payload]);
@@ -74,8 +72,6 @@ class FieldHaulSessionController extends Controller
     )]
     public function destroy(Request $request): JsonResponse
     {
-        $this->authorize('create-haul');
-
         $this->fieldHauls->closeSession($request->user());
 
         return response()->json(['message' => 'Oturum kapatıldı.']);

@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\User;
+use App\Support\ApiPermissions;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -54,6 +56,19 @@ class UserFactory extends Factory
         return $this->afterCreating(function (User $user) {
             (new RolePermissionSeeder)->run();
             $user->syncRoles(['yonetici']);
+        });
+    }
+
+    /**
+     * Assign the seeded api-operator role (api guard → field-haul.operate).
+     */
+    public function apiOperator(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            (new RolePermissionSeeder)->run();
+            $user->assignRole(
+                Role::findByName('api-operator', ApiPermissions::GUARD)
+            );
         });
     }
 }

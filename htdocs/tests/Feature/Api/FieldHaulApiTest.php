@@ -35,7 +35,7 @@ class FieldHaulApiTest extends TestCase
 
         Storage::fake('local');
 
-        $this->user = User::factory()->yonetici()->create();
+        $this->user = User::factory()->apiOperator()->create();
         $this->vehicle = Vehicle::factory()->create(['plate' => '34 ABC 123']);
         $this->route = HaulRoute::factory()->create();
 
@@ -52,6 +52,24 @@ class FieldHaulApiTest extends TestCase
         ]);
 
         $this->token = JWTAuth::fromUser($this->user);
+    }
+
+    public function test_field_haul_endpoints_require_api_permission(): void
+    {
+        $user = User::factory()->create();
+        $token = JWTAuth::fromUser($user);
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/hauls/options')
+            ->assertForbidden();
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson('/api/v1/field-sessions', [
+                'site_id' => $this->route->site_id,
+                'dump_site_id' => $this->route->dump_site_id,
+                'shift' => 'day',
+            ])
+            ->assertForbidden();
     }
 
     private function api(): static

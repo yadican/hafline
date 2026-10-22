@@ -39,8 +39,6 @@ class HaulController extends Controller
     )]
     public function options(): JsonResponse
     {
-        $this->authorize('view-haul');
-
         return response()->json($this->fieldHauls->options());
     }
 
@@ -60,8 +58,6 @@ class HaulController extends Controller
     )]
     public function dumpSites(Request $request): JsonResponse
     {
-        $this->authorize('view-haul');
-
         $validated = $request->validate([
             'site_id' => ['required', 'uuid'],
         ]);
@@ -166,8 +162,6 @@ class HaulController extends Controller
     )]
     public function session(Request $request): JsonResponse
     {
-        $this->authorize('view-haul');
-
         return response()->json(
             $this->fieldHauls->sessionHauls($request->user())
         );
@@ -189,8 +183,6 @@ class HaulController extends Controller
     )]
     public function show(Request $request, Haul $haul): HaulPrintResource
     {
-        $this->authorize('view-haul');
-
         return new HaulPrintResource($this->fieldHauls->showFor($request->user(), $haul));
     }
 

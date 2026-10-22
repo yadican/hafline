@@ -19,8 +19,7 @@ class PermissionController extends AdminController
         return view('admin.permissions.index', [
             'title' => 'İzinler',
             'permissionGroups' => PermissionGroups::grouped(
-                Permission::query()->where('guard_name', 'web')->orderBy('name')->get(),
-                'web',
+                Permission::query()->orderBy('guard_name')->orderBy('name')->get(),
             ),
         ]);
     }

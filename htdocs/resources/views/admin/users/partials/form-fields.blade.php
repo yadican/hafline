@@ -1,6 +1,8 @@
 @php
     $roleOptions = collect($roles)->mapWithKeys(fn ($role) => [$role->name => $role->name])->all();
-    $selectedRoles = $selectedRoles ?? old('roles', isset($user) ? $user->roles->pluck('name')->all() : []);
+    $apiRoleOptions = collect($apiRoles ?? [])->mapWithKeys(fn ($role) => [$role->name => $role->name])->all();
+    $selectedRoles = $selectedRoles ?? old('roles', isset($user) ? $user->roles->where('guard_name', 'web')->pluck('name')->all() : []);
+    $selectedApiRoles = $selectedApiRoles ?? old('api_roles', isset($user) ? $user->roles->where('guard_name', 'api')->pluck('name')->all() : []);
 @endphp
 
 <x-form.group legend="Hesap" icon="fa-solid fa-id-card" description="Giriş bilgileri">
@@ -20,6 +22,10 @@
     <x-form.select searchable hide-search name="shift" label="Vardiya" placeholder="Vardiya yok" :options="$shifts" />
 </x-form.group>
 
-<x-form.group legend="Roller" icon="fa-solid fa-user-shield" description="Kullanıcının yetki rolleri" class="is-wide">
+<x-form.group legend="Web roller" icon="fa-solid fa-user-shield" description="Admin panel yetkileri (web guard)" class="is-wide">
     <x-form.checkboxes name="roles" label="Roller" :options="$roleOptions" :value="$selectedRoles" />
+</x-form.group>
+
+<x-form.group legend="API roller" icon="fa-solid fa-mobile-screen" description="Mobil / JWT API yetkileri (api guard)" class="is-wide">
+    <x-form.checkboxes name="api_roles" label="API roller" :options="$apiRoleOptions" :value="$selectedApiRoles" />
 </x-form.group>

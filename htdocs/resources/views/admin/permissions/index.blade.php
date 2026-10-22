@@ -16,7 +16,10 @@
                     </div>
                     <div class="permission-group-body">
                         @foreach ($permissions as $permission)
-                            <span class="panel-badge">{{ $permission->name }}</span>
+                            <span class="panel-badge" title="guard: {{ $permission->guard_name }}">
+                                {{ $permission->name }}
+                                <small class="text-muted">({{ $permission->guard_name }})</small>
+                            </span>
                         @endforeach
                     </div>
                 </div>

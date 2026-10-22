@@ -589,10 +589,15 @@ class MediumDataSeeder extends Seeder
 
         $this->rows('audit_logs', collect(range(1, 12))->map(fn (int $n) => [
             'user_id' => $this->userId,
-            'action' => $n % 5 === 0 ? 'updated' : 'created',
+            'channel' => $n % 3 === 0 ? 'api' : 'web',
+            'action' => $n % 5 === 0 ? 'updated' : ($n % 4 === 0 ? 'viewed' : 'created'),
             'auditable_type' => 'party',
             'auditable_id' => $party?->id,
             'ip_address' => '127.0.0.1',
+            'method' => $n % 4 === 0 ? 'GET' : 'POST',
+            'route' => $n % 3 === 0 ? 'api.hauls.store' : 'admin.parties.store',
+            'url' => $n % 3 === 0 ? 'http://localhost/api/v1/hauls' : 'http://localhost/admin/parties',
+            'status' => 200,
             'old_values' => $n % 5 === 0 ? json_encode(['phone' => '05000000000']) : null,
             'new_values' => json_encode(['name' => $party?->name]),
             'created_at' => now()->subDays($n),

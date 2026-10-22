@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -36,10 +37,18 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Roles/permissions are seeded on the web guard; API JWT auth must resolve the same set.
+     * Admin (session) → web catalog; JWT routes → api catalog. Never mix the two.
      */
     public function getDefaultGuardName(): string
     {
+        if (request()->is('api/*')) {
+            return 'api';
+        }
+
+        if (Auth::guard('api')->hasUser() && Auth::guard('api')->id() === $this->getAuthIdentifier()) {
+            return 'api';
+        }
+
         return 'web';
     }
 

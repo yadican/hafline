@@ -48,11 +48,12 @@ class RolePermissionTest extends TestCase
         $this->actingAs($admin)
             ->post(route('admin.roles.store'), [
                 'name' => 'saha-ekibi',
+                'guard_name' => 'web',
                 'permissions' => ['view-dashboard', 'view-haul'],
             ])
             ->assertRedirect(route('admin.roles.index'));
 
-        $role = Role::query()->where('name', 'saha-ekibi')->firstOrFail();
+        $role = Role::query()->where('name', 'saha-ekibi')->where('guard_name', 'web')->firstOrFail();
         $this->assertTrue($role->hasPermissionTo('view-haul'));
         $this->assertFalse($role->hasPermissionTo('view-users'));
     }

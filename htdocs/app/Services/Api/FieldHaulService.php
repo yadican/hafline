@@ -83,15 +83,10 @@ class FieldHaulService extends Service
             ]);
         }
 
+        // OCR the original upload — ingest downscales/re-encodes and can corrupt plate glyphs (E→K).
+        $this->images->assertAcceptable($file);
+        $ocr = $this->ocr->scan($file->getRealPath());
         $stored = $this->images->ingest($file, $session->id);
-
-        try {
-            $ocr = $this->ocr->scan($stored['absolute_path']);
-        } catch (RuntimeException $exception) {
-            $this->images->delete($stored['path']);
-
-            throw $exception;
-        }
 
         $plate = $ocr['plate'];
         $vehicle = $plate ? Vehicle::findByPlate($plate) : null;
@@ -319,7 +314,7 @@ class FieldHaulService extends Service
 
     public function assertCanView(User $user, Haul $haul): void
     {
-        if ($user->hasRole('yonetici')) {
+        if ($user->hasRole('yonetici', 'web')) {
             return;
         }
 

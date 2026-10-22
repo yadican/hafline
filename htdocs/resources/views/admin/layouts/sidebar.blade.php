@@ -257,6 +257,26 @@
         </div>
     @endcanany
 
+    @canany(['view-web-audit-log', 'view-api-audit-log'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.web-audit-logs.*', 'admin.api-audit-logs.*')]) id="um-sec-audit-logs">
+            <button type="button" class="um-title" data-um-toggle="um-sec-audit-logs">
+                <span class="um-title-text">
+                    <i class="fa-solid fa-clipboard-list um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">İşlem logları</span>
+                </span>
+                <span class="um-caret" aria-hidden="true"></span>
+            </button>
+            <div class="um-items">
+                @can('view-web-audit-log')
+                    <a href="{{ route('admin.web-audit-logs.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.web-audit-logs.*')])>Web logları</a>
+                @endcan
+                @can('view-api-audit-log')
+                    <a href="{{ route('admin.api-audit-logs.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.api-audit-logs.*')])>API logları</a>
+                @endcan
+            </div>
+        </div>
+    @endcanany
+
     @canany(['view-users', 'view-role', 'view-permission'])
         <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.users.*', 'admin.roles.*', 'admin.permissions.*')]) id="um-sec-authority">
             <button type="button" class="um-title" data-um-toggle="um-sec-authority">

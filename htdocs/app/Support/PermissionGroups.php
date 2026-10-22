@@ -13,6 +13,7 @@ class PermissionGroups
     public static function labels(): array
     {
         return [
+            'api' => 'API',
             'system' => 'Sistem',
             'hauls' => 'Taşıma fişleri',
             'machine-works' => 'Makine çalışma',
@@ -39,10 +40,16 @@ class PermissionGroups
         ];
     }
 
-    public static function groupKey(string $permissionName): string
+    public static function groupKey(string $permissionName, ?string $guardName = null): string
     {
+        if ($guardName === ApiPermissions::GUARD || str_starts_with($permissionName, 'field-haul.')) {
+            return 'api';
+        }
+
         return match (true) {
-            $permissionName === 'view-dashboard' => 'system',
+            $permissionName === 'view-dashboard'
+                || $permissionName === 'view-web-audit-log'
+                || $permissionName === 'view-api-audit-log' => 'system',
             str_starts_with($permissionName, 'view-report-') || str_contains($permissionName, 'report') => 'reports',
             str_contains($permissionName, 'haul') && ! str_contains($permissionName, 'haul-route') => 'hauls',
             str_contains($permissionName, 'machine-work') => 'machine-works',
@@ -80,7 +87,7 @@ class PermissionGroups
         $labels = self::labels();
 
         return $permissions
-            ->groupBy(fn (Permission $permission) => self::groupKey($permission->name))
+            ->groupBy(fn (Permission $permission) => self::groupKey($permission->name, $permission->guard_name))
             ->sortBy(function (Collection $items, string $key) use ($labels) {
                 $order = array_flip(array_keys($labels));
 

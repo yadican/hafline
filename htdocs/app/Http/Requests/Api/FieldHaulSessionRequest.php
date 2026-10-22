@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api;
 
 use App\Enums\Shift;
 use App\Services\HaulService;
+use App\Support\ApiPermissions;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,7 +15,10 @@ class FieldHaulSessionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create-haul') ?? false;
+        return $this->user()?->checkPermissionTo(
+            ApiPermissions::FIELD_HAUL_OPERATE,
+            ApiPermissions::GUARD,
+        ) ?? false;
     }
 
     /**

@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * Every form submission is stored with the posted fields, the record before
+ * Every request is stored with the posted fields, the record before
  * and after, and the request that carried them.
  */
 class RecordUserActivity
@@ -18,7 +18,7 @@ class RecordUserActivity
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->isMethodSafe()) {
+        if ($this->shouldSkip($request)) {
             return $next($request);
         }
 
@@ -34,5 +34,17 @@ class RecordUserActivity
         }
 
         return $response;
+    }
+
+    private function shouldSkip(Request $request): bool
+    {
+        $route = $request->route()?->getName();
+
+        if (! is_string($route)) {
+            return false;
+        }
+
+        return str_starts_with($route, 'admin.web-audit-logs.')
+            || str_starts_with($route, 'admin.api-audit-logs.');
     }
 }

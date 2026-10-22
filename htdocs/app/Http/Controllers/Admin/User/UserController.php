@@ -8,7 +8,9 @@ use App\Http\Requests\Admin\UserRequest;
 use App\Models\Role;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\ApiPermissions;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class UserController extends AdminController
@@ -36,7 +38,8 @@ class UserController extends AdminController
 
         return view('admin.users.create', [
             'title' => 'Yeni kullanıcı',
-            'roles' => Role::query()->where('guard_name', 'web')->orderBy('name')->get(),
+            'roles' => $this->webRoles(),
+            'apiRoles' => $this->apiRoles(),
             'sites' => Site::query()->orderBy('name')->pluck('name', 'id')->all(),
             'shifts' => Shift::options(),
         ]);
@@ -49,7 +52,7 @@ class UserController extends AdminController
             function () use ($request) {
                 $data = $request->userData();
                 $user = User::create($data);
-                $user->syncRoles($request->roleNames());
+                $this->syncUserRoles($user, $request->webRoleNames(), $request->apiRoleNames());
             },
             'admin.users.index',
             'Kullanıcı oluşturuldu.',
@@ -64,10 +67,18 @@ class UserController extends AdminController
         return view('admin.users.edit', [
             'title' => 'Kullanıcıyı düzenle',
             'user' => $user,
-            'roles' => Role::query()->where('guard_name', 'web')->orderBy('name')->get(),
+            'roles' => $this->webRoles(),
+            'apiRoles' => $this->apiRoles(),
             'sites' => Site::query()->orderBy('name')->pluck('name', 'id')->all(),
             'shifts' => Shift::options(),
-            'selectedRoles' => old('roles', $user->roles->pluck('name')->all()),
+            'selectedRoles' => old(
+                'roles',
+                $user->roles->where('guard_name', 'web')->pluck('name')->all()
+            ),
+            'selectedApiRoles' => old(
+                'api_roles',
+                $user->roles->where('guard_name', ApiPermissions::GUARD)->pluck('name')->all()
+            ),
         ]);
     }
 
@@ -77,7 +88,7 @@ class UserController extends AdminController
         return $this->complete(
             function () use ($request, $user) {
                 $user->update($request->userData());
-                $user->syncRoles($request->roleNames());
+                $this->syncUserRoles($user, $request->webRoleNames(), $request->apiRoleNames());
             },
             'admin.users.index',
             'Kullanıcı güncellendi.',
@@ -88,9 +99,47 @@ class UserController extends AdminController
     {
 
         return $this->complete(
-            fn () => $user->delete(),
+            function () use ($user) {
+                $user->syncRoles([]);
+                $user->delete();
+            },
             'admin.users.index',
             'Kullanıcı silindi.',
         );
+    }
+
+    /**
+     * @param  list<string>  $webNames
+     * @param  list<string>  $apiNames
+     */
+    private function syncUserRoles(User $user, array $webNames, array $apiNames): void
+    {
+        $roles = Role::query()
+            ->where(function ($query) use ($webNames, $apiNames): void {
+                $query->where(function ($web) use ($webNames): void {
+                    $web->where('guard_name', 'web')->whereIn('name', $webNames);
+                })->orWhere(function ($api) use ($apiNames): void {
+                    $api->where('guard_name', ApiPermissions::GUARD)->whereIn('name', $apiNames);
+                });
+            })
+            ->get();
+
+        $user->syncRoles($roles);
+    }
+
+    /**
+     * @return Collection<int, Role>
+     */
+    private function webRoles(): Collection
+    {
+        return Role::query()->where('guard_name', 'web')->orderBy('name')->get();
+    }
+
+    /**
+     * @return Collection<int, Role>
+     */
+    private function apiRoles(): Collection
+    {
+        return Role::query()->where('guard_name', ApiPermissions::GUARD)->orderBy('name')->get();
     }
 }

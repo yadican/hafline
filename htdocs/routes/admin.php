@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ApiAuditLogController;
 use App\Http\Controllers\Admin\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\BankController;
 use App\Http\Controllers\Admin\CariEntryController;
@@ -54,6 +55,7 @@ use App\Http\Controllers\Admin\VehicleClassController;
 use App\Http\Controllers\Admin\VehicleController;
 use App\Http\Controllers\Admin\VehicleOwnershipController;
 use App\Http\Controllers\Admin\VehicleRateController;
+use App\Http\Controllers\Admin\WebAuditLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -67,6 +69,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])
         ->middleware('can:view-dashboard')
         ->name('dashboard');
+
+    Route::middleware('can:view-web-audit-log')->group(function () {
+        Route::get('web-audit-logs', [WebAuditLogController::class, 'index'])->name('web-audit-logs.index');
+        Route::get('web-audit-logs/{auditLog}', [WebAuditLogController::class, 'show'])->name('web-audit-logs.show');
+    });
+
+    Route::middleware('can:view-api-audit-log')->group(function () {
+        Route::get('api-audit-logs', [ApiAuditLogController::class, 'index'])->name('api-audit-logs.index');
+        Route::get('api-audit-logs/{auditLog}', [ApiAuditLogController::class, 'show'])->name('api-audit-logs.show');
+    });
 
     Route::middleware('can:view-example')->group(function () {
         Route::resource('examples', ExampleController::class)->except(['show']);
