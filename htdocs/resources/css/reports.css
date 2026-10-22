@@ -36,21 +36,45 @@
 .vehicle-balance-report.panel-wrap,
 .owner-monthly-report.panel-wrap,
 .owner-balance-report.panel-wrap,
+.monthly-voucher-report.panel-wrap,
+.fuel-station-monthly-report.panel-wrap,
+.dump-site-payment-report.panel-wrap,
+.vehicle-periodic-report.panel-wrap,
+.owner-periodic-report.panel-wrap,
+.ticket-control-report.panel-wrap,
 .vehicle-monthly-report .panel,
 .vehicle-site-monthly-report .panel,
 .vehicle-balance-report .panel,
 .owner-monthly-report .panel,
 .owner-balance-report .panel,
+.monthly-voucher-report .panel,
+.fuel-station-monthly-report .panel,
+.dump-site-payment-report .panel,
+.vehicle-periodic-report .panel,
+.owner-periodic-report .panel,
+.ticket-control-report .panel,
 .vehicle-monthly-report .panel-body,
 .vehicle-site-monthly-report .panel-body,
 .vehicle-balance-report .panel-body,
 .owner-monthly-report .panel-body,
 .owner-balance-report .panel-body,
+.monthly-voucher-report .panel-body,
+.fuel-station-monthly-report .panel-body,
+.dump-site-payment-report .panel-body,
+.vehicle-periodic-report .panel-body,
+.owner-periodic-report .panel-body,
+.ticket-control-report .panel-body,
 .vehicle-monthly-report .report-matrix,
 .vehicle-site-monthly-report .report-matrix,
 .vehicle-balance-report .report-matrix,
 .owner-monthly-report .report-matrix,
-.owner-balance-report .report-matrix {
+.owner-balance-report .report-matrix,
+.monthly-voucher-report .report-matrix,
+.fuel-station-monthly-report .report-matrix,
+.dump-site-payment-report .report-matrix,
+.vehicle-periodic-report .report-matrix,
+.owner-periodic-report .report-matrix,
+.ticket-control-report .report-matrix {
 	max-width: 100%;
 	min-width: 0;
 }
@@ -59,7 +83,13 @@
 .vehicle-site-monthly-report .panel-body,
 .vehicle-balance-report .panel-body,
 .owner-monthly-report .panel-body,
-.owner-balance-report .panel-body {
+.owner-balance-report .panel-body,
+.monthly-voucher-report .panel-body,
+.fuel-station-monthly-report .panel-body,
+.dump-site-payment-report .panel-body,
+.vehicle-periodic-report .panel-body,
+.owner-periodic-report .panel-body,
+.ticket-control-report .panel-body {
 	overflow-x: clip;
 }
 
@@ -70,7 +100,13 @@
 .vehicle-site-monthly-report .panel-list-scroll,
 .vehicle-balance-report .panel-list-scroll,
 .owner-monthly-report .panel-list-scroll,
-.owner-balance-report .panel-list-scroll {
+.owner-balance-report .panel-list-scroll,
+.monthly-voucher-report .panel-list-scroll,
+.fuel-station-monthly-report .panel-list-scroll,
+.dump-site-payment-report .panel-list-scroll,
+.vehicle-periodic-report .panel-list-scroll,
+.owner-periodic-report .panel-list-scroll,
+.ticket-control-report .panel-list-scroll {
 	max-width: 100%;
 	width: 100%;
 	overflow-x: auto;
@@ -338,6 +374,24 @@
 	body:has(.owner-monthly-report) .app-topbar,
 	body:has(.owner-monthly-report) .um-cell,
 	body:has(.owner-monthly-report) .app-footer,
+	body:has(.monthly-voucher-report) .app-topbar,
+	body:has(.monthly-voucher-report) .um-cell,
+	body:has(.monthly-voucher-report) .app-footer,
+	body:has(.fuel-station-monthly-report) .app-topbar,
+	body:has(.fuel-station-monthly-report) .um-cell,
+	body:has(.fuel-station-monthly-report) .app-footer,
+	body:has(.dump-site-payment-report) .app-topbar,
+	body:has(.dump-site-payment-report) .um-cell,
+	body:has(.dump-site-payment-report) .app-footer,
+	body:has(.vehicle-periodic-report) .app-topbar,
+	body:has(.vehicle-periodic-report) .um-cell,
+	body:has(.vehicle-periodic-report) .app-footer,
+	body:has(.owner-periodic-report) .app-topbar,
+	body:has(.owner-periodic-report) .um-cell,
+	body:has(.owner-periodic-report) .app-footer,
+	body:has(.ticket-control-report) .app-topbar,
+	body:has(.ticket-control-report) .um-cell,
+	body:has(.ticket-control-report) .app-footer,
 	.site-exit-report .panel-title,
 	.site-exit-report .site-exit-filters,
 	.site-exit-report .site-exit-actions,
@@ -355,7 +409,25 @@
 	.vehicle-site-monthly-report .report-actions,
 	.owner-monthly-report .panel-title,
 	.owner-monthly-report .report-filters,
-	.owner-monthly-report .report-actions {
+	.owner-monthly-report .report-actions,
+	.monthly-voucher-report .panel-title,
+	.monthly-voucher-report .report-filters,
+	.monthly-voucher-report .report-actions,
+	.fuel-station-monthly-report .panel-title,
+	.fuel-station-monthly-report .report-filters,
+	.fuel-station-monthly-report .report-actions,
+	.dump-site-payment-report .panel-title,
+	.dump-site-payment-report .report-filters,
+	.dump-site-payment-report .report-actions,
+	.vehicle-periodic-report .panel-title,
+	.vehicle-periodic-report .report-filters,
+	.vehicle-periodic-report .report-actions,
+	.owner-periodic-report .panel-title,
+	.owner-periodic-report .report-filters,
+	.owner-periodic-report .report-actions,
+	.ticket-control-report .panel-title,
+	.ticket-control-report .report-filters,
+	.ticket-control-report .report-actions {
 		display: none !important;
 	}
 
@@ -364,7 +436,13 @@
 	.fuel-station-report .panel-list-scroll,
 	.vehicle-monthly-report .panel-list-scroll,
 	.vehicle-site-monthly-report .panel-list-scroll,
-	.owner-monthly-report .panel-list-scroll {
+	.owner-monthly-report .panel-list-scroll,
+	.monthly-voucher-report .panel-list-scroll,
+	.fuel-station-monthly-report .panel-list-scroll,
+	.dump-site-payment-report .panel-list-scroll,
+	.vehicle-periodic-report .panel-list-scroll,
+	.owner-periodic-report .panel-list-scroll,
+	.ticket-control-report .panel-list-scroll {
 		overflow: visible;
 	}
 

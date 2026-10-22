@@ -32,14 +32,24 @@ class VehicleBalanceReportRequest extends FormRequest
             'period' => [
                 Rule::requiredIf($active),
                 'nullable',
-                Rule::in(['month', 'range', 'all']),
+                Rule::in(['month', 'range']),
             ],
             'year' => [Rule::requiredIf($byMonth && $active), 'nullable', 'integer', 'min:2000', 'max:2100'],
             'month' => [Rule::requiredIf($byMonth && $active), 'nullable', 'integer', 'min:1', 'max:12'],
             'from' => [Rule::requiredIf($byRange && $active), 'nullable', 'date'],
             'to' => [Rule::requiredIf($byRange && $active), 'nullable', 'date', 'after_or_equal:from'],
-            'site' => ['nullable', 'uuid', Rule::exists('sites', 'id')],
-            'fuel_station' => ['nullable', 'uuid', Rule::exists('fuel_stations', 'id')],
+            'site' => [
+                Rule::requiredIf($active),
+                'nullable',
+                'uuid',
+                Rule::exists('sites', 'id'),
+            ],
+            'fuel_station' => [
+                Rule::requiredIf($active),
+                'nullable',
+                'uuid',
+                Rule::exists('fuel_stations', 'id'),
+            ],
         ];
     }
 
@@ -61,7 +71,6 @@ class VehicleBalanceReportRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // Capture before merge(): GET defaults are written into the query bag.
         $this->submitted = $this->query->count() > 0;
 
         if (! $this->filled('period')) {
@@ -90,43 +99,35 @@ class VehicleBalanceReportRequest extends FormRequest
     }
 
     /**
-     * @return array{period: 'month'|'range'|'all', year?: int, month?: int, from?: string, to?: string, site?: string, fuel_station?: string}|null
+     * @return array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, site: string, fuel_station: string}|null
      */
     public function filters(): ?array
     {
-        if (! $this->submitted && ! $this->routeIs('admin.reports.vehicle-balance.export')) {
+        if ((! $this->submitted && ! $this->routeIs('admin.reports.vehicle-balance.export'))
+            || ! $this->filled('site')
+            || ! $this->filled('fuel_station')) {
             return null;
         }
 
         $filters = [
             'period' => (string) $this->validated('period'),
+            'site' => (string) $this->validated('site'),
+            'fuel_station' => (string) $this->validated('fuel_station'),
         ];
 
         if ($filters['period'] === 'month') {
             $filters['year'] = (int) $this->validated('year');
             $filters['month'] = (int) $this->validated('month');
-        } elseif ($filters['period'] === 'range') {
+        } else {
             $filters['from'] = (string) $this->validated('from');
             $filters['to'] = (string) $this->validated('to');
-        }
-
-        $site = $this->validated('site');
-
-        if ($site !== null && $site !== '') {
-            $filters['site'] = (string) $site;
-        }
-
-        $fuelStation = $this->validated('fuel_station');
-
-        if ($fuelStation !== null && $fuelStation !== '') {
-            $filters['fuel_station'] = (string) $fuelStation;
         }
 
         return $filters;
     }
 
     /**
-     * @return array{period: 'month'|'range'|'all', year: ?int, month: ?int, from: ?string, to: ?string, site: ?string, fuel_station: ?string}
+     * @return array{period: 'month'|'range', year: ?int, month: ?int, from: ?string, to: ?string, site: ?string, fuel_station: ?string}
      */
     public function displayFilters(): array
     {

@@ -96,14 +96,27 @@
             <span class="um-caret" aria-hidden="true"></span>
         </button>
         <div class="um-items">
+            <a href="{{ route('admin.reports.monthly-vouchers') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.monthly-vouchers*')])>Aylık koçanlar</a>
             <a href="{{ route('admin.reports.site-exits') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.site-exits*')])>Şantiye çıkış raporları</a>
-            <a href="{{ route('admin.reports.dump-sites') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.dump-sites*')])>Döküm yeri raporları</a>
-            <a href="{{ route('admin.reports.fuel-stations') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.fuel-stations*')])>Yakıt yeri raporları</a>
+            <a href="{{ route('admin.reports.dump-sites') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.dump-sites') || request()->routeIs('admin.reports.dump-sites.export')])>Döküm yeri raporları</a>
+            <a href="{{ route('admin.reports.dump-site-payments') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.dump-site-payments*')])>Döküm yeri ödeme</a>
+            <a href="{{ route('admin.reports.fuel-stations') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.fuel-stations') || request()->routeIs('admin.reports.fuel-stations.export')])>Yakıt yeri raporları</a>
+            <a href="{{ route('admin.reports.fuel-stations-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.fuel-stations-monthly*')])>Yakıt yeri aylık</a>
+            <a href="{{ route('admin.reports.ticket-control') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.ticket-control*')])>Hareket fişi kontrol</a>
             <a href="{{ route('admin.reports.vehicle-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-monthly*')])>Plaka aylık döküm</a>
+            <a href="{{ route('admin.reports.vehicle-periodic') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-periodic*')])>Plaka dönemsel</a>
             <a href="{{ route('admin.reports.vehicle-site-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-site-monthly*')])>Plaka şantiye döküm</a>
             <a href="{{ route('admin.reports.vehicle-balance') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-balance*')])>Plaka bakiye</a>
             <a href="{{ route('admin.reports.owner-monthly') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.owner-monthly*')])>Plaka sahibi aylık döküm</a>
+            <a href="{{ route('admin.reports.owner-periodic') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.owner-periodic*')])>Plaka sahibi dönemsel</a>
             <a href="{{ route('admin.reports.owner-balance') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.owner-balance*')])>Plaka sahibi bakiye</a>
+            <a href="{{ route('admin.reports.vehicle-cost') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-cost', 'admin.reports.vehicle-cost.export')])>Araç maliyet</a>
+            <a href="{{ route('admin.reports.vehicle-cost.owners') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.vehicle-cost.owners*')])>Plaka sahibi özet</a>
+            <a href="{{ route('admin.reports.company-balance') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.company-balance*')])>Firma bakiye</a>
+            <a href="{{ route('admin.reports.company-ledger') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.company-ledger*')])>Firma cari</a>
+            <a href="{{ route('admin.reports.site-cari') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.site-cari*')])>Şantiye cari</a>
+            <a href="{{ route('admin.reports.site-expense') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.site-expense*')])>Şantiye gider</a>
+            <a href="{{ route('admin.reports.cash-movements') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.cash-movements*')])>Kasa hareketleri</a>
         </div>
     </div>
 

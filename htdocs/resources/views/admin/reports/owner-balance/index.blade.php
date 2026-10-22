@@ -19,7 +19,7 @@
                         colspan="5"
                         icon="fa-solid fa-filter"
                         title="Raporu görmek için seçim yapın."
-                        text="Dönemi seçip Raporu Göster’e basın. Şantiye ve yakıt yeri isteğe bağlıdır."
+                        text="Şantiye, yakıt yeri ve dönemi seçip Raporu Göster’e basın."
                     />
                 </tbody>
             </x-table.list>

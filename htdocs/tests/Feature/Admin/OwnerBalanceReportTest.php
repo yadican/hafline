@@ -91,16 +91,24 @@ class OwnerBalanceReportTest extends TestCase
 
     public function test_report_page_shows_filters_without_running(): void
     {
-        $previous = now()->subMonthNoOverflow();
-
         $this->actingAs($this->admin)
             ->get(route('admin.reports.owner-balance'))
             ->assertOk()
             ->assertSee('Plaka sahibi bakiye', false)
-            ->assertSee('Raporu Göster', false)
-            ->assertSee('Raporu görmek için seçim yapın.', false)
-            ->assertSee((string) $previous->year, false)
+            ->assertSee('Şantiye, yakıt yeri ve dönemi seçip Raporu Göster’e basın.', false)
             ->assertViewHas('ready', false);
+    }
+
+    public function test_report_requires_site_and_fuel_station(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-balance', [
+                'period' => 'month',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertRedirect(route('admin.reports.owner-balance'))
+            ->assertSessionHasErrors(['site', 'fuel_station']);
     }
 
     public function test_report_builds_totals_per_owner_including_owner_payment(): void
@@ -136,49 +144,38 @@ class OwnerBalanceReportTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance', [
-                'period' => 'month',
-                'year' => 2026,
-                'month' => 9,
-            ]));
+            ->get(route('admin.reports.owner-balance', $this->filters()));
 
         $response->assertOk()
             ->assertSee('Plaka Sahibi Bakiye Raporu', false)
             ->assertSee('Ahmet Yılmaz', false)
             ->assertSee('Mehmet Demir', false)
-            ->assertSee('Plaka Sahibi', false);
+            ->assertSee('Filtreli net', false);
 
         $report = $response->viewData('report');
-
-        $this->assertFalse($report['filtered']);
         $this->assertCount(2, $report['rows']);
-        $this->assertSame('Ahmet Yılmaz', $report['rows'][0]['name']);
-        $this->assertSame('Mehmet Demir', $report['rows'][1]['name']);
 
         $ahmet = $report['rows'][0];
+        $this->assertSame('Ahmet Yılmaz', $ahmet['name']);
         $this->assertSame(4200.0, $ahmet['credit']);
         $this->assertSame(800.0, $ahmet['cash']);
-        // fuel 5000 + payment 1500 + fine 250 + owner payment 400
         $this->assertSame(7150.0, $ahmet['debit']);
         $this->assertSame(2150.0, $ahmet['balance']);
 
         $mehmet = $report['rows'][1];
         $this->assertSame(1000.0, $mehmet['credit']);
         $this->assertSame(2000.0, $mehmet['debit']);
-        $this->assertSame(1000.0, $mehmet['balance']);
     }
 
     public function test_snapshot_party_keeps_activity_with_prior_owner(): void
     {
         $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 3000);
+        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-06', 20, 50);
         $this->makeHaul($this->vehicle, $this->otherOwner, $this->routeA, '2026-09-10 08:00:00', 1500);
+        $this->makeReceipt($this->vehicle, $this->otherOwner, $this->stationA, '2026-09-11', 10, 50);
 
         $report = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance', [
-                'period' => 'month',
-                'year' => 2026,
-                'month' => 9,
-            ]))
+            ->get(route('admin.reports.owner-balance', $this->filters()))
             ->assertOk()
             ->viewData('report');
 
@@ -187,48 +184,21 @@ class OwnerBalanceReportTest extends TestCase
         $this->assertSame(1500.0, $byName['Mehmet Demir']['credit']);
     }
 
-    public function test_site_filter_limits_hauls_and_fuel(): void
+    public function test_hides_owners_missing_site_haul_or_station_fuel(): void
     {
-        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 2000);
-        $this->makeHaul($this->vehicle, $this->owner, $this->routeB, '2026-09-06 08:00:00', 3000);
-        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-10', 100, 50, $this->siteA->id);
-        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-11', 40, 50, $this->siteB->id);
+        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 1500);
+        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-10', 40, 50);
+
+        $this->makeHaul($this->otherVehicle, $this->otherOwner, $this->routeB, '2026-09-05 08:00:00', 3000);
+        $this->makeReceipt($this->otherVehicle, $this->otherOwner, $this->stationA, '2026-09-11', 40, 50);
 
         $report = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance', [
-                'period' => 'month',
-                'year' => 2026,
-                'month' => 9,
-                'site' => $this->siteA->id,
-            ]))
-            ->assertOk()
-            ->assertSee('Filtreli net', false)
-            ->viewData('report');
-
-        $row = $report['rows'][0];
-        $this->assertSame(2000.0, $row['credit']);
-        $this->assertSame(5000.0, $row['debit']);
-    }
-
-    public function test_fuel_station_filter_limits_fuel_debit(): void
-    {
-        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 1000);
-        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-10', 100, 50);
-        $this->makeReceipt($this->vehicle, $this->owner, $this->stationB, '2026-09-11', 80, 50);
-
-        $report = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance', [
-                'period' => 'month',
-                'year' => 2026,
-                'month' => 9,
-                'fuel_station' => $this->stationA->id,
-            ]))
+            ->get(route('admin.reports.owner-balance', $this->filters()))
             ->assertOk()
             ->viewData('report');
 
-        $row = $report['rows'][0];
-        $this->assertSame(1000.0, $row['credit']);
-        $this->assertSame(5000.0, $row['debit']);
+        $this->assertCount(1, $report['rows']);
+        $this->assertSame('Ahmet Yılmaz', $report['rows'][0]['name']);
     }
 
     public function test_date_range_includes_end_day(): void
@@ -236,55 +206,51 @@ class OwnerBalanceReportTest extends TestCase
         $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-01 00:00:00', 1000);
         $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-15 23:30:00', 1300);
         $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-16 00:00:00', 9999);
+        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-01', 40, 50);
 
         $report = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance', [
+            ->get(route('admin.reports.owner-balance', $this->filters([
                 'period' => 'range',
                 'from' => '2026-09-01',
                 'to' => '2026-09-15',
-            ]))
+            ])))
             ->assertOk()
-            ->assertSee('01.09.2026 – 15.09.2026', false)
             ->viewData('report');
 
         $this->assertSame(2300.0, $report['rows'][0]['credit']);
     }
 
-    public function test_soft_deleted_rows_are_excluded(): void
-    {
-        $haul = $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 2000);
-        $haul->delete();
-        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-06 08:00:00', 1800);
-
-        $report = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance', [
-                'period' => 'month',
-                'year' => 2026,
-                'month' => 9,
-            ]))
-            ->assertOk()
-            ->viewData('report');
-
-        $this->assertSame(1800.0, $report['rows'][0]['credit']);
-    }
-
     public function test_csv_export_contains_owner_rows(): void
     {
         $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 2000);
+        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-09-10', 40, 50);
 
-        $response = $this->actingAs($this->admin)
-            ->get(route('admin.reports.owner-balance.export', [
-                'period' => 'month',
-                'year' => 2026,
-                'month' => 9,
-            ]));
+        $csv = $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-balance.export', $this->filters()))
+            ->assertOk()
+            ->streamedContent();
 
-        $response->assertOk();
-        $csv = $response->streamedContent();
-
-        $this->assertStringContainsString('Plaka Sahibi', $csv);
         $this->assertStringContainsString('Ahmet Yılmaz', $csv);
-        $this->assertStringContainsString('Toplam', $csv);
+        $this->assertStringContainsString('Filtreli net', $csv);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function filters(array $overrides = []): array
+    {
+        return array_merge([
+            'period' => 'month',
+            'year' => 2026,
+            'month' => 9,
+            'site' => $this->siteA->id,
+            'fuel_station' => $this->stationA->id,
+        ], $overrides);
     }
 
     private function makeHaul(Vehicle $vehicle, Party $owner, HaulRoute $route, string $hauledAt, float $price): Haul

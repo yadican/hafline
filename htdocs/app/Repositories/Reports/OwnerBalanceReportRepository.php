@@ -69,7 +69,6 @@ class OwnerBalanceReportRepository
             ->when($dateFrom, fn ($q) => $q->where('issued_on', '>=', $dateFrom))
             ->when($dateTo, fn ($q) => $q->where('issued_on', '<', $dateTo))
             ->when($fuelStationId, fn ($q) => $q->where('fuel_station_id', $fuelStationId))
-            ->when($siteId, fn ($q) => $q->where('site_id', $siteId))
             ->groupBy('party_id');
 
         $payments = DB::table('vehicle_payments')
@@ -123,7 +122,28 @@ class OwnerBalanceReportRepository
                 DB::raw('COALESCE(fines_sum.total, 0) as debit_fines'),
                 DB::raw('COALESCE(owner_payments_sum.total, 0) as debit_owner_payments'),
             ])
-            ->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0) + COALESCE(owner_payments_sum.total, 0)) <> 0')
+            ->where(function ($query) use ($siteId, $fuelStationId): void {
+                if (filled($siteId) && filled($fuelStationId)) {
+                    $query->whereRaw('COALESCE(hauls_sum.total, 0) > 0')
+                        ->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
+
+                    return;
+                }
+
+                if (filled($fuelStationId)) {
+                    $query->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
+
+                    return;
+                }
+
+                if (filled($siteId)) {
+                    $query->whereRaw('COALESCE(hauls_sum.total, 0) > 0');
+
+                    return;
+                }
+
+                $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0) + COALESCE(owner_payments_sum.total, 0)) <> 0');
+            })
             ->orderBy('parties.name')
             ->get();
     }

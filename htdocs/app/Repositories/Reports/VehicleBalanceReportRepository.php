@@ -60,13 +60,13 @@ class VehicleBalanceReportRepository
             ->when($siteId, fn ($q) => $q->where('site_id', $siteId))
             ->groupBy('vehicle_id');
 
+        // Site filters hauls only; fuel station filters fuel only (legacy card).
         $fuel = DB::table('fuel_receipts')
             ->select('vehicle_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
             ->whereNull('deleted_at')
             ->when($dateFrom, fn ($q) => $q->where('issued_on', '>=', $dateFrom))
             ->when($dateTo, fn ($q) => $q->where('issued_on', '<', $dateTo))
             ->when($fuelStationId, fn ($q) => $q->where('fuel_station_id', $fuelStationId))
-            ->when($siteId, fn ($q) => $q->where('site_id', $siteId))
             ->groupBy('vehicle_id');
 
         $payments = DB::table('vehicle_payments')
@@ -108,7 +108,29 @@ class VehicleBalanceReportRepository
                 DB::raw('COALESCE(fuel_sum.total, 0) as debit_fuel'),
                 DB::raw('COALESCE(fines_sum.total, 0) as debit_fines'),
             ])
-            ->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0)) <> 0')
+            ->where(function ($query) use ($siteId, $fuelStationId): void {
+                // Required filters must match real activity; Elden/ödeme alone must not fill the list.
+                if (filled($siteId) && filled($fuelStationId)) {
+                    $query->whereRaw('COALESCE(hauls_sum.total, 0) > 0')
+                        ->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
+
+                    return;
+                }
+
+                if (filled($fuelStationId)) {
+                    $query->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
+
+                    return;
+                }
+
+                if (filled($siteId)) {
+                    $query->whereRaw('COALESCE(hauls_sum.total, 0) > 0');
+
+                    return;
+                }
+
+                $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0)) <> 0');
+            })
             ->orderBy('vehicles.plate')
             ->get();
     }

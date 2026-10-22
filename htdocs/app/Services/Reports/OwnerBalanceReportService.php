@@ -33,17 +33,17 @@ class OwnerBalanceReportService extends Service
     }
 
     /**
-     * @param  array{period: 'month'|'range'|'all', year?: int, month?: int, from?: string, to?: string, site?: string, fuel_station?: string}  $filters
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, site: string, fuel_station: string}  $filters
      * @return array{
      *     title: string,
      *     subtitle: string,
-     *     period: 'month'|'range'|'all',
+     *     period: 'month'|'range',
      *     period_label: string,
      *     year: ?int,
      *     month: ?int,
      *     month_label: ?string,
-     *     from: ?string,
-     *     to: ?string,
+     *     from: string,
+     *     to: string,
      *     filtered: bool,
      *     balance_label: string,
      *     rows: list<array{name: string, credit: float, cash: float, debit: float, balance: float}>,
@@ -56,9 +56,9 @@ class OwnerBalanceReportService extends Service
     public function report(array $filters): array
     {
         [$from, $toExclusive, $meta] = $this->resolvePeriod($filters);
-        $siteId = $filters['site'] ?? null;
-        $fuelStationId = $filters['fuel_station'] ?? null;
-        $filtered = filled($siteId) || filled($fuelStationId);
+        $siteId = $filters['site'];
+        $fuelStationId = $filters['fuel_station'];
+        $filtered = true;
 
         $rows = [];
         $totalCredit = 0.0;
@@ -113,17 +113,15 @@ class OwnerBalanceReportService extends Service
     }
 
     /**
-     * @param  array{period: 'month'|'range'|'all', year?: int, month?: int, from?: string, to?: string, site?: string, fuel_station?: string}  $filters
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, site: string, fuel_station: string}  $filters
      */
     public function exportCsv(array $filters): StreamedResponse
     {
         $report = $this->report($filters);
 
-        $filename = match ($report['period']) {
-            'month' => sprintf('plaka-sahibi-bakiye-%04d-%02d.csv', $report['year'], $report['month']),
-            'range' => sprintf('plaka-sahibi-bakiye-%s_%s.csv', $report['from'], $report['to']),
-            default => 'plaka-sahibi-bakiye-tum-zamanlar.csv',
-        };
+        $filename = $report['period'] === 'month'
+            ? sprintf('plaka-sahibi-bakiye-%04d-%02d.csv', $report['year'], $report['month'])
+            : sprintf('plaka-sahibi-bakiye-%s_%s.csv', $report['from'], $report['to']);
 
         return response()->streamDownload(function () use ($report): void {
             $handle = fopen('php://output', 'w');
@@ -163,30 +161,12 @@ class OwnerBalanceReportService extends Service
     }
 
     /**
-     * @param  array{period: 'month'|'range'|'all', year?: int, month?: int, from?: string, to?: string}  $filters
-     * @return array{0: ?Carbon, 1: ?Carbon, 2: array{period: 'month'|'range'|'all', label: string, year: ?int, month: ?int, month_label: ?string, from: ?string, to: ?string}}
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
+     * @return array{0: Carbon, 1: Carbon, 2: array{period: 'month'|'range', label: string, year: ?int, month: ?int, month_label: ?string, from: string, to: string}}
      */
     private function resolvePeriod(array $filters): array
     {
-        $period = $filters['period'] ?? 'month';
-
-        if ($period === 'all') {
-            return [
-                null,
-                null,
-                [
-                    'period' => 'all',
-                    'label' => 'Tüm zamanlar',
-                    'year' => null,
-                    'month' => null,
-                    'month_label' => null,
-                    'from' => null,
-                    'to' => null,
-                ],
-            ];
-        }
-
-        if ($period === 'range') {
+        if (($filters['period'] ?? 'month') === 'range') {
             $from = Carbon::parse($filters['from'])->startOfDay();
             $toInclusive = Carbon::parse($filters['to'])->startOfDay();
 

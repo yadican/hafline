@@ -70,18 +70,20 @@
             searchable
             name="site"
             label="Şantiye"
-            placeholder="Tüm şantiyeler"
+            placeholder="Şantiye seçin"
             :options="$options['sites']"
             :value="$filters['site'] ?? null"
+            required
             class="md:col-span-2"
         />
         <x-search.select
             searchable
             name="fuel_station"
             label="Yakıt Yeri"
-            placeholder="Tüm yakıt yerleri"
+            placeholder="Yakıt yeri seçin"
             :options="$options['stations']"
             :value="$filters['fuel_station'] ?? null"
+            required
             class="md:col-span-2"
         />
         <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
