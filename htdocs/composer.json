@@ -7,9 +7,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "darkaonline/l5-swagger": "^11.2",
         "laravel/framework": "^13.17",
-        "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
+        "php-open-source-saver/jwt-auth": "^2.9",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {

@@ -1,18 +1,25 @@
 @extends('admin.layouts.app')
 
 @section('content')
-    <x-panel.page heading="Gösterge paneli" icon="fa-solid fa-gauge" description="Modüllere hızlı erişim ve genel durum.">
+    <x-panel.page heading="Gösterge paneli" icon="fa-solid fa-gauge" description="Operasyon özeti, bugünkü hareketler ve hızlı erişim.">
         <div class="dash">
-            <div class="dash-hero">
+            <div class="dash-header">
                 <div>
-                    <img class="dash-logo" src="{{ asset('img/logo.png') }}" alt="Hafline">
-                    <h1>Operasyon özeti</h1>
-                    <p class="dash-sub">Bugünkü fişler, aktif saha ve filo durumu. Modüllere alttaki kısayollardan geçebilirsiniz.</p>
+                    <p class="dash-kicker">Operasyon özeti</p>
+                    <h1 class="dash-title">Bugünün panosu</h1>
                 </div>
-                <div class="dash-hero-route" aria-hidden="true"></div>
+                <time class="dash-date" datetime="{{ today()->toDateString() }}">{{ $todayLabel }}</time>
             </div>
 
             @include('admin.dashboard.partials.stats')
+
+            @if ($recentHauls !== null || $cashSummary !== null)
+                <div class="dash-panels">
+                    @include('admin.dashboard.partials.recent-hauls')
+                    @include('admin.dashboard.partials.cash-summary')
+                </div>
+            @endif
+
             @include('admin.dashboard.partials.shortcuts')
         </div>
     </x-panel.page>

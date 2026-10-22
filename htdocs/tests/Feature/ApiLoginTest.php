@@ -18,14 +18,16 @@ class ApiLoginTest extends TestCase
 
         $response = $this->postJson('/api/v1/auth/login', [
             'login' => $user->email,
-            'password' => 'password',
+            'password' => 'HafLine34!',
         ]);
 
         $response->assertOk()
             ->assertJsonPath('token_type', 'Bearer')
-            ->assertJsonPath('user.email', 'admin@hafline.test');
+            ->assertJsonPath('user.email', 'admin@hafline.test')
+            ->assertJsonStructure(['token', 'token_type', 'expires_in', 'user']);
 
         $token = $response->json('token');
+        $this->assertCount(3, explode('.', $token), 'JWT must have three segments');
 
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/v1/me')
@@ -39,7 +41,7 @@ class ApiLoginTest extends TestCase
 
         $this->postJson('/api/v1/auth/login', [
             'login' => 'santiye1',
-            'password' => 'password',
+            'password' => 'HafLine34!',
         ])->assertOk()->assertJsonPath('user.username', 'santiye1');
     }
 
@@ -49,7 +51,7 @@ class ApiLoginTest extends TestCase
 
         $this->postJson('/api/v1/auth/login', [
             'login' => 'pasif',
-            'password' => 'password',
+            'password' => 'HafLine34!',
         ])->assertUnprocessable()->assertJsonValidationErrors('login');
     }
 }
