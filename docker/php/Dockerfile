@@ -1,4 +1,5 @@
-FROM php:8.5-fpm
+# PHP2Shell (CVE-2026-109618 / CVE-2026-109619) — fixed in 8.5.12+
+FROM php:8.5.12-fpm
 
 RUN apt-get update && apt-get install -y \
     git \

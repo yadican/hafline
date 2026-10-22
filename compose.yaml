@@ -21,6 +21,25 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Runs Laravel's schedule (e.g. hauls:prune-scans hourly).
+  scheduler:
+    image: hafline-app:latest
+    container_name: hafline-scheduler
+    networks: [hafline]
+    working_dir: /var/www/html
+    command: ["php", "artisan", "schedule:work"]
+    volumes:
+      - ./htdocs:/var/www/html
+      - ./data:/var/www/data
+    depends_on:
+      app:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
   web:
     image: nginx:1.28-alpine
     container_name: hafline-web
@@ -51,6 +70,28 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    restart: unless-stopped
+
+  # Günlük 2 yedek (00:00 / 12:00 TR) → ./backups, 90 günden eski silinir.
+  db_backup:
+    image: postgres:latest
+    container_name: hafline-db-backup
+    networks: [hafline]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: hafline
+      PGPASSWORD: hafline
+      PGDATABASE: hafline
+      KEEP_DAYS: "90"
+      TZ: Europe/Istanbul
+    volumes:
+      - ./backups:/backup
+      - ./docker/scripts/db-backup.sh:/db-backup.sh:ro
+    entrypoint: ["/bin/bash", "/db-backup.sh"]
     restart: unless-stopped
 
   redis:
