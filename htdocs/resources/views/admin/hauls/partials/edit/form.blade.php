@@ -46,6 +46,23 @@
             <x-form.input name="tonnage" label="Tonaj" type="number" min="0" max="1000" />
         </x-form.group>
 
+        @if (! empty($photoUrl))
+            <x-form.group legend="Saha fotoğrafı" icon="fa-solid fa-camera" description="Plaka taramasından gelen görüntü">
+                <div class="md:col-span-full">
+                    <a href="{{ $photoUrl }}" target="_blank" rel="noopener" class="inline-block">
+                        <img
+                            src="{{ $photoUrl }}"
+                            alt="Saha fotoğrafı"
+                            class="max-h-64 max-w-full rounded border border-[var(--ui-border-soft)] object-contain"
+                        >
+                    </a>
+                    <p class="mt-2 text-sm text-slate-500 break-all">
+                        <a href="{{ $photoUrl }}" target="_blank" rel="noopener" class="underline">{{ $photoUrl }}</a>
+                    </p>
+                </div>
+            </x-form.group>
+        @endif
+
         <x-form.actions label="Güncelle" :cancel="route('admin.hauls.index')" />
     </x-form.grid>
 </form>

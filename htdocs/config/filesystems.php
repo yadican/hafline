@@ -38,6 +38,18 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Field haul scans/photos live outside htdocs, next to docker data volumes:
+         *   {project}/data/haul-scans/...
+         *   {project}/data/haul-photos/...
+         */
+        'data' => [
+            'driver' => 'local',
+            'root' => env('DATA_PATH', dirname(base_path()).DIRECTORY_SEPARATOR.'data'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

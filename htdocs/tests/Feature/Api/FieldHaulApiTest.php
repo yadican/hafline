@@ -13,7 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Tests\TestCase;
 
@@ -33,7 +32,7 @@ class FieldHaulApiTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('local');
+        Storage::fake('data');
 
         $this->user = User::factory()->apiOperator()->create();
         $this->vehicle = Vehicle::factory()->create(['plate' => '34 ABC 123']);
@@ -166,7 +165,7 @@ class FieldHaulApiTest extends TestCase
         $scan = HaulScan::query()->findOrFail($response->json('scan_id'));
         $this->assertSame(HaulScan::STATUS_PENDING, $scan->status);
         $this->assertSame($sessionId, $scan->field_haul_session_id);
-        Storage::disk('local')->assertExists($scan->path);
+        Storage::disk('data')->assertExists($scan->path);
         $this->assertMatchesRegularExpression(
             '#^haul-scans/\d{4}/\d{2}/\d{2}/\d{2}/'.preg_quote($sessionId, '#').'-\d{17}(?:-\d+)?\.(jpg|png)$#',
             $scan->path,
@@ -225,7 +224,7 @@ class FieldHaulApiTest extends TestCase
         $scan = HaulScan::query()->findOrFail($scanId);
         $this->assertSame(HaulScan::STATUS_ATTACHED, $scan->status);
         $this->assertSame($haul->id, $scan->haul_id);
-        Storage::disk('local')->assertExists($scan->path);
+        Storage::disk('data')->assertExists($scan->path);
 
         $this->api()
             ->getJson('/api/v1/hauls/session')
@@ -240,7 +239,8 @@ class FieldHaulApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.ticket_no', $haul->ticket_no);
 
-        $photoUrl = URL::temporarySignedRoute('api.hauls.photo', now()->addMinutes(5), ['haul' => $haul->id]);
+        $photoUrl = $response->json('data.photo_url');
+        $this->assertStringContainsString('/media/'.$scan->path, $photoUrl);
         $this->get($photoUrl)->assertOk();
     }
 

@@ -14,7 +14,6 @@ use App\Services\Service;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -404,12 +403,18 @@ class FieldHaulService extends Service
             'shift_label' => $shift->label(),
             'tonnage' => (int) $haul->tonnage,
             'qr_payload' => $haul->id,
-            'photo_url' => URL::temporarySignedRoute(
-                'api.hauls.photo',
-                now()->addMinutes(5),
-                ['haul' => $haul->id],
-            ),
+            'photo_url' => $this->photoUrlFor($haul),
         ];
+    }
+
+    public function photoUrlFor(Haul $haul): ?string
+    {
+        $path = HaulScan::query()
+            ->where('haul_id', $haul->id)
+            ->where('status', HaulScan::STATUS_ATTACHED)
+            ->value('path');
+
+        return is_string($path) && $path !== '' ? $this->images->url($path) : null;
     }
 
     private function nextTicketNo(): string

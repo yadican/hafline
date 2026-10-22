@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\Admin\HaulRequest;
 use App\Http\Requests\Admin\HaulSearchRequest;
 use App\Models\Haul;
+use App\Services\Api\FieldHaulService;
 use App\Services\HaulService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -13,7 +14,10 @@ class HaulController extends AdminController
 {
     protected ?string $permissionResource = 'haul';
 
-    public function __construct(private HaulService $hauls) {}
+    public function __construct(
+        private HaulService $hauls,
+        private FieldHaulService $fieldHauls,
+    ) {}
 
     public function index(HaulSearchRequest $request): View
     {
@@ -52,6 +56,7 @@ class HaulController extends AdminController
         return view('admin.hauls.edit', [
             'title' => 'Taşıma fişini düzenle',
             'haul' => $haul->load('vehicle'),
+            'photoUrl' => $this->fieldHauls->photoUrlFor($haul),
             'options' => $this->hauls->formOptions(old('site_id', $haul->site_id), $haul),
         ]);
     }

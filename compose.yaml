@@ -13,6 +13,7 @@ services:
     networks: [hafline]
     volumes:
       - ./htdocs:/var/www/html
+      - ./data:/var/www/data
     depends_on:
       postgres:
         condition: service_healthy

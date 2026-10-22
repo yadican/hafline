@@ -9,16 +9,18 @@ use Illuminate\Validation\ValidationException;
 
 class SecureImageIngest
 {
+    public const DISK = 'data';
+
     /** Phone field photos before server-side downscale (must stay under PHP upload_max_filesize). */
     public const MAX_BYTES = 15_728_640;
 
     /** Reject absurd uploads before decode. */
     public const MAX_EDGE = 4096;
 
-    /** Longest side after resize — plate OCR + field photos stay readable, disk stays small. */
-    public const STORE_EDGE = 1600;
+    /** Longest side after resize — enough for plate review, typically lands ~100–200 KB. */
+    public const STORE_EDGE = 1024;
 
-    public const JPEG_QUALITY = 88;
+    public const JPEG_QUALITY = 72;
 
     /**
      * @var list<string>
@@ -82,24 +84,32 @@ class SecureImageIngest
             $this->uniqueFilename($fieldSessionId, $extension),
         );
 
-        Storage::disk('local')->put($path, $encoded);
+        Storage::disk(self::DISK)->put($path, $encoded);
 
         return [
             'path' => $path,
             'checksum' => $checksum,
-            'absolute_path' => Storage::disk('local')->path($path),
+            'absolute_path' => Storage::disk(self::DISK)->path($path),
             'mime' => $mime,
         ];
     }
 
     public function absolutePath(string $path): string
     {
-        return Storage::disk('local')->path($path);
+        return Storage::disk(self::DISK)->path($path);
+    }
+
+    /**
+     * Browser-openable URL under /media/{path} (project data disk).
+     */
+    public function url(string $path): string
+    {
+        return url('/media/'.ltrim(str_replace('\\', '/', $path), '/'));
     }
 
     public function delete(string $path): void
     {
-        Storage::disk('local')->delete($path);
+        Storage::disk(self::DISK)->delete($path);
     }
 
     public function moveAttached(string $fromPath, string $haulId): string
@@ -108,7 +118,7 @@ class SecureImageIngest
         $toPath = $this->datedPath('haul-photos', $haulId.'.'.$extension);
 
         if ($fromPath !== $toPath) {
-            Storage::disk('local')->move($fromPath, $toPath);
+            Storage::disk(self::DISK)->move($fromPath, $toPath);
         }
 
         return $toPath;
@@ -153,7 +163,7 @@ class SecureImageIngest
         $filename = $base.'.'.$extension;
         $attempt = 0;
 
-        while (Storage::disk('local')->exists($this->datedPath('haul-scans', $filename, $at))) {
+        while (Storage::disk(self::DISK)->exists($this->datedPath('haul-scans', $filename, $at))) {
             $attempt++;
             $filename = $base.'-'.$attempt.'.'.$extension;
         }
