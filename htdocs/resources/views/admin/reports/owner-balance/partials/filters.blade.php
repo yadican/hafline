@@ -86,8 +86,8 @@
             required
             class="md:col-span-2"
         />
-        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-1">
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

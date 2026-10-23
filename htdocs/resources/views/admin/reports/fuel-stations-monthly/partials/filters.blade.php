@@ -17,6 +17,16 @@
         <x-search.select
             searchable
             hide-search
+            name="class"
+            label="Araç Tipi"
+            placeholder="Araç tipi"
+            :options="$options['classes']"
+            :value="$filters['class'] ?? null"
+            class="md:col-span-2"
+        />
+        <x-search.select
+            searchable
+            hide-search
             name="year"
             label="Yıl"
             :placeholder="null"
@@ -56,18 +66,8 @@
             :value="$filters['day_to'] ?? null"
             class="md:col-span-1"
         />
-        <x-search.select
-            searchable
-            hide-search
-            name="class"
-            label="Araç Tipi"
-            placeholder="Araç tipi"
-            :options="$options['classes']"
-            :value="$filters['class'] ?? null"
-            class="md:col-span-2"
-        />
         <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

@@ -115,8 +115,8 @@ class DumpSitePaymentReportService extends Service
         $closing = $this->reports->closingLedger($dumpSite->party_id, $toExclusive);
 
         return [
-            'title' => $dumpSite->name.' Döküm Yeri Ödeme Raporu',
-            'subtitle' => $meta['label'],
+            'title' => 'Döküm Yeri Ödeme Raporu',
+            'subtitle' => "{$dumpSite->name} {$meta['label']} Raporu",
             'dump_site_name' => $dumpSite->name,
             'period' => $meta['period'],
             'period_label' => $meta['label'],

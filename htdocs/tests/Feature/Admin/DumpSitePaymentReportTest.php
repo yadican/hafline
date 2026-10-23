@@ -104,7 +104,8 @@ class DumpSitePaymentReportTest extends TestCase
         $report = $this->actingAs($this->admin)
             ->get(route('admin.reports.dump-site-payments', $this->filters()))
             ->assertOk()
-            ->assertSee('212 Döküm Yeri Ödeme Raporu', false)
+            ->assertSee('Döküm Yeri Ödeme Raporu', false)
+            ->assertSee('212 2026 Eylül Raporu', false)
             ->assertSee('Sınıfsız', false)
             ->assertSee('CK-1', false)
             ->viewData('report');

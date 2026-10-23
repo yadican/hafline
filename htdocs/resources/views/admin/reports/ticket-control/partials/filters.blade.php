@@ -11,7 +11,7 @@
             placeholder="Tüm şantiyeler"
             :options="$options['sites']"
             :value="$filters['site'] ?? null"
-            class="md:col-span-2"
+            class="md:col-span-3"
         />
         <x-search.select
             searchable
@@ -20,7 +20,7 @@
             placeholder="Tüm döküm yerleri"
             :options="$options['dumpSites']"
             :value="$filters['dump_site'] ?? null"
-            class="md:col-span-2"
+            class="md:col-span-3"
         />
         <x-search.select
             searchable
@@ -48,7 +48,7 @@
             :options="$options['groups']"
             :value="$filters['group'] ?? 'none'"
             required
-            class="md:col-span-2"
+            class="md:col-span-3"
         />
         <x-search.select
             searchable
@@ -112,8 +112,8 @@
                 class="w-full"
             />
         </div>
-        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-1">
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

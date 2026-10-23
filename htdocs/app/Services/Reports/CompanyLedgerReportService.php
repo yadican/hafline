@@ -7,7 +7,6 @@ use App\Enums\PartyRole;
 use App\Repositories\Reports\CompanyBalanceReportRepository;
 use App\Repositories\Reports\CompanyLedgerReportRepository;
 use App\Services\Service;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -16,7 +15,14 @@ class CompanyLedgerReportService extends Service
     public function __construct(private CompanyLedgerReportRepository $reports) {}
 
     /**
-     * @return array{roles: array<string, string>, parties: array<string, string>, periods: array<string, string>, years: array<int, string>, months: array<int, string>}
+     * @return array{
+     *     roles: array<string, string>,
+     *     parties: array<string, string>,
+     *     partiesByRole: array<string, array<string, string>>,
+     *     periods: array<string, string>,
+     *     years: array<int, string>,
+     *     months: array<int, string>
+     * }
      */
     public function formOptions(?string $roleValue = null): array
     {
@@ -28,18 +34,21 @@ class CompanyLedgerReportService extends Service
         }
 
         $roles = [];
+        $partiesByRole = [];
         foreach (CompanyBalanceReportRepository::reportRoles() as $role) {
             $roles[$role->value] = CariEntryKind::from($role->value)->label();
+            $partiesByRole[$role->value] = $this->reports->partiesForRole($role);
         }
 
         $parties = [];
-        if ($roleValue !== null && $roleValue !== '') {
-            $parties = $this->reports->partiesForRole(PartyRole::from($roleValue));
+        if ($roleValue !== null && $roleValue !== '' && isset($partiesByRole[$roleValue])) {
+            $parties = $partiesByRole[$roleValue];
         }
 
         return [
             'roles' => $roles,
             'parties' => $parties,
+            'partiesByRole' => $partiesByRole,
             'periods' => VehicleBalanceReportService::PERIODS,
             'years' => $years,
             'months' => SiteExitReportService::MONTHS,
@@ -47,7 +56,7 @@ class CompanyLedgerReportService extends Service
     }
 
     /**
-     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party?: ?string}  $filters
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party: string}  $filters
      * @return array{
      *     title: string,
      *     subtitle: string,
@@ -84,37 +93,32 @@ class CompanyLedgerReportService extends Service
      *         total_credit: float,
      *         closing: float
      *     }>,
-     *     parties: LengthAwarePaginator|null,
+     *     parties: null,
      * }
      */
-    public function report(array $filters, bool $paginate = true): array
+    public function report(array $filters): array
     {
         [$from, $toExclusive, $meta] = $this->resolvePeriod($filters);
         $role = PartyRole::from($filters['role']);
         $roleLabel = CariEntryKind::from($role->value)->label();
-        $partyId = $filters['party'] ?? null;
-        $singleParty = filled($partyId);
+        $partyId = (string) $filters['party'];
 
         $parties = $this->reports->partiesWithActivity(
             $role,
             $from,
             $toExclusive,
-            $singleParty ? (string) $partyId : null,
-            paginate: $paginate && ! $singleParty,
+            $partyId,
+            paginate: false,
         );
 
-        $partyRows = $parties instanceof LengthAwarePaginator
-            ? collect($parties->items())
-            : $parties;
-
-        $partyIds = $partyRows->pluck('party_id')->map(fn ($id) => (string) $id)->all();
+        $partyIds = $parties->pluck('party_id')->map(fn ($id) => (string) $id)->all();
         $openings = $this->reports->openingBalances($role, $partyIds, $from);
         $linesByParty = $this->reports->periodLines($role, $partyIds, $from, $toExclusive)
             ->groupBy('party_id');
 
         $groups = [];
 
-        foreach ($partyRows as $party) {
+        foreach ($parties as $party) {
             $id = (string) $party->party_id;
             $opening = $openings[$id] ?? 0.0;
             $running = $opening;
@@ -155,14 +159,16 @@ class CompanyLedgerReportService extends Service
             ];
         }
 
+        $partyName = $groups[0]['party_name'] ?? null;
+
         return [
             'title' => 'Firma Cari Raporu',
-            'subtitle' => $roleLabel.' · '.$meta['label'],
+            'subtitle' => ($partyName !== null ? $partyName.' · ' : '').$roleLabel.' · '.$meta['label'],
             'role' => $role->value,
             'role_label' => $roleLabel,
             'show_fuel' => $role === PartyRole::Fuel,
             'show_market' => $role === PartyRole::Market,
-            'show_party_column' => ! $singleParty,
+            'show_party_column' => false,
             'period' => $meta['period'],
             'period_label' => $meta['label'],
             'year' => $meta['year'],
@@ -171,16 +177,16 @@ class CompanyLedgerReportService extends Service
             'from' => $meta['from'],
             'to' => $meta['to'],
             'groups' => $groups,
-            'parties' => $parties instanceof LengthAwarePaginator ? $parties : null,
+            'parties' => null,
         ];
     }
 
     /**
-     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party?: ?string}  $filters
+     * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party: string}  $filters
      */
     public function exportCsv(array $filters): StreamedResponse
     {
-        $report = $this->report($filters, paginate: false);
+        $report = $this->report($filters);
 
         $filename = $report['period'] === 'month'
             ? sprintf('firma-cari-%s-%04d-%02d.csv', $report['role'], $report['year'], $report['month'])

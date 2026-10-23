@@ -51,6 +51,7 @@ class CompanyLedgerReportRequest extends FormRequest
                 Rule::in($roleValues),
             ],
             'party' => [
+                Rule::requiredIf($active),
                 'nullable',
                 'uuid',
                 Rule::when(
@@ -122,19 +123,20 @@ class CompanyLedgerReportRequest extends FormRequest
     }
 
     /**
-     * @return array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party: ?string}|null
+     * @return array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party: string}|null
      */
     public function filters(): ?array
     {
         if ((! $this->submitted && ! $this->routeIs('admin.reports.company-ledger.export'))
-            || ! $this->filled('role')) {
+            || ! $this->filled('role')
+            || ! $this->filled('party')) {
             return null;
         }
 
         $filters = [
             'period' => (string) $this->validated('period'),
             'role' => (string) $this->validated('role'),
-            'party' => $this->validated('party'),
+            'party' => (string) $this->validated('party'),
         ];
 
         if ($filters['period'] === 'month') {

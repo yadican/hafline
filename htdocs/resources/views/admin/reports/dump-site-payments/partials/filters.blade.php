@@ -12,7 +12,7 @@
             :options="$options['dumpSites']"
             :value="$filters['dump_site'] ?? null"
             required
-            class="md:col-span-2"
+            class="md:col-span-3"
         />
         <x-search.select
             searchable
@@ -76,8 +76,8 @@
                 class="w-full"
             />
         </div>
-        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-1">
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

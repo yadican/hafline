@@ -3,7 +3,11 @@
 @endphp
 
 <div class="panel-liste-bar haul-search-bar report-filters">
-    <x-search.form :action="route('admin.reports.company-ledger')" data-report-search>
+    <x-search.form
+        :action="route('admin.reports.company-ledger')"
+        data-report-search
+        data-company-ledger-parties="{{ json_encode($options['partiesByRole'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP) }}"
+    >
         <x-search.select
             searchable
             hide-search
@@ -13,16 +17,19 @@
             :options="$options['roles']"
             :value="$filters['role'] ?? null"
             required
+            data-company-ledger-role
             class="md:col-span-2"
         />
         <x-search.select
             searchable
             name="party"
             label="Firma"
-            placeholder="Tümü"
+            placeholder="Firma seçin"
             :options="$options['parties']"
             :value="$filters['party'] ?? null"
-            class="md:col-span-2"
+            required
+            data-company-ledger-party
+            class="md:col-span-3"
         />
         <x-search.select
             searchable
@@ -86,8 +93,8 @@
                 class="w-full"
             />
         </div>
-        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-1">
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

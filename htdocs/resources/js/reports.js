@@ -76,11 +76,63 @@ function bindMonthlyVoucherRoutes(form) {
     }
 }
 
+// Cari türü değişince firma listesi o role göre dolar.
+function bindCompanyLedgerParties(form) {
+    const raw = form.getAttribute('data-company-ledger-parties');
+
+    if (! raw) {
+        return;
+    }
+
+    let maps;
+
+    try {
+        maps = JSON.parse(raw);
+    } catch {
+        return;
+    }
+
+    const role = form.querySelector('[data-company-ledger-role]');
+    const party = form.querySelector('[data-company-ledger-party]');
+
+    if (! role || ! party) {
+        return;
+    }
+
+    const fill = () => {
+        const items = maps[role.value] || {};
+        const keep = party.value;
+        const placeholder = party.dataset.placeholder || 'Firma seçin';
+        const $ = window.jQuery;
+
+        party.replaceChildren(
+            new Option(placeholder, ''),
+            ...Object.entries(items).map(([id, name]) => new Option(name, id)),
+        );
+        party.value = Object.prototype.hasOwnProperty.call(items, keep) ? keep : '';
+
+        if ($ && $(party).hasClass('select2-hidden-accessible')) {
+            $(party).trigger('change');
+        } else {
+            party.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    };
+
+    role.addEventListener('change', fill);
+
+    const $ = window.jQuery;
+
+    if ($ && $(role).hasClass('select2-hidden-accessible')) {
+        $(role).on('select2:select select2:clear', fill);
+    }
+}
+
 onReady(() => {
     document.querySelectorAll('form[data-report-search]').forEach((form) => {
         bindSearch(form);
         bindPeriodToggle(form);
         bindMonthlyVoucherRoutes(form);
+        bindCompanyLedgerParties(form);
     });
     document.querySelectorAll('[data-report-print]').forEach(bindPrint);
 });

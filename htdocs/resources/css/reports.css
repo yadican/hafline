@@ -37,48 +37,56 @@
 .owner-monthly-report.panel-wrap,
 .owner-balance-report.panel-wrap,
 .monthly-voucher-report.panel-wrap,
+.fuel-station-report.panel-wrap,
 .fuel-station-monthly-report.panel-wrap,
 .dump-site-payment-report.panel-wrap,
 .vehicle-periodic-report.panel-wrap,
 .owner-periodic-report.panel-wrap,
 .ticket-control-report.panel-wrap,
 .employee-salaries-report.panel-wrap,
+.cash-movements-report.panel-wrap,
 .vehicle-monthly-report .panel,
 .vehicle-site-monthly-report .panel,
 .vehicle-balance-report .panel,
 .owner-monthly-report .panel,
 .owner-balance-report .panel,
 .monthly-voucher-report .panel,
+.fuel-station-report .panel,
 .fuel-station-monthly-report .panel,
 .dump-site-payment-report .panel,
 .vehicle-periodic-report .panel,
 .owner-periodic-report .panel,
 .ticket-control-report .panel,
 .employee-salaries-report .panel,
+.cash-movements-report .panel,
 .vehicle-monthly-report .panel-body,
 .vehicle-site-monthly-report .panel-body,
 .vehicle-balance-report .panel-body,
 .owner-monthly-report .panel-body,
 .owner-balance-report .panel-body,
 .monthly-voucher-report .panel-body,
+.fuel-station-report .panel-body,
 .fuel-station-monthly-report .panel-body,
 .dump-site-payment-report .panel-body,
 .vehicle-periodic-report .panel-body,
 .owner-periodic-report .panel-body,
 .ticket-control-report .panel-body,
 .employee-salaries-report .panel-body,
+.cash-movements-report .panel-body,
 .vehicle-monthly-report .report-matrix,
 .vehicle-site-monthly-report .report-matrix,
 .vehicle-balance-report .report-matrix,
 .owner-monthly-report .report-matrix,
 .owner-balance-report .report-matrix,
 .monthly-voucher-report .report-matrix,
+.fuel-station-report .report-matrix,
 .fuel-station-monthly-report .report-matrix,
 .dump-site-payment-report .report-matrix,
 .vehicle-periodic-report .report-matrix,
 .owner-periodic-report .report-matrix,
 .ticket-control-report .report-matrix,
-.employee-salaries-report .report-matrix {
+.employee-salaries-report .report-matrix,
+.cash-movements-report .report-matrix {
 	max-width: 100%;
 	min-width: 0;
 }
@@ -89,12 +97,14 @@
 .owner-monthly-report .panel-body,
 .owner-balance-report .panel-body,
 .monthly-voucher-report .panel-body,
+.fuel-station-report .panel-body,
 .fuel-station-monthly-report .panel-body,
 .dump-site-payment-report .panel-body,
 .vehicle-periodic-report .panel-body,
 .owner-periodic-report .panel-body,
 .ticket-control-report .panel-body,
-.employee-salaries-report .panel-body {
+.employee-salaries-report .panel-body,
+.cash-movements-report .panel-body {
 	overflow-x: clip;
 }
 
@@ -112,29 +122,28 @@
 .vehicle-periodic-report .panel-list-scroll,
 .owner-periodic-report .panel-list-scroll,
 .ticket-control-report .panel-list-scroll,
-.employee-salaries-report .panel-list-scroll {
+.employee-salaries-report .panel-list-scroll,
+.cash-movements-report .panel-list-scroll {
 	max-width: 100%;
 	width: 100%;
 	overflow-x: auto;
 	-webkit-overflow-scrolling: touch;
 }
 
-.vehicle-monthly-table.panel-list,
-.vehicle-site-monthly-table.panel-list,
+/* Plaka / sahip bakiye: tam genişlik; tutar sütunları dar, plaka/isim esnek */
 .vehicle-balance-table.panel-list,
-.owner-monthly-table.panel-list,
 .owner-balance-table.panel-list {
-	width: max-content;
-	max-width: none;
-	min-width: 100%;
+	table-layout: auto;
+	width: 100%;
+	min-width: 0;
 }
 
-.vehicle-monthly-table td:nth-child(3),
-.vehicle-site-monthly-table td:nth-child(3),
-.owner-monthly-table td:nth-child(3) {
-	white-space: normal;
-	overflow-wrap: anywhere;
-	max-width: 22rem;
+.vehicle-balance-table th:nth-child(n+2),
+.vehicle-balance-table td:nth-child(n+2),
+.owner-balance-table th:nth-child(n+2),
+.owner-balance-table td:nth-child(n+2) {
+	width: 1%;
+	white-space: nowrap;
 }
 
 .owner-monthly-table .report-vehicle-gap td {
@@ -248,18 +257,23 @@
 	white-space: nowrap;
 }
 
-/* Yakıt yeri: tablo içeriğe göre; sütunlar yan yana (boş orta yok) */
+/* Yakıt yeri: tam genişlik; sıra/sayı sütunları dar, plaka esnek */
 .fuel-station-table.panel-list {
 	table-layout: auto;
-	width: max-content;
-	max-width: 100%;
+	width: 100%;
 	min-width: 0;
 }
 
 .fuel-station-table th,
 .fuel-station-table td {
-	width: 1%;
 	white-space: nowrap;
+}
+
+.fuel-station-table th:nth-child(1),
+.fuel-station-table td:nth-child(1),
+.fuel-station-table th:nth-child(n+3),
+.fuel-station-table td:nth-child(n+3) {
+	width: 1%;
 }
 
 .fuel-station-table th:nth-child(1),
@@ -272,11 +286,13 @@
 	padding-inline: 16px;
 }
 
-/* Aylık döküm: sıra / tarih dar, açıklama esnek */
+/* Aylık döküm: tam genişlik; sıra/tarih/tutar dar, açıklama esnek */
 .vehicle-monthly-table.panel-list,
 .vehicle-site-monthly-table.panel-list,
 .owner-monthly-table.panel-list {
 	table-layout: auto;
+	width: 100%;
+	min-width: 0;
 }
 
 .vehicle-monthly-table .report-col-head th:nth-child(1),
@@ -284,29 +300,54 @@
 .owner-monthly-table .report-col-head th:nth-child(1),
 .vehicle-monthly-table td:nth-child(1),
 .vehicle-site-monthly-table td:nth-child(1),
-.owner-monthly-table td:nth-child(1) {
-	width: 3.5rem;
-	white-space: nowrap;
-}
-
+.owner-monthly-table td:nth-child(1),
 .vehicle-monthly-table .report-col-head th:nth-child(2),
 .vehicle-site-monthly-table .report-col-head th:nth-child(2),
 .owner-monthly-table .report-col-head th:nth-child(2),
 .vehicle-monthly-table td:nth-child(2),
 .vehicle-site-monthly-table td:nth-child(2),
-.owner-monthly-table td:nth-child(2) {
-	width: 7rem;
-	white-space: nowrap;
-}
-
+.owner-monthly-table td:nth-child(2),
 .vehicle-monthly-table .report-col-head th:nth-child(n+4),
 .vehicle-site-monthly-table .report-col-head th:nth-child(n+4),
 .owner-monthly-table .report-col-head th:nth-child(n+4),
 .vehicle-monthly-table td:nth-child(n+4),
 .vehicle-site-monthly-table td:nth-child(n+4),
 .owner-monthly-table td:nth-child(n+4) {
-	width: 8.5rem;
+	width: 1%;
 	white-space: nowrap;
+}
+
+.vehicle-monthly-table td:nth-child(3),
+.vehicle-site-monthly-table td:nth-child(3),
+.owner-monthly-table td:nth-child(3),
+.vehicle-monthly-table .report-col-head th:nth-child(3),
+.vehicle-site-monthly-table .report-col-head th:nth-child(3),
+.owner-monthly-table .report-col-head th:nth-child(3) {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+/* Kasa hareketleri: tam genişlik; tarih/ödeme/tutar dar, işlem ve açıklama esnek */
+.cash-movements-table.panel-list {
+	table-layout: auto;
+	width: 100%;
+	min-width: 0;
+}
+
+.cash-movements-table .report-col-head th:nth-child(1),
+.cash-movements-table tbody td:nth-child(1),
+.cash-movements-table .report-col-head th:nth-child(n+5),
+.cash-movements-table tbody td:nth-child(n+5),
+.cash-movements-table tfoot th:nth-child(n+2) {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.cash-movements-table tbody td:nth-child(2),
+.cash-movements-table tbody td:nth-child(3),
+.cash-movements-table tbody td:nth-child(4) {
+	white-space: normal;
+	overflow-wrap: break-word;
 }
 
 .report-table th,
@@ -415,6 +456,22 @@
 	font-weight: 700;
 }
 
+/* Hareket fişi kontrol: 3 dar (etiket + adet) tablo; global report-table min-width iç scroll yaratmasın */
+.ticket-control-report .panel-list-scroll {
+	overflow-x: visible;
+}
+
+.ticket-control-report .report-table.panel-list {
+	table-layout: auto;
+	width: 100%;
+	min-width: 0;
+}
+
+.ticket-control-report .report-table th:last-child,
+.ticket-control-report .report-table td:last-child {
+	width: 1%;
+}
+
 @media print {
 	body:has(.site-exit-report) .app-topbar,
 	body:has(.site-exit-report) .um-cell,
@@ -455,6 +512,9 @@
 	body:has(.employee-salaries-report) .app-topbar,
 	body:has(.employee-salaries-report) .um-cell,
 	body:has(.employee-salaries-report) .app-footer,
+	body:has(.cash-movements-report) .app-topbar,
+	body:has(.cash-movements-report) .um-cell,
+	body:has(.cash-movements-report) .app-footer,
 	.site-exit-report .panel-title,
 	.site-exit-report .site-exit-filters,
 	.site-exit-report .site-exit-actions,
@@ -493,7 +553,10 @@
 	.ticket-control-report .report-actions,
 	.employee-salaries-report .panel-title,
 	.employee-salaries-report .report-filters,
-	.employee-salaries-report .report-actions {
+	.employee-salaries-report .report-actions,
+	.cash-movements-report .panel-title,
+	.cash-movements-report .report-filters,
+	.cash-movements-report .report-actions {
 		display: none !important;
 	}
 
@@ -509,7 +572,8 @@
 	.vehicle-periodic-report .panel-list-scroll,
 	.owner-periodic-report .panel-list-scroll,
 	.ticket-control-report .panel-list-scroll,
-	.employee-salaries-report .panel-list-scroll {
+	.employee-salaries-report .panel-list-scroll,
+	.cash-movements-report .panel-list-scroll {
 		overflow: visible;
 	}
 

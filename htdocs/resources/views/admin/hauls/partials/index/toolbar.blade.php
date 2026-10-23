@@ -24,7 +24,7 @@
         <div class="haul-toolbar-end">
             <span class="haul-toolbar-count">{{ number_format($hauls->total(), 0, ',', '.') }} kayıt</span>
             <x-ui.button icon="fa-solid fa-print" data-haul-print>Yazdır</x-ui.button>
-            <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.hauls.create')">Yeni fiş</x-ui.button>
+            <x-ui.button variant="create" icon="fa-solid fa-truck-ramp-box" :href="route('admin.hauls.create')">Yeni fiş</x-ui.button>
         </div>
     </div>
     @if ($filters === [])

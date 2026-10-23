@@ -18,7 +18,7 @@
             :value="$filters['orientation'] ?? 'site_dump'"
             required
             data-monthly-voucher-orientation
-            class="md:col-span-2"
+            class="md:col-span-4"
         />
         <x-search.select
             searchable
@@ -29,7 +29,17 @@
             :value="$filters['route'] ?? null"
             required
             data-monthly-voucher-route
-            class="md:col-span-2"
+            class="md:col-span-4"
+        />
+        <x-search.select
+            searchable
+            hide-search
+            name="class"
+            label="Araç Tipi"
+            placeholder="Araç tipi"
+            :options="$options['classes']"
+            :value="$filters['class'] ?? null"
+            class="md:col-span-4"
         />
         <x-search.select
             searchable
@@ -40,7 +50,7 @@
             :options="$options['years']"
             :value="$filters['year'] ?? null"
             required
-            class="md:col-span-1"
+            class="md:col-span-2"
         />
         <x-search.select
             searchable
@@ -53,16 +63,7 @@
             required
             class="md:col-span-2"
         />
-        <x-search.select
-            searchable
-            hide-search
-            name="class"
-            label="Araç Tipi"
-            placeholder="Araç tipi"
-            :options="$options['classes']"
-            :value="$filters['class'] ?? null"
-            class="md:col-span-1"
-        />
+
         <x-search.select
             searchable
             hide-search
@@ -84,7 +85,7 @@
             class="md:col-span-1"
         />
         <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

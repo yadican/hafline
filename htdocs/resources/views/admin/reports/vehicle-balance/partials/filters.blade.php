@@ -4,6 +4,27 @@
 
 <div class="panel-liste-bar haul-search-bar report-filters">
     <x-search.form :action="route('admin.reports.vehicle-balance')" data-report-search>
+       
+        <x-search.select
+            searchable
+            name="site"
+            label="Şantiye"
+            placeholder="Şantiye seçin"
+            :options="$options['sites']"
+            :value="$filters['site'] ?? null"
+            required
+            class="md:col-span-2"
+        />
+        <x-search.select
+            searchable
+            name="fuel_station"
+            label="Yakıt Yeri"
+            placeholder="Yakıt yeri seçin"
+            :options="$options['stations']"
+            :value="$filters['fuel_station'] ?? null"
+            required
+            class="md:col-span-3"
+        />
         <x-search.select
             searchable
             hide-search
@@ -66,28 +87,9 @@
                 class="w-full"
             />
         </div>
-        <x-search.select
-            searchable
-            name="site"
-            label="Şantiye"
-            placeholder="Şantiye seçin"
-            :options="$options['sites']"
-            :value="$filters['site'] ?? null"
-            required
-            class="md:col-span-2"
-        />
-        <x-search.select
-            searchable
-            name="fuel_station"
-            label="Yakıt Yeri"
-            placeholder="Yakıt yeri seçin"
-            :options="$options['stations']"
-            :value="$filters['fuel_station'] ?? null"
-            required
-            class="md:col-span-2"
-        />
-        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-2">
-            Raporu Göster
+
+        <x-ui.button type="submit" variant="search" icon="fa-solid fa-magnifying-glass" class="md:col-span-1">
+            Rapor
         </x-ui.button>
     </x-search.form>
 </div>

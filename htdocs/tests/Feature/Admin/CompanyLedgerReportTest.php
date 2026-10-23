@@ -72,11 +72,11 @@ class CompanyLedgerReportTest extends TestCase
             ->get(route('admin.reports.company-ledger'))
             ->assertOk()
             ->assertSee('Firma cari', false)
-            ->assertSee('Cari türü ve dönemi seçip Raporu Göster’e basın.', false)
+            ->assertSee('Cari türü, firma ve dönemi seçip Raporu Göster’e basın.', false)
             ->assertViewHas('ready', false);
     }
 
-    public function test_report_requires_role(): void
+    public function test_report_requires_role_and_party(): void
     {
         $this->actingAs($this->admin)
             ->get(route('admin.reports.company-ledger', [
@@ -85,7 +85,17 @@ class CompanyLedgerReportTest extends TestCase
                 'month' => 9,
             ]))
             ->assertRedirect(route('admin.reports.company-ledger'))
-            ->assertSessionHasErrors(['role']);
+            ->assertSessionHasErrors(['role', 'party']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.reports.company-ledger', [
+                'period' => 'month',
+                'year' => 2026,
+                'month' => 9,
+                'role' => PartyRole::Supplier->value,
+            ]))
+            ->assertRedirect(route('admin.reports.company-ledger'))
+            ->assertSessionHasErrors(['party']);
     }
 
     public function test_party_must_match_selected_role(): void
@@ -126,20 +136,20 @@ class CompanyLedgerReportTest extends TestCase
         $this->assertSame(-1150.0, $group['closing']);
     }
 
-    public function test_all_parties_mode_lists_multiple_firms(): void
+    public function test_report_is_scoped_to_the_selected_party_only(): void
     {
         $this->makeTx($this->supplier, PartyRole::Supplier, '2026-09-05', debit: 0, credit: 100);
         $this->makeTx($this->otherSupplier, PartyRole::Supplier, '2026-09-06', debit: 50, credit: 0);
 
         $report = $this->actingAs($this->admin)
-            ->get(route('admin.reports.company-ledger', $this->filters(PartyRole::Supplier)))
+            ->get(route('admin.reports.company-ledger', $this->filters(PartyRole::Supplier, $this->supplier->id)))
             ->assertOk()
-            ->assertSee('ALPHA TEDARİK', false)
-            ->assertSee('BETA TEDARİK', false)
             ->viewData('report');
 
-        $this->assertCount(2, $report['groups']);
-        $this->assertTrue($report['show_party_column']);
+        $this->assertCount(1, $report['groups']);
+        $this->assertFalse($report['show_party_column']);
+        $this->assertSame($this->supplier->id, $report['groups'][0]['party_id']);
+        $this->assertSame('ALPHA TEDARİK', $report['groups'][0]['party_name']);
     }
 
     public function test_soft_deleted_lines_are_excluded(): void
@@ -201,7 +211,7 @@ class CompanyLedgerReportTest extends TestCase
             ->assertSee('Ahmet Yılmaz', false);
     }
 
-    public function test_export_requires_role_and_streams_csv(): void
+    public function test_export_requires_party_and_streams_csv(): void
     {
         $this->makeTx($this->supplier, PartyRole::Supplier, '2026-09-05', debit: 0, credit: 175);
 
@@ -210,12 +220,13 @@ class CompanyLedgerReportTest extends TestCase
                 'period' => 'month',
                 'year' => 2026,
                 'month' => 9,
+                'role' => PartyRole::Supplier->value,
             ]))
             ->assertRedirect(route('admin.reports.company-ledger'))
-            ->assertSessionHasErrors(['role']);
+            ->assertSessionHasErrors(['party']);
 
         $csv = $this->actingAs($this->admin)
-            ->get(route('admin.reports.company-ledger.export', $this->filters(PartyRole::Supplier)))
+            ->get(route('admin.reports.company-ledger.export', $this->filters(PartyRole::Supplier, $this->supplier->id)))
             ->assertOk()
             ->streamedContent();
 
@@ -226,22 +237,17 @@ class CompanyLedgerReportTest extends TestCase
     }
 
     /**
-     * @return array{period: string, year: int, month: int, role: string, party?: string}
+     * @return array{period: string, year: int, month: int, role: string, party: string}
      */
-    private function filters(PartyRole $role, ?string $partyId = null): array
+    private function filters(PartyRole $role, string $partyId): array
     {
-        $filters = [
+        return [
             'period' => 'month',
             'year' => 2026,
             'month' => 9,
             'role' => $role->value,
+            'party' => $partyId,
         ];
-
-        if ($partyId !== null) {
-            $filters['party'] = $partyId;
-        }
-
-        return $filters;
     }
 
     private function makeTx(
