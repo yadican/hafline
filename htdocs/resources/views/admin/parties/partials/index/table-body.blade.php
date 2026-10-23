@@ -27,8 +27,9 @@
             <td><x-ui.balance :value="$party->balance" /></td>
             <td><x-ui.active-badge :active="$party->active" /></td>
             <x-table.actions
-                :edit="route('admin.parties.edit', $party)"
-                :delete="route('admin.parties.destroy', $party)"
+                :show="route('admin.parties.show', $party)"
+                :edit="auth()->user()->can('edit-party') ? route('admin.parties.edit', $party) : null"
+                :delete="auth()->user()->can('delete-party') ? route('admin.parties.destroy', $party) : null"
                 confirm="Cari kart silinsin mi?"
                 :confirm-text="$party->name.' listeden kaldırılacak. Aracı, döküm yeri veya cari hareketi varsa silme engellenir.'"
             />

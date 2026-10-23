@@ -56,6 +56,27 @@ class PartyController extends AdminController
         );
     }
 
+    public function show(Party $party): View
+    {
+        $party->load([
+            'person',
+            'company',
+            'roleAssignments',
+            'city',
+            'district',
+            'neighborhood',
+            'ownerships' => fn ($query) => $query->with('vehicle')->orderByDesc('started_on'),
+            'sites',
+        ]);
+
+        return view('admin.parties.show', [
+            'title' => 'Cari kart detayı',
+            'party' => $party,
+            'entries' => $this->parties->statement($party),
+            'totals' => $this->parties->totals($party),
+        ]);
+    }
+
     public function edit(Party $party): View
     {
         $party->load(['ownerships' => fn ($query) => $query->with('vehicle')->orderByDesc('started_on'), 'sites']);

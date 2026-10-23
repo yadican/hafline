@@ -45,6 +45,14 @@ class FuelReceiptController extends AdminController
         );
     }
 
+    public function show(FuelReceipt $fuelReceipt): View
+    {
+        return view('admin.fuel-receipts.show', [
+            'title' => 'Yakıt fişi detayı',
+            'receipt' => $fuelReceipt->load(['vehicle', 'party', 'fuelStation', 'site', 'creator']),
+        ]);
+    }
+
     public function edit(FuelReceipt $fuelReceipt): View
     {
         return view('admin.fuel-receipts.edit', [

@@ -13,6 +13,7 @@
             </td>
             <td><x-ui.active-badge :active="$user->active" /></td>
             <x-table.actions
+                :show="route('admin.users.show', $user)"
                 :edit="auth()->user()->can('edit-user') ? route('admin.users.edit', $user) : null"
                 :delete="auth()->user()->can('delete-user') ? route('admin.users.destroy', $user) : null"
                 confirm="Kullanıcı silinsin mi?"

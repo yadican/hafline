@@ -5,14 +5,23 @@ namespace Tests\Feature\Admin;
 use App\Models\Bank;
 use App\Models\CashCategory;
 use App\Models\DumpSite;
+use App\Models\Employee;
+use App\Models\EmployeeBonus;
+use App\Models\EmployeePayment;
+use App\Models\FuelReceipt;
 use App\Models\FuelStation;
+use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\MachineWork;
+use App\Models\Party;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Site;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Models\VehicleClass;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -63,6 +72,19 @@ class RolePermissionTest extends TestCase
         $role = Role::query()->where('name', 'saha-ekibi')->where('guard_name', 'web')->firstOrFail();
         $this->assertTrue($role->hasPermissionTo('view-haul'));
         $this->assertFalse($role->hasPermissionTo('view-users'));
+
+        $this->actingAs($admin)
+            ->get(route('admin.roles.show', $role))
+            ->assertOk()
+            ->assertSee('saha-ekibi')
+            ->assertSee('view-haul')
+            ->assertDontSee('view-users');
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.show', $admin))
+            ->assertOk()
+            ->assertSee($admin->username)
+            ->assertSee('yonetici');
     }
 
     public function test_role_update_ignores_permissions_from_another_guard(): void
@@ -235,6 +257,70 @@ class RolePermissionTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_view_permission_can_show_employee_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-employee', 'view-dashboard']);
+
+        $employee = Employee::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('admin.employees.show', $employee))
+            ->assertOk()
+            ->assertSee($employee->name)
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.employees.edit', $employee))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_user_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(['view-users', 'view-dashboard']);
+
+        $target = User::factory()->create(['name' => 'Görünen Kullanıcı']);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.users.show', $target))
+            ->assertOk()
+            ->assertSee('Görünen Kullanıcı')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($viewer)
+            ->get(route('admin.users.edit', $target))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_role_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(['view-role', 'view-dashboard']);
+
+        $role = Role::create([
+            'id' => (string) Str::uuid7(),
+            'name' => 'gorunen-rol',
+            'guard_name' => 'web',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.roles.show', $role))
+            ->assertOk()
+            ->assertSee('gorunen-rol')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($viewer)
+            ->get(route('admin.roles.edit', $role))
+            ->assertForbidden();
+    }
+
     public function test_view_permission_can_show_dump_site_but_cannot_edit(): void
     {
         (new RolePermissionSeeder)->run();
@@ -291,6 +377,68 @@ class RolePermissionTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('admin.fuel-stations.edit', $station))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_vehicle_but_cannot_edit(): void
+    {
+        $this->assertViewOnlyShow('vehicle', 'vehicles', Vehicle::factory()->create());
+    }
+
+    public function test_view_permission_can_show_party_but_cannot_edit(): void
+    {
+        $this->assertViewOnlyShow('party', 'parties', Party::factory()->company()->create(['name' => 'Görünen Cari']), 'Görünen Cari');
+    }
+
+    public function test_view_permission_can_show_haul_but_cannot_edit(): void
+    {
+        $haul = Haul::factory()->create(['ticket_no' => 'TF-9001']);
+
+        $this->assertViewOnlyShow('haul', 'hauls', $haul, 'TF-9001');
+    }
+
+    public function test_view_permission_can_show_machine_work_but_cannot_edit(): void
+    {
+        $work = MachineWork::factory()->create(['ticket_no' => 'MK-9001']);
+
+        $this->assertViewOnlyShow('machine-work', 'machine-works', $work, 'MK-9001');
+    }
+
+    public function test_view_permission_can_show_fuel_receipt_but_cannot_edit(): void
+    {
+        $receipt = FuelReceipt::factory()->create(['ticket_no' => 'YF-9001']);
+
+        $this->assertViewOnlyShow('fuel-receipt', 'fuel-receipts', $receipt, 'YF-9001');
+    }
+
+    public function test_view_permission_can_show_employee_payment_but_cannot_edit(): void
+    {
+        $this->assertViewOnlyShow('employee-payment', 'employee-payments', EmployeePayment::factory()->create());
+    }
+
+    public function test_view_permission_can_show_employee_bonus_but_cannot_edit(): void
+    {
+        $this->assertViewOnlyShow('employee-bonus', 'employee-bonuses', EmployeeBonus::factory()->create());
+    }
+
+    private function assertViewOnlyShow(string $resource, string $routePrefix, Model $model, ?string $expectedText = null): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(["view-{$resource}", 'view-dashboard']);
+
+        $response = $this->actingAs($user)
+            ->get(route("admin.{$routePrefix}.show", $model))
+            ->assertOk()
+            ->assertDontSee('Düzenle');
+
+        if ($expectedText !== null) {
+            $response->assertSee($expectedText);
+        }
+
+        $this->actingAs($user)
+            ->get(route("admin.{$routePrefix}.edit", $model))
             ->assertForbidden();
     }
 }

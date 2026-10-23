@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CariEntryKind;
 use App\Http\Controllers\Admin\ApiAuditLogController;
 use App\Http\Controllers\Admin\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\BankController;
@@ -97,7 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::get('locations/districts/{district}/neighborhoods', [LocationController::class, 'neighborhoods'])->name('locations.neighborhoods');
         Route::get('persons', [PartyController::class, 'index'])->name('persons.index')->defaults('type', 'person');
         Route::get('companies', [PartyController::class, 'index'])->name('companies.index')->defaults('type', 'company');
-        Route::resource('parties', PartyController::class)->except(['index', 'show']);
+        Route::resource('parties', PartyController::class)->except(['index']);
     });
 
     Route::middleware('can:view-cari-entry')->group(function () {
@@ -106,13 +107,16 @@ Route::middleware('auth')->group(function () {
         Route::get('cari-entries', [CariEntryController::class, 'index'])->name('cari-entries.index');
         Route::get('cari-entries/create', [CariEntryController::class, 'create'])->name('cari-entries.create');
         Route::post('cari-entries', [CariEntryController::class, 'store'])->name('cari-entries.store');
+        Route::get('cari-entries/{kind}/{entry}', [CariEntryController::class, 'show'])
+            ->whereIn('kind', array_column(CariEntryKind::cases(), 'value'))
+            ->name('cari-entries.show');
         Route::get('cari-entries/{kind}/{entry}/edit', [CariEntryController::class, 'edit'])->name('cari-entries.edit');
         Route::put('cari-entries/{kind}/{entry}', [CariEntryController::class, 'update'])->name('cari-entries.update');
         Route::delete('cari-entries/{kind}/{entry}', [CariEntryController::class, 'destroy'])->name('cari-entries.destroy');
     });
 
     Route::middleware('can:view-vehicle')->group(function () {
-        Route::resource('vehicles', VehicleController::class)->except(['show']);
+        Route::resource('vehicles', VehicleController::class);
         Route::resource('vehicles.ownerships', VehicleOwnershipController::class)->only(['store', 'destroy'])->scoped();
         Route::resource('vehicles.rates', VehicleRateController::class)->only(['store', 'destroy'])->scoped();
     });
@@ -140,7 +144,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:view-employee')->group(function () {
         Route::get('employees/{employee}/balance', [EmployeeController::class, 'balance'])->name('employees.balance');
-        Route::resource('employees', EmployeeController::class)->except(['show']);
+        Route::resource('employees', EmployeeController::class);
     });
 
     Route::middleware('can:view-employee-salary')->group(function () {
@@ -149,31 +153,31 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:view-employee-payment')->group(function () {
-        Route::resource('employee-payments', EmployeePaymentController::class)->except(['show']);
+        Route::resource('employee-payments', EmployeePaymentController::class);
     });
 
     Route::middleware('can:view-employee-bonus')->group(function () {
-        Route::resource('employee-bonuses', EmployeeBonusController::class)->except(['show']);
+        Route::resource('employee-bonuses', EmployeeBonusController::class);
     });
 
     Route::middleware('can:view-haul')->group(function () {
         Route::get('hauls/lookups/dump-sites', [HaulLookupController::class, 'dumpSites'])->name('hauls.lookups.dump-sites');
         Route::get('hauls/lookups/quote', [HaulLookupController::class, 'quote'])->name('hauls.lookups.quote');
         Route::get('hauls/lookups/vehicles', [HaulLookupController::class, 'vehicles'])->name('hauls.lookups.vehicles');
-        Route::resource('hauls', HaulController::class)->except(['show']);
+        Route::resource('hauls', HaulController::class);
     });
 
     Route::middleware('can:view-machine-work')->group(function () {
         Route::get('machine-works/lookups/machines', [MachineWorkLookupController::class, 'machines'])->name('machine-works.lookups.machines');
         Route::get('machine-works/lookups/rate', [MachineWorkLookupController::class, 'rate'])->name('machine-works.lookups.rate');
         Route::get('machine-works/lookups/operator', [MachineWorkLookupController::class, 'operator'])->name('machine-works.lookups.operator');
-        Route::resource('machine-works', MachineWorkController::class)->except(['show']);
+        Route::resource('machine-works', MachineWorkController::class);
     });
 
     Route::middleware('can:view-fuel-receipt')->group(function () {
         Route::get('fuel-receipts/lookups/vehicles', [FuelReceiptLookupController::class, 'vehicles'])->name('fuel-receipts.lookups.vehicles');
         Route::get('fuel-receipts/lookups/stations/{fuelStation}', [FuelReceiptLookupController::class, 'station'])->name('fuel-receipts.lookups.station');
-        Route::resource('fuel-receipts', FuelReceiptController::class)->except(['show']);
+        Route::resource('fuel-receipts', FuelReceiptController::class);
     });
 
     Route::middleware('can:view-report-monthly-vouchers')->group(function () {
@@ -270,11 +274,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:view-users')->group(function () {
-        Route::resource('users', UserController::class)->except(['show']);
+        Route::resource('users', UserController::class);
     });
 
     Route::middleware('can:view-role')->group(function () {
-        Route::resource('roles', RoleController::class)->except(['show']);
+        Route::resource('roles', RoleController::class);
     });
 
     Route::middleware('can:view-permission')->group(function () {

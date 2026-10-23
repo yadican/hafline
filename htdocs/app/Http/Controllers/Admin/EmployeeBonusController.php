@@ -44,6 +44,14 @@ class EmployeeBonusController extends AdminController
         );
     }
 
+    public function show(EmployeeBonus $employeeBonus): View
+    {
+        return view('admin.employee-bonuses.show', [
+            'title' => 'Personel primi detayı',
+            'bonus' => $employeeBonus->load(['employee.party', 'creator']),
+        ]);
+    }
+
     public function edit(EmployeeBonus $employeeBonus): View
     {
         return view('admin.employee-bonuses.edit', [

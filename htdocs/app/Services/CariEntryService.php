@@ -6,11 +6,16 @@ use App\Enums\CariEntryKind;
 use App\Enums\PaymentMethod;
 use App\Exceptions\OperationException;
 use App\Exceptions\OperationRejectedException;
+use App\Models\Bank;
+use App\Models\CashCategory;
 use App\Models\CashEntry;
 use App\Models\CompanyTransaction;
 use App\Models\DumpSite;
 use App\Models\DumpSitePayment;
+use App\Models\FuelStation;
+use App\Models\Party;
 use App\Models\PartyPayment;
+use App\Models\Site;
 use App\Models\SiteTransaction;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
@@ -148,6 +153,41 @@ class CariEntryService extends Service
             'dump_site_id' => $entry->dump_site_id ?? null,
             'bank_id' => $entry->bank_id ?? null,
             'cheque_no' => $entry->cheque_no ?? null,
+        ];
+    }
+
+    /**
+     * Read-only labels for the detail screen; links holds only the fields this kind uses.
+     *
+     * @return array{direction: string, amount: string, occurred_on: Carbon, payment_method: ?PaymentMethod, category: ?string, description: ?string, links: array<string, string>}
+     */
+    public function details(CariEntryKind $kind, string $id): array
+    {
+        $form = $this->form($kind, $id);
+        $name = fn (string $model, ?string $key): ?string => $key ? $model::withTrashed()->find($key)?->name : null;
+        $method = $form['payment_method'];
+
+        $links = array_filter([
+            'Cari' => $name(Party::class, $form['party_id']),
+            'Plaka' => $form['plate'],
+            'Döküm yeri' => $name(DumpSite::class, $form['dump_site_id']),
+            'Çek no' => $form['cheque_no'],
+            'Şantiye' => $name(Site::class, $form['site_id']),
+            'Yakıt yeri' => $name(FuelStation::class, $form['fuel_station_id']),
+            'Litre' => $form['liters'] !== null ? number_format((float) $form['liters'], 2, ',', '.') : null,
+            'Birim fiyat' => $form['unit_price'] !== null ? number_format((float) $form['unit_price'], 4, ',', '.').' TL' : null,
+            'Belge no' => $form['document_no'],
+            'Banka' => $name(Bank::class, $form['bank_id']),
+        ], fn ($value) => $value !== null && $value !== '');
+
+        return [
+            'direction' => $form['direction'] === 'credit' ? 'Alacak' : 'Borç',
+            'amount' => $form['amount'],
+            'occurred_on' => Carbon::parse($form['occurred_on']),
+            'payment_method' => $method instanceof PaymentMethod ? $method : PaymentMethod::tryFrom((string) $method),
+            'category' => $name(CashCategory::class, $form['cash_category_id']),
+            'description' => $form['description'],
+            'links' => $links,
         ];
     }
 

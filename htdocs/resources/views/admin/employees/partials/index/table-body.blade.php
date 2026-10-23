@@ -12,8 +12,9 @@
             <td class="is-num">{{ number_format((float) $employee->salary, 2, ',', '.') }} ₺</td>
             <td><x-ui.active-badge :active="$employee->active" /></td>
             <x-table.actions
-                :edit="route('admin.employees.edit', $employee)"
-                :delete="route('admin.employees.destroy', $employee)"
+                :show="route('admin.employees.show', $employee)"
+                :edit="auth()->user()->can('edit-employee') ? route('admin.employees.edit', $employee) : null"
+                :delete="auth()->user()->can('delete-employee') ? route('admin.employees.destroy', $employee) : null"
                 confirm="Personel kartı kaldırılsın mı?"
                 :confirm-text="$employee->name.' personel kartı silinecek ve Cari’deki Personel rolü kalkacak. Maaş/ödeme/prim varsa işlem reddedilir. Kişi cari kartı silinmez.'"
             />

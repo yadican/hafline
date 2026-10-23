@@ -24,11 +24,11 @@
                             <td>{{ $entry->occurred_on->format('d.m.Y') }}</td>
                             <td>
                                 @if ($entry->source_type === 'haul' && $entry->source && ! $entry->source->trashed())
-                                    <a href="{{ route('admin.hauls.edit', $entry->source) }}">{{ $entry->description }}</a>
+                                    <a href="{{ route('admin.hauls.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'machine_work' && $entry->source && ! $entry->source->trashed())
-                                    <a href="{{ route('admin.machine-works.edit', $entry->source) }}">{{ $entry->description }}</a>
+                                    <a href="{{ route('admin.machine-works.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'fuel_receipt' && $entry->source && ! $entry->source->trashed())
-                                    <a href="{{ route('admin.fuel-receipts.edit', $entry->source) }}">{{ $entry->description }}</a>
+                                    <a href="{{ route('admin.fuel-receipts.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment'], true) && $entry->source && ! $entry->source->trashed())
                                     @php
                                         $cariKind = match ($entry->source_type) {
@@ -38,7 +38,7 @@
                                             default => $entry->source_type,
                                         };
                                     @endphp
-                                    <a href="{{ route('admin.cari-entries.edit', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $entry->description }}</a>
+                                    <a href="{{ route('admin.cari-entries.show', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $entry->description }}</a>
                                 @else
                                     {{ $entry->description }}
                                 @endif

@@ -6,8 +6,9 @@
             <td>{{ $bonus->description ?: '—' }}</td>
             <td class="is-num">{{ number_format((float) $bonus->amount, 2, ',', '.') }} ₺</td>
             <x-table.actions
-                :edit="route('admin.employee-bonuses.edit', $bonus)"
-                :delete="route('admin.employee-bonuses.destroy', $bonus)"
+                :show="route('admin.employee-bonuses.show', $bonus)"
+                :edit="auth()->user()->can('edit-employee-bonus') ? route('admin.employee-bonuses.edit', $bonus) : null"
+                :delete="auth()->user()->can('delete-employee-bonus') ? route('admin.employee-bonuses.destroy', $bonus) : null"
                 confirm="Prim silinsin mi?"
                 :confirm-text="number_format((float) $bonus->amount, 2, ',', '.').' ₺ tutarındaki prim silinecek.'"
             />

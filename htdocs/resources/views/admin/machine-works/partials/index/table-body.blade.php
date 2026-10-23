@@ -17,8 +17,9 @@
             <td>{{ $work->creator?->name ?? '—' }}</td>
             <td class="is-center"><x-ui.enum-badge :value="$work->shift" /></td>
             <x-table.actions
-                :edit="route('admin.machine-works.edit', $work)"
-                :delete="route('admin.machine-works.destroy', $work)"
+                :show="route('admin.machine-works.show', $work)"
+                :edit="auth()->user()->can('edit-machine-work') ? route('admin.machine-works.edit', $work) : null"
+                :delete="auth()->user()->can('delete-machine-work') ? route('admin.machine-works.destroy', $work) : null"
                 confirm="Makine çalışma fişi silinsin mi?"
                 :confirm-text="$work->ticket_no.' numaralı fiş silinecek; makine sahibinin carisindeki alacak ters kayıtla kapatılır.'"
             />

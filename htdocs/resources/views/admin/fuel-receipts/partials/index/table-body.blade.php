@@ -13,8 +13,9 @@
             <td>{{ $receipt->issued_on->translatedFormat('j.m.Y') }}</td>
             <td class="is-center"><x-ui.enum-badge :value="$receipt->shift" /></td>
             <x-table.actions
-                :edit="route('admin.fuel-receipts.edit', $receipt)"
-                :delete="route('admin.fuel-receipts.destroy', $receipt)"
+                :show="route('admin.fuel-receipts.show', $receipt)"
+                :edit="auth()->user()->can('edit-fuel-receipt') ? route('admin.fuel-receipts.edit', $receipt) : null"
+                :delete="auth()->user()->can('delete-fuel-receipt') ? route('admin.fuel-receipts.destroy', $receipt) : null"
                 confirm="Yakıt fişi silinsin mi?"
                 :confirm-text="($receipt->ticket_no ?: 'Bu').' fiş silinecek; araç sahibinin carisindeki borç ters kayıtla kapatılır.'"
             />

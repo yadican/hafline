@@ -48,6 +48,14 @@ class EmployeeController extends AdminController
         );
     }
 
+    public function show(Employee $employee): View
+    {
+        return view('admin.employees.show', [
+            'title' => 'Personel kartı detayı',
+            'employee' => $employee->load(['party', 'periods']),
+        ]);
+    }
+
     public function edit(Employee $employee): View
     {
         return view('admin.employees.edit', [

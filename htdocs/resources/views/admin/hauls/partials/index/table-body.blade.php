@@ -15,8 +15,9 @@
             <td>{{ $haul->creator?->name ?? '—' }}</td>
             <td class="is-center"><x-ui.enum-badge :value="$haul->shift" /></td>
             <x-table.actions
-                :edit="route('admin.hauls.edit', $haul)"
-                :delete="route('admin.hauls.destroy', $haul)"
+                :show="route('admin.hauls.show', $haul)"
+                :edit="auth()->user()->can('edit-haul') ? route('admin.hauls.edit', $haul) : null"
+                :delete="auth()->user()->can('delete-haul') ? route('admin.hauls.destroy', $haul) : null"
                 confirm="Taşıma fişi silinsin mi?"
                 :confirm-text="$haul->ticket_no.' numaralı fişin bu seferi listeden kaldırılacak ve geri alınamayacak.'"
             />

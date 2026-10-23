@@ -6,6 +6,7 @@ use App\Enums\Shift;
 use App\Exceptions\OperationException;
 use App\Exceptions\OperationRejectedException;
 use App\Models\FuelReceipt;
+use App\Models\FuelStation;
 use App\Models\Vehicle;
 use App\Repositories\FuelReceiptRepository;
 use App\Repositories\FuelStationRepository;

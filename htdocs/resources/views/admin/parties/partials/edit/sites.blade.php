@@ -16,7 +16,7 @@
                                 @if ($site->trashed())
                                     {{ $site->name }}
                                 @else
-                                    <a href="{{ route('admin.sites.edit', $site) }}">{{ $site->name }}</a>
+                                    <a href="{{ route('admin.sites.show', $site) }}">{{ $site->name }}</a>
                                 @endif
                             </td>
                             <td>{{ $links->map(fn ($link) => \App\Enums\PartyRole::from($link->pivot->role)->label())->join(', ') }}</td>

@@ -15,7 +15,7 @@
                         <tr>
                             <td>
                                 @if ($ownership->vehicle && ! $ownership->vehicle->trashed())
-                                    <a href="{{ route('admin.vehicles.edit', $ownership->vehicle) }}" class="panel-plate-text">{{ $ownership->vehicle->plate }}</a>
+                                    <a href="{{ route('admin.vehicles.show', $ownership->vehicle) }}" class="panel-plate-text">{{ $ownership->vehicle->plate }}</a>
                                 @else
                                     <span class="panel-plate-text">{{ $ownership->vehicle?->plate }}</span>
                                 @endif

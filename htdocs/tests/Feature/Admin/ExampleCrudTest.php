@@ -88,7 +88,7 @@ class ExampleCrudTest extends TestCase
             ->get(route('admin.examples.index', ['sort' => 'title', 'dir' => 'asc']))
             ->assertOk()
             ->assertSeeInOrder(['Alfa kaydı', 'Beta kaydı', 'Gama kaydı'])
-            ->assertSee('<input type="hidden" name="sort" value="title">', false);
+            ->assertSee('name="sort" value="title"', false);
 
         $this->actingAs($admin)
             ->get(route('admin.examples.index', ['sort' => 'title', 'dir' => 'desc']))

@@ -51,6 +51,15 @@ class HaulController extends AdminController
         );
     }
 
+    public function show(Haul $haul): View
+    {
+        return view('admin.hauls.show', [
+            'title' => 'Taşıma fişi detayı',
+            'haul' => $haul->load(['vehicle.vehicleClass', 'site', 'dumpSite', 'party', 'dumpParty', 'creator']),
+            'photoUrl' => $this->fieldHauls->photoUrlFor($haul),
+        ]);
+    }
+
     public function edit(Haul $haul): View
     {
         return view('admin.hauls.edit', [

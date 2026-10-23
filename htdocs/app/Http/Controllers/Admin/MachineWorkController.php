@@ -45,6 +45,14 @@ class MachineWorkController extends AdminController
         );
     }
 
+    public function show(MachineWork $machineWork): View
+    {
+        return view('admin.machine-works.show', [
+            'title' => 'Makine çalışma fişi detayı',
+            'work' => $machineWork->load(['vehicle', 'party', 'operator', 'site', 'creator']),
+        ]);
+    }
+
     public function edit(MachineWork $machineWork): View
     {
         return view('admin.machine-works.edit', [

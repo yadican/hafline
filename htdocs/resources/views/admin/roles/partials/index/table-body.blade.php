@@ -14,6 +14,7 @@
                 @endif
             </td>
             <x-table.actions
+                :show="route('admin.roles.show', $role)"
                 :edit="auth()->user()->can('edit-role') ? route('admin.roles.edit', $role) : null"
                 :delete="auth()->user()->can('delete-role') ? route('admin.roles.destroy', $role) : null"
                 confirm="Rol silinsin mi?"

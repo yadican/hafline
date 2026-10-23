@@ -59,6 +59,12 @@ class EmployeeTest extends TestCase
         $this->assertNull($employee->periods->first()->ended_on);
 
         $this->actingAs($this->admin)
+            ->get(route('admin.employees.show', $employee))
+            ->assertOk()
+            ->assertSee('Ahmet Çetin')
+            ->assertSee('15.01.2026');
+
+        $this->actingAs($this->admin)
             ->put(route('admin.employees.update', $employee), [
                 'occupation' => EmployeeOccupation::Operator->value,
                 'salary' => '40000',

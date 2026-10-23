@@ -17,6 +17,7 @@ class UserController extends AdminController
 {
     protected array $permissionMap = [
         'index' => 'view-users',
+        'show' => 'view-users',
         'create' => 'create-user',
         'store' => 'create-user',
         'edit' => 'edit-user',
@@ -59,6 +60,16 @@ class UserController extends AdminController
             'admin.users.index',
             'Kullanıcı oluşturuldu.',
         );
+    }
+
+    public function show(User $user): View
+    {
+        $user->load(['roles', 'site']);
+
+        return view('admin.users.show', [
+            'title' => 'Kullanıcı detayı',
+            'user' => $user,
+        ]);
     }
 
     public function edit(User $user): View

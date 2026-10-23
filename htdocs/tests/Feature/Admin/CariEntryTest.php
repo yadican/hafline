@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -41,7 +42,7 @@ class CariEntryTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.cari-entries.create'))
             ->assertOk()
-            ->assertSee('Satıcı petrol');
+            ->assertSee('Satıcı Petrol');
 
         $this->actingAs($this->admin)
             ->post(route('admin.cari-entries.store'), [
@@ -71,7 +72,52 @@ class CariEntryTest extends TestCase
             ->get(route('admin.cari-entries.index'))
             ->assertOk()
             ->assertSee('Malzeme')
-            ->assertSee('Satıcı cari');
+            ->assertSee('Satıcı Cari');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.show', ['kind' => 'supplier', 'entry' => $row->id]))
+            ->assertOk()
+            ->assertSee($supplier->name)
+            ->assertSee('Alacak')
+            ->assertSee('1.500,00 TL')
+            ->assertSee('Malzeme');
+    }
+
+    public function test_view_permission_can_show_an_entry_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $owner = Party::factory()->create();
+        Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 CR 77']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 77',
+                'amount' => '750',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+            ])
+            ->assertSessionHas('success');
+
+        $payment = VehiclePayment::query()->sole();
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(['view-cari-entry', 'view-dashboard']);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.show', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertOk()
+            ->assertSee('34 CR 77')
+            ->assertSee($owner->name)
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.edit', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.show', ['kind' => 'vehicle_payment', 'entry' => '00000000-0000-0000-0000-000000000000']))
+            ->assertNotFound();
     }
 
     public function test_party_filter_returns_only_entries_for_the_selected_party(): void

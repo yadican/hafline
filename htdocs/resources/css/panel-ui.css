@@ -1205,7 +1205,7 @@ a.um-title.um-active {
 .panel-arama-grid th {
 	text-align: left;
 	padding: 5px 8px;
-	background: var(--ui-ochre-soft);
+	background: var(--ui-surface-muted);
 	border: 1px solid var(--ui-border-soft);
 	white-space: nowrap;
 	width: 110px;

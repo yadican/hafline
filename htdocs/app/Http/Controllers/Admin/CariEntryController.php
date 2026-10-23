@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\CariEntryKind;
+use App\Exceptions\OperationException;
 use App\Http\Requests\Admin\CariEntryRequest;
 use App\Http\Requests\Admin\CariEntrySearchRequest;
 use App\Repositories\PartyRepository;
@@ -48,6 +49,24 @@ class CariEntryController extends AdminController
             'admin.cari-entries.index',
             'Cari hareketi kaydedildi.',
         );
+    }
+
+    public function show(string $kind, string $entry): View
+    {
+        $kind = CariEntryKind::from($kind);
+
+        try {
+            $details = $this->entries->details($kind, $entry);
+        } catch (OperationException) {
+            abort(404);
+        }
+
+        return view('admin.cari-entries.show', [
+            'title' => 'Cari hareketi detayı',
+            'kind' => $kind,
+            'entry' => $entry,
+            'details' => $details,
+        ]);
     }
 
     public function edit(string $kind, string $entry): View

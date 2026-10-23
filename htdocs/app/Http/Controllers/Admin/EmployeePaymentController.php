@@ -44,6 +44,14 @@ class EmployeePaymentController extends AdminController
         );
     }
 
+    public function show(EmployeePayment $employeePayment): View
+    {
+        return view('admin.employee-payments.show', [
+            'title' => 'Personel ödemesi detayı',
+            'payment' => $employeePayment->load(['employee.party', 'creator']),
+        ]);
+    }
+
     public function edit(EmployeePayment $employeePayment): View
     {
         return view('admin.employee-payments.edit', [

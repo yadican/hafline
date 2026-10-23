@@ -16,6 +16,7 @@ class RoleController extends AdminController
 {
     protected array $permissionMap = [
         'index' => 'view-role',
+        'show' => 'view-role',
         'create' => 'create-role',
         'store' => 'create-role',
         'edit' => 'edit-role',
@@ -60,6 +61,19 @@ class RoleController extends AdminController
             'admin.roles.index',
             'Rol oluşturuldu.',
         );
+    }
+
+    public function show(Role $role): View
+    {
+        $role->load('permissions');
+
+        return view('admin.roles.show', [
+            'title' => 'Rol detayı',
+            'role' => $role,
+            'permissionGroups' => PermissionGroups::grouped(
+                $role->permissions->where('guard_name', $role->guard_name)->values(),
+            ),
+        ]);
     }
 
     public function edit(Role $role): View

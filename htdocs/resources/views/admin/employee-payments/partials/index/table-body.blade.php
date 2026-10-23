@@ -8,8 +8,9 @@
             <td>{{ $payment->description ?: '—' }}</td>
             <td class="is-num">{{ number_format((float) $payment->amount, 2, ',', '.') }} ₺</td>
             <x-table.actions
-                :edit="route('admin.employee-payments.edit', $payment)"
-                :delete="route('admin.employee-payments.destroy', $payment)"
+                :show="route('admin.employee-payments.show', $payment)"
+                :edit="auth()->user()->can('edit-employee-payment') ? route('admin.employee-payments.edit', $payment) : null"
+                :delete="auth()->user()->can('delete-employee-payment') ? route('admin.employee-payments.destroy', $payment) : null"
                 confirm="Ödeme silinsin mi?"
                 :confirm-text="number_format((float) $payment->amount, 2, ',', '.').' ₺ tutarındaki ödeme silinecek.'"
             />

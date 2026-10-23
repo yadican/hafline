@@ -7,8 +7,9 @@
             <td>{{ $vehicle->driver_name ?: '—' }}</td>
             <td><x-ui.active-badge :active="$vehicle->active" /></td>
             <x-table.actions
-                :edit="route('admin.vehicles.edit', $vehicle)"
-                :delete="route('admin.vehicles.destroy', $vehicle)"
+                :show="route('admin.vehicles.show', $vehicle)"
+                :edit="auth()->user()->can('edit-vehicle') ? route('admin.vehicles.edit', $vehicle) : null"
+                :delete="auth()->user()->can('delete-vehicle') ? route('admin.vehicles.destroy', $vehicle) : null"
                 confirm="Araç silinsin mi?"
                 :confirm-text="$vehicle->plate.' listeden kaldırılacak. Geçmiş taşıma fişleri etkilenmez.'"
             />
