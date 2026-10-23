@@ -4,19 +4,25 @@ namespace App\Repositories\Reports;
 
 use App\Models\DumpSite;
 use App\Models\Haul;
-use App\Models\VehicleClass;
+use App\Repositories\DumpSiteRepository;
+use App\Repositories\VehicleClassRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DumpSiteReportRepository
 {
+    public function __construct(
+        private DumpSiteRepository $dumpSites,
+        private VehicleClassRepository $classes,
+    ) {}
+
     /**
      * @return array<string, string>
      */
     public function dumpSites(): array
     {
-        return DumpSite::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->dumpSites->options();
     }
 
     /**
@@ -24,7 +30,7 @@ class DumpSiteReportRepository
      */
     public function vehicleClasses(): array
     {
-        return VehicleClass::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->classes->options();
     }
 
     public function findDumpSite(string $dumpSiteId): ?DumpSite

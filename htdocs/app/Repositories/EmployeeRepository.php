@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Enums\PartyType;
 use App\Models\Employee;
 use App\Models\Party;
@@ -45,17 +46,33 @@ class EmployeeRepository extends Repository
      */
     public function options(?string $include = null, bool $withPeriodOnly = false): array
     {
-        return $this->query()
-            ->with('party')
-            ->where(fn (Builder $query) => $query
-                ->where(fn (Builder $query) => $query
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::EMPLOYEES,
+            $withPeriodOnly ? 'with_period' : 'all',
+            function () use ($withPeriodOnly): array {
+                return $this->query()
+                    ->with('party')
                     ->where('active', true)
-                    ->when($withPeriodOnly, fn (Builder $query) => $query->whereHas('periods', fn (Builder $query) => $query->whereNull('ended_on'))))
-                ->when($include, fn (Builder $query, string $id) => $query->orWhere('id', $id)))
-            ->get()
-            ->sortBy(fn (Employee $employee) => mb_strtolower($employee->name))
-            ->mapWithKeys(fn (Employee $employee) => [$employee->id => $employee->name])
-            ->all();
+                    ->when($withPeriodOnly, fn (Builder $query) => $query->whereHas('periods', fn (Builder $query) => $query->whereNull('ended_on')))
+                    ->get()
+                    ->sortBy(fn (Employee $employee) => mb_strtolower($employee->name))
+                    ->mapWithKeys(fn (Employee $employee) => [$employee->id => $employee->name])
+                    ->all();
+            },
+        );
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            function (array $ids): array {
+                return Employee::withTrashed()
+                    ->with('party')
+                    ->whereIn('id', $ids)
+                    ->get()
+                    ->mapWithKeys(fn (Employee $employee) => [$employee->id => $employee->name])
+                    ->all();
+            },
+        );
     }
 
     /**

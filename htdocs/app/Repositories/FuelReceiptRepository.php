@@ -3,7 +3,6 @@
 namespace App\Repositories;
 
 use App\Models\FuelReceipt;
-use App\Models\FuelStation;
 use App\Models\Site;
 use App\Models\Vehicle;
 use App\Support\Sort;
@@ -16,8 +15,10 @@ class FuelReceiptRepository extends Repository
 {
     public const RECENT_DAYS = 5;
 
-    public function __construct(FuelReceipt $model)
-    {
+    public function __construct(
+        FuelReceipt $model,
+        private FuelStationRepository $stations,
+    ) {
         parent::__construct($model);
     }
 
@@ -75,13 +76,7 @@ class FuelReceiptRepository extends Repository
      */
     public function stationOptions(?string $include = null): array
     {
-        return FuelStation::withTrashed()
-            ->where(fn (Builder $query) => $query
-                ->where(fn (Builder $query) => $query->whereNull('deleted_at')->where('active', true))
-                ->when($include, fn (Builder $query, string $id) => $query->orWhere('id', $id)))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        return $this->stations->options(activeOnly: true, include: $include);
     }
 
     protected function defaultSort(Builder $query): void

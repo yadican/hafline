@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Models\VehicleClass;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -35,13 +36,21 @@ class VehicleClassRepository extends Repository
      */
     public function options(bool $activeOnly = false, string|array|null $include = null): array
     {
-        return $this->query()
-            ->when($activeOnly, fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query->where('active', true)->orWhereIn('id', array_filter((array) $include)),
-            ))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::VEHICLE_CLASSES,
+            $activeOnly ? 'active' : 'all',
+            fn (): array => $this->query()
+                ->when($activeOnly, fn (Builder $query) => $query->where('active', true))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            fn (array $ids): array => VehicleClass::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     protected function defaultSort(Builder $query): void

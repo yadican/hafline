@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Cache\FuelStationCache;
 use App\Enums\PartyRole;
 use App\Models\FuelStation;
@@ -28,7 +29,7 @@ class FuelStationService extends Service
         return FuelStationCache::rememberFirstPage(
             $filters,
             $sort,
-            fn() => $this->stations->search($filters, $sort, $perPage),
+            fn () => $this->stations->search($filters, $sort, $perPage),
         );
     }
 
@@ -69,6 +70,7 @@ class FuelStationService extends Service
             $station = $this->stations->create($attributes);
             $station->sites()->sync($siteIds);
             $station->party->assignRole(PartyRole::Fuel);
+            $this->flushCaches();
 
             return $station;
         });
@@ -90,6 +92,7 @@ class FuelStationService extends Service
             $trashed = $updated->sites()->onlyTrashed()->pluck('sites.id')->all();
             $updated->sites()->sync([...$siteIds, ...$trashed]);
             $updated->party->assignRole(PartyRole::Fuel);
+            $this->flushCaches();
 
             return $updated;
         });
@@ -97,6 +100,15 @@ class FuelStationService extends Service
 
     public function delete(FuelStation $station): void
     {
-        $this->transaction(fn() => $this->stations->delete($station));
+        $this->transaction(function () use ($station): void {
+            $this->stations->delete($station);
+            $this->flushCaches();
+        });
+    }
+
+    private function flushCaches(): void
+    {
+        FuelStationCache::flush();
+        FormOptionsCache::flush(FormOptionsCache::FUEL_STATIONS, FormOptionsCache::PARTIES);
     }
 }

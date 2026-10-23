@@ -15,8 +15,11 @@ use App\Models\SiteTransaction;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
+use App\Repositories\BankRepository;
 use App\Repositories\CariEntryRepository;
 use App\Repositories\CashCategoryRepository;
+use App\Repositories\DumpSiteRepository;
+use App\Repositories\FuelStationRepository;
 use App\Repositories\PartyRepository;
 use App\Repositories\SiteRepository;
 use App\Services\Ledger\Ledger;
@@ -32,6 +35,9 @@ class CariEntryService extends Service
         private CariEntryRepository $entries,
         private PartyRepository $parties,
         private SiteRepository $sites,
+        private DumpSiteRepository $dumpSites,
+        private FuelStationRepository $stations,
+        private BankRepository $banks,
         private CashCategoryRepository $categories,
         private Ledger $ledger,
     ) {}
@@ -61,9 +67,9 @@ class CariEntryService extends Service
             'kinds' => CariEntryKind::options(),
             'parties' => $parties,
             'sites' => $this->sites->options(activeOnly: true, include: $current['site_id'] ?? null),
-            'stations' => $this->entries->stationOptions($current['fuel_station_id'] ?? null),
-            'dumpSites' => $this->entries->dumpSiteOptions($current['dump_site_id'] ?? null),
-            'banks' => $this->entries->bankOptions($current['bank_id'] ?? null),
+            'stations' => $this->stations->options(activeOnly: true, include: $current['fuel_station_id'] ?? null),
+            'dumpSites' => $this->dumpSites->options(activeOnly: true, include: $current['dump_site_id'] ?? null),
+            'banks' => $this->banks->options(activeOnly: true, include: $current['bank_id'] ?? null),
             'categories' => $this->categories->options(include: $current['cash_category_id'] ?? null),
             'methods' => PaymentMethod::options(),
         ];

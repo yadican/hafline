@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Cache\SiteCache;
 use App\Enums\PartyRole;
 use App\Exceptions\OperationRejectedException;
@@ -28,7 +29,7 @@ class SiteService extends Service
         return SiteCache::rememberFirstPage(
             $filters,
             $sort,
-            fn() => $this->sites->search($filters, $sort, $perPage),
+            fn () => $this->sites->search($filters, $sort, $perPage),
         );
     }
 
@@ -46,7 +47,7 @@ class SiteService extends Service
     public function partyValues(Site $site): array
     {
         return collect(PartyRole::forSites())
-            ->mapWithKeys(fn(PartyRole $role) => [
+            ->mapWithKeys(fn (PartyRole $role) => [
                 $role->value => $site->parties->where('pivot.role', $role->value)->pluck('id')->values()->all(),
             ])
             ->all();
@@ -64,6 +65,7 @@ class SiteService extends Service
             /** @var Site $site */
             $site = $this->sites->create($attributes);
             $this->syncParties($site, $parties);
+            $this->flushCaches();
 
             return $site;
         });
@@ -81,6 +83,7 @@ class SiteService extends Service
             /** @var Site $updated */
             $updated = $this->sites->update($site, $attributes);
             $this->syncParties($updated, $parties);
+            $this->flushCaches();
 
             return $updated;
         });
@@ -92,7 +95,22 @@ class SiteService extends Service
             throw new OperationRejectedException('Bu şantiyeye bağlı güzergahlar var. Şantiyeyi silmek yerine pasif yapabilirsiniz.');
         }
 
-        $this->transaction(fn() => $this->sites->delete($site));
+        $this->transaction(function () use ($site): void {
+            $this->sites->delete($site);
+            $this->flushCaches();
+        });
+    }
+
+    private function flushCaches(): void
+    {
+        SiteCache::flush();
+        FormOptionsCache::flush(
+            FormOptionsCache::SITES,
+            FormOptionsCache::PARTIES,
+            FormOptionsCache::HAUL_ROUTE_SITES,
+            FormOptionsCache::HAUL_ROUTE_DUMPS,
+            FormOptionsCache::HAUL_ROUTES,
+        );
     }
 
     /**
@@ -106,7 +124,7 @@ class SiteService extends Service
             $ids = $parties[$role->value] ?? [];
 
             Party::withTrashed()->whereIn('id', $ids)->get()
-                ->each(fn(Party $party) => $party->assignRole($role));
+                ->each(fn (Party $party) => $party->assignRole($role));
 
             $site->parties()->withPivotValue('role', $role->value)->sync($ids);
         }

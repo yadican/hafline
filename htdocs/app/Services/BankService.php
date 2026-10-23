@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Cache\BankCache;
+use App\Cache\FormOptionsCache;
 use App\Models\Bank;
 use App\Repositories\BankRepository;
 use App\Support\Sort;
@@ -33,7 +34,7 @@ class BankService extends Service
             /** @var Bank $bank */
             $bank = $this->banks->create($attributes);
 
-            BankCache::flush();
+            $this->flushCaches();
 
             return $bank;
         });
@@ -48,7 +49,7 @@ class BankService extends Service
             /** @var Bank $updated */
             $updated = $this->banks->update($bank, $attributes);
 
-            BankCache::flush();
+            $this->flushCaches();
 
             return $updated;
         });
@@ -58,7 +59,13 @@ class BankService extends Service
     {
         $this->transaction(function () use ($bank): void {
             $this->banks->delete($bank);
-            BankCache::flush();
+            $this->flushCaches();
         });
+    }
+
+    private function flushCaches(): void
+    {
+        BankCache::flush();
+        FormOptionsCache::flush(FormOptionsCache::BANKS);
     }
 }

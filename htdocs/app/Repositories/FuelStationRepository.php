@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Models\FuelStation;
 use App\Models\Party;
 use App\Support\Sort;
@@ -28,6 +29,29 @@ class FuelStationRepository extends Repository
         return $this->applySort($query, $sort)
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * @param  string|array<int, string>|null  $include
+     * @return array<string, string>
+     */
+    public function options(bool $activeOnly = true, string|array|null $include = null): array
+    {
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::FUEL_STATIONS,
+            $activeOnly ? 'active' : 'all',
+            fn (): array => $this->query()
+                ->when($activeOnly, fn (Builder $query) => $query->where('active', true))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            fn (array $ids): array => FuelStation::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     protected function defaultSort(Builder $query): void

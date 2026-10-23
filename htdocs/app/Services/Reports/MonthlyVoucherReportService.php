@@ -17,7 +17,14 @@ class MonthlyVoucherReportService extends Service
     public function __construct(private MonthlyVoucherReportRepository $reports) {}
 
     /**
-     * @return array{routes: array<string, string>, orientations: array<string, string>, years: array<int, string>, months: array<int, string>, classes: array<string, string>}
+     * @return array{
+     *     routes: array<string, string>,
+     *     routesByOrientation: array{site_dump: array<string, string>, dump_site: array<string, string>},
+     *     orientations: array<string, string>,
+     *     years: array<int, string>,
+     *     months: array<int, string>,
+     *     classes: array<string, string>
+     * }
      */
     public function formOptions(?string $orientation = null): array
     {
@@ -29,11 +36,14 @@ class MonthlyVoucherReportService extends Service
         }
 
         $orientation = $orientation ?? 'site_dump';
+        $routesByOrientation = [
+            'site_dump' => $this->reports->routes(),
+            'dump_site' => $this->reports->routesDumpFirst(),
+        ];
 
         return [
-            'routes' => $orientation === 'dump_site'
-                ? $this->reports->routesDumpFirst()
-                : $this->reports->routes(),
+            'routes' => $routesByOrientation[$orientation] ?? $routesByOrientation['site_dump'],
+            'routesByOrientation' => $routesByOrientation,
             'orientations' => self::ORIENTATIONS,
             'years' => $years,
             'months' => SiteExitReportService::MONTHS,

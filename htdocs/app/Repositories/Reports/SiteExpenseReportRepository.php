@@ -3,18 +3,21 @@
 namespace App\Repositories\Reports;
 
 use App\Models\Site;
+use App\Repositories\SiteRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SiteExpenseReportRepository
 {
+    public function __construct(private SiteRepository $sites) {}
+
     /**
      * @return array<string, string>
      */
     public function sites(): array
     {
-        return Site::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->sites->options();
     }
 
     public function siteName(string $siteId): ?string

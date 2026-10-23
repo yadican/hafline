@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Enums\PartyRole;
 use App\Exceptions\OperationRejectedException;
 use App\Models\Party;
@@ -36,6 +37,7 @@ class VehicleOwnershipService extends Service
     public function open(Vehicle $vehicle, Party $party, CarbonInterface $from): VehicleOwnership
     {
         $party->assignRole(PartyRole::VehicleOwner);
+        FormOptionsCache::flush(FormOptionsCache::PARTIES);
 
         /** @var VehicleOwnership */
         return $vehicle->ownerships()->create([

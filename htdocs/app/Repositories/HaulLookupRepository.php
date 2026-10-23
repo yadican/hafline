@@ -3,22 +3,25 @@
 namespace App\Repositories;
 
 use App\Enums\PartyRole;
-use App\Models\DumpSite;
-use App\Models\Party;
-use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Models\VehicleClass;
 use Illuminate\Database\Eloquent\Collection;
 
 class HaulLookupRepository
 {
+    public function __construct(
+        private SiteRepository $sites,
+        private DumpSiteRepository $dumpSites,
+        private PartyRepository $parties,
+        private VehicleClassRepository $classes,
+    ) {}
+
     /**
      * @return array<string, string>
      */
     public function sites(): array
     {
-        return Site::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->sites->options();
     }
 
     /**
@@ -26,7 +29,7 @@ class HaulLookupRepository
      */
     public function dumpSites(): array
     {
-        return DumpSite::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->dumpSites->options();
     }
 
     /**
@@ -34,11 +37,7 @@ class HaulLookupRepository
      */
     public function owners(): array
     {
-        return Party::withTrashed()
-            ->withRole(PartyRole::VehicleOwner)
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        return $this->parties->options(PartyRole::VehicleOwner);
     }
 
     /**
@@ -46,7 +45,7 @@ class HaulLookupRepository
      */
     public function vehicleClasses(): array
     {
-        return VehicleClass::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->classes->options();
     }
 
     /**

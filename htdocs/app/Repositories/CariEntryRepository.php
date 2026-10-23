@@ -2,11 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Models\Bank;
-use App\Models\DumpSite;
-use App\Models\FuelStation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
@@ -29,48 +25,6 @@ class CariEntryRepository
             ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function stationOptions(?string $include = null): array
-    {
-        return FuelStation::withTrashed()
-            ->where(fn (Builder $query) => $query
-                ->where(fn (Builder $query) => $query->whereNull('deleted_at')->where('active', true))
-                ->when($include, fn (Builder $query, string $id) => $query->orWhere('id', $id)))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function dumpSiteOptions(?string $include = null): array
-    {
-        return DumpSite::withTrashed()
-            ->where(fn (Builder $query) => $query
-                ->where(fn (Builder $query) => $query->whereNull('deleted_at')->where('active', true))
-                ->when($include, fn (Builder $query, string $id) => $query->orWhere('id', $id)))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function bankOptions(?string $include = null): array
-    {
-        return Bank::withTrashed()
-            ->where(fn (Builder $query) => $query
-                ->where(fn (Builder $query) => $query->whereNull('deleted_at')->where('active', true))
-                ->when($include, fn (Builder $query, string $id) => $query->orWhere('id', $id)))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
     }
 
     /**

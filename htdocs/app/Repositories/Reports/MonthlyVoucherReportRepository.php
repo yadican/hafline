@@ -2,32 +2,39 @@
 
 namespace App\Repositories\Reports;
 
+use App\Cache\FormOptionsCache;
 use App\Models\Haul;
 use App\Models\HaulRoute;
-use App\Models\VehicleClass;
+use App\Repositories\VehicleClassRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class MonthlyVoucherReportRepository
 {
+    public function __construct(private VehicleClassRepository $classes) {}
+
     /**
      * @return array<string, string>
      */
     public function routes(): array
     {
-        return HaulRoute::query()
-            ->with(['site', 'dumpSite'])
-            ->join('sites', 'sites.id', '=', 'haul_routes.site_id')
-            ->join('dump_sites', 'dump_sites.id', '=', 'haul_routes.dump_site_id')
-            ->orderBy('sites.name')
-            ->orderBy('dump_sites.name')
-            ->select('haul_routes.*')
-            ->get()
-            ->mapWithKeys(fn (HaulRoute $route): array => [
-                $route->id => trim(($route->site?->name ?? '').' – '.($route->dumpSite?->name ?? '')),
-            ])
-            ->all();
+        return FormOptionsCache::remember(
+            FormOptionsCache::HAUL_ROUTES,
+            'site_dump',
+            fn (): array => HaulRoute::query()
+                ->with(['site', 'dumpSite'])
+                ->join('sites', 'sites.id', '=', 'haul_routes.site_id')
+                ->join('dump_sites', 'dump_sites.id', '=', 'haul_routes.dump_site_id')
+                ->orderBy('sites.name')
+                ->orderBy('dump_sites.name')
+                ->select('haul_routes.*')
+                ->get()
+                ->mapWithKeys(fn (HaulRoute $route): array => [
+                    $route->id => trim(($route->site?->name ?? '').' – '.($route->dumpSite?->name ?? '')),
+                ])
+                ->all(),
+        );
     }
 
     /**
@@ -37,18 +44,22 @@ class MonthlyVoucherReportRepository
      */
     public function routesDumpFirst(): array
     {
-        return HaulRoute::query()
-            ->with(['site', 'dumpSite'])
-            ->join('sites', 'sites.id', '=', 'haul_routes.site_id')
-            ->join('dump_sites', 'dump_sites.id', '=', 'haul_routes.dump_site_id')
-            ->orderBy('dump_sites.name')
-            ->orderBy('sites.name')
-            ->select('haul_routes.*')
-            ->get()
-            ->mapWithKeys(fn (HaulRoute $route): array => [
-                $route->id => trim(($route->dumpSite?->name ?? '').' – '.($route->site?->name ?? '')),
-            ])
-            ->all();
+        return FormOptionsCache::remember(
+            FormOptionsCache::HAUL_ROUTES,
+            'dump_site',
+            fn (): array => HaulRoute::query()
+                ->with(['site', 'dumpSite'])
+                ->join('sites', 'sites.id', '=', 'haul_routes.site_id')
+                ->join('dump_sites', 'dump_sites.id', '=', 'haul_routes.dump_site_id')
+                ->orderBy('dump_sites.name')
+                ->orderBy('sites.name')
+                ->select('haul_routes.*')
+                ->get()
+                ->mapWithKeys(fn (HaulRoute $route): array => [
+                    $route->id => trim(($route->dumpSite?->name ?? '').' – '.($route->site?->name ?? '')),
+                ])
+                ->all(),
+        );
     }
 
     /**
@@ -56,7 +67,7 @@ class MonthlyVoucherReportRepository
      */
     public function vehicleClasses(): array
     {
-        return VehicleClass::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->classes->options();
     }
 
     public function findRoute(string $routeId): ?HaulRoute

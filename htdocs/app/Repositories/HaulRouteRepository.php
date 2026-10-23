@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Models\DumpSite;
 use App\Models\HaulRoute;
 use App\Models\Site;
@@ -41,11 +42,27 @@ class HaulRouteRepository extends Repository
      */
     public function siteOptions(?string $includeRoute = null): array
     {
-        return Site::withTrashed()
-            ->whereIn('id', $this->open($includeRoute)->select('site_id'))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::HAUL_ROUTE_SITES,
+            'open',
+            fn (): array => Site::withTrashed()
+                ->whereIn('id', $this->open(null)->select('site_id'))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
+
+        if (! $includeRoute) {
+            return $options;
+        }
+
+        $siteId = $this->query()->whereKey($includeRoute)->value('site_id');
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $siteId,
+            fn (array $ids): array => Site::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     /**
@@ -59,11 +76,27 @@ class HaulRouteRepository extends Repository
             return [];
         }
 
-        return DumpSite::withTrashed()
-            ->whereIn('id', $this->open($includeRoute)->where('site_id', $siteId)->select('dump_site_id'))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::HAUL_ROUTE_DUMPS,
+            'open:'.$siteId,
+            fn (): array => DumpSite::withTrashed()
+                ->whereIn('id', $this->open(null)->where('site_id', $siteId)->select('dump_site_id'))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
+
+        if (! $includeRoute) {
+            return $options;
+        }
+
+        $dumpSiteId = $this->query()->whereKey($includeRoute)->value('dump_site_id');
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $dumpSiteId,
+            fn (array $ids): array => DumpSite::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Cache\VehicleClassCache;
 use App\Exceptions\OperationRejectedException;
 use App\Models\VehicleClass;
@@ -30,8 +31,13 @@ class VehicleClassService extends Service
      */
     public function create(array $attributes): VehicleClass
     {
-        /** @var VehicleClass */
-        return $this->transaction(fn () => $this->classes->create($attributes));
+        return $this->transaction(function () use ($attributes): VehicleClass {
+            /** @var VehicleClass $class */
+            $class = $this->classes->create($attributes);
+            $this->flushCaches();
+
+            return $class;
+        });
     }
 
     /**
@@ -39,8 +45,13 @@ class VehicleClassService extends Service
      */
     public function update(VehicleClass $class, array $attributes): VehicleClass
     {
-        /** @var VehicleClass */
-        return $this->transaction(fn () => $this->classes->update($class, $attributes));
+        return $this->transaction(function () use ($class, $attributes): VehicleClass {
+            /** @var VehicleClass $updated */
+            $updated = $this->classes->update($class, $attributes);
+            $this->flushCaches();
+
+            return $updated;
+        });
     }
 
     public function delete(VehicleClass $class): void
@@ -49,6 +60,15 @@ class VehicleClassService extends Service
             throw new OperationRejectedException('Bu sınıfta kayıtlı araçlar var. Önce araçları başka bir sınıfa taşıyın.');
         }
 
-        $this->transaction(fn () => $this->classes->delete($class));
+        $this->transaction(function () use ($class): void {
+            $this->classes->delete($class);
+            $this->flushCaches();
+        });
+    }
+
+    private function flushCaches(): void
+    {
+        VehicleClassCache::flush();
+        FormOptionsCache::flush(FormOptionsCache::VEHICLE_CLASSES);
     }
 }

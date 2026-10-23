@@ -54,6 +54,20 @@ class MonthlyVoucherReportTest extends TestCase
             ->assertRedirect(route('admin.login'));
     }
 
+    public function test_filter_page_embeds_both_route_label_orientations(): void
+    {
+        $options = $this->actingAs($this->admin)
+            ->get(route('admin.reports.monthly-vouchers'))
+            ->assertOk()
+            ->assertSee('data-monthly-voucher-routes', false)
+            ->assertSee('TOPKAPI – 212', false)
+            ->assertSee('212 – TOPKAPI', false)
+            ->viewData('options');
+
+        $this->assertSame('TOPKAPI – 212', $options['routesByOrientation']['site_dump'][$this->route->id]);
+        $this->assertSame('212 – TOPKAPI', $options['routesByOrientation']['dump_site'][$this->route->id]);
+    }
+
     public function test_matrix_counts_by_day_and_respects_day_range(): void
     {
         $this->makeHaul($this->vehicleA, '2026-09-01 08:00:00');

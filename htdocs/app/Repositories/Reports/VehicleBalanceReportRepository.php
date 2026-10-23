@@ -2,21 +2,26 @@
 
 namespace App\Repositories\Reports;
 
-use App\Models\FuelStation;
-use App\Models\Site;
 use App\Models\Vehicle;
+use App\Repositories\FuelStationRepository;
+use App\Repositories\SiteRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class VehicleBalanceReportRepository
 {
+    public function __construct(
+        private SiteRepository $sites,
+        private FuelStationRepository $stations,
+    ) {}
+
     /**
      * @return array<string, string>
      */
     public function sites(): array
     {
-        return Site::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->sites->options();
     }
 
     /**
@@ -24,7 +29,7 @@ class VehicleBalanceReportRepository
      */
     public function fuelStations(): array
     {
-        return FuelStation::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->stations->options();
     }
 
     /**

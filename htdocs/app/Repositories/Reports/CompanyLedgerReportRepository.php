@@ -3,7 +3,7 @@
 namespace App\Repositories\Reports;
 
 use App\Enums\PartyRole;
-use App\Models\Party;
+use App\Repositories\PartyRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -11,16 +11,14 @@ use Illuminate\Support\Facades\DB;
 
 class CompanyLedgerReportRepository
 {
+    public function __construct(private PartyRepository $parties) {}
+
     /**
      * @return array<string, string>
      */
     public function partiesForRole(PartyRole $role): array
     {
-        return Party::query()
-            ->withRole($role)
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        return $this->parties->options($role);
     }
 
     /**

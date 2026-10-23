@@ -3,13 +3,13 @@
 namespace App\Repositories\Reports;
 
 use App\Enums\PartyRole;
-use App\Models\DumpSite;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
-use App\Models\Site;
 use App\Models\TicketHandover;
 use App\Models\Vehicle;
+use App\Repositories\DumpSiteRepository;
 use App\Repositories\PartyRepository;
+use App\Repositories\SiteRepository;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -17,7 +17,11 @@ use Illuminate\Support\Facades\DB;
 
 class TicketControlReportRepository
 {
-    public function __construct(private PartyRepository $parties) {}
+    public function __construct(
+        private PartyRepository $parties,
+        private SiteRepository $sites,
+        private DumpSiteRepository $dumpSites,
+    ) {}
 
     /**
      * @return array{sites: array<string, string>, dumpSites: array<string, string>, owners: array<string, string>}
@@ -25,8 +29,8 @@ class TicketControlReportRepository
     public function formLookups(): array
     {
         return [
-            'sites' => Site::query()->orderBy('name')->pluck('name', 'id')->all(),
-            'dumpSites' => DumpSite::query()->orderBy('name')->pluck('name', 'id')->all(),
+            'sites' => $this->sites->options(),
+            'dumpSites' => $this->dumpSites->options(),
             'owners' => $this->parties->options(PartyRole::VehicleOwner),
         ];
     }

@@ -6,18 +6,21 @@ use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\Site;
 use App\Models\Vehicle;
+use App\Repositories\SiteRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class VehicleSiteMonthlyReportRepository
 {
+    public function __construct(private SiteRepository $sites) {}
+
     /**
      * @return array<string, string>
      */
     public function sites(): array
     {
-        return Site::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->sites->options();
     }
 
     public function findVehicle(string $vehicleId): ?Vehicle

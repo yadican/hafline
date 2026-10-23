@@ -4,19 +4,25 @@ namespace App\Repositories\Reports;
 
 use App\Models\FuelReceipt;
 use App\Models\FuelStation;
-use App\Models\VehicleClass;
+use App\Repositories\FuelStationRepository;
+use App\Repositories\VehicleClassRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class FuelStationMonthlyReportRepository
 {
+    public function __construct(
+        private FuelStationRepository $stations,
+        private VehicleClassRepository $classes,
+    ) {}
+
     /**
      * @return array<string, string>
      */
     public function fuelStations(): array
     {
-        return FuelStation::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->stations->options();
     }
 
     /**
@@ -24,7 +30,7 @@ class FuelStationMonthlyReportRepository
      */
     public function vehicleClasses(): array
     {
-        return VehicleClass::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->classes->options();
     }
 
     public function findFuelStation(string $fuelStationId): ?FuelStation

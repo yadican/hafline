@@ -6,9 +6,9 @@ use App\Enums\Shift;
 use App\Exceptions\OperationException;
 use App\Exceptions\OperationRejectedException;
 use App\Models\FuelReceipt;
-use App\Models\FuelStation;
 use App\Models\Vehicle;
 use App\Repositories\FuelReceiptRepository;
+use App\Repositories\FuelStationRepository;
 use App\Repositories\HaulLookupRepository;
 use App\Repositories\SiteRepository;
 use App\Services\Ledger\FuelReceiptLedger;
@@ -22,6 +22,7 @@ class FuelReceiptService extends Service
     public function __construct(
         private FuelReceiptRepository $receipts,
         private SiteRepository $sites,
+        private FuelStationRepository $stations,
         private HaulLookupRepository $lookups,
         private FuelReceiptLedger $ledger,
     ) {}
@@ -50,7 +51,7 @@ class FuelReceiptService extends Service
     {
         return [
             'sites' => $this->lookups->sites(),
-            'stations' => FuelStation::withTrashed()->orderBy('name')->pluck('name', 'id')->all(),
+            'stations' => $this->stations->options(activeOnly: false),
             'owners' => $this->lookups->owners(),
             'creators' => $this->lookups->creators(),
             'shifts' => Shift::options(),

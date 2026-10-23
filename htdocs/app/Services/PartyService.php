@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Cache\PartyCache;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
@@ -113,7 +114,7 @@ class PartyService extends Service
             $this->syncRoles($party, $data['roles'] ?? []);
             $this->employees->ensureForParty($party->fresh(['roleAssignments']));
 
-            PartyCache::flush();
+            $this->flushCaches();
 
             return $party;
         });
@@ -135,7 +136,7 @@ class PartyService extends Service
             $this->syncRoles($updated, $data['roles'] ?? []);
             $this->employees->ensureForParty($updated->fresh(['roleAssignments']));
 
-            PartyCache::flush();
+            $this->flushCaches();
 
             return $updated;
         });
@@ -149,8 +150,14 @@ class PartyService extends Service
 
         $this->transaction(function () use ($party): void {
             $this->parties->delete($party);
-            PartyCache::flush();
+            $this->flushCaches();
         });
+    }
+
+    private function flushCaches(): void
+    {
+        PartyCache::flush();
+        FormOptionsCache::flush(FormOptionsCache::PARTIES, FormOptionsCache::EMPLOYEES);
     }
 
     /**

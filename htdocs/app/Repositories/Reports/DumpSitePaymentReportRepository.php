@@ -6,18 +6,21 @@ use App\Models\DumpSite;
 use App\Models\DumpSitePayment;
 use App\Models\Haul;
 use App\Models\LedgerEntry;
+use App\Repositories\DumpSiteRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DumpSitePaymentReportRepository
 {
+    public function __construct(private DumpSiteRepository $dumpSites) {}
+
     /**
      * @return array<string, string>
      */
     public function dumpSites(): array
     {
-        return DumpSite::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->dumpSites->options();
     }
 
     public function findDumpSite(string $dumpSiteId): ?DumpSite

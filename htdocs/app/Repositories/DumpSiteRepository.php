@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Models\DumpSite;
 use App\Models\Party;
 use App\Support\Sort;
@@ -29,17 +30,26 @@ class DumpSiteRepository extends Repository
     }
 
     /**
+     * @param  string|array<int, string>|null  $include
      * @return array<string, string>
      */
-    public function options(bool $activeOnly = false, ?string $include = null): array
+    public function options(bool $activeOnly = false, string|array|null $include = null): array
     {
-        return $this->query()
-            ->when($activeOnly, fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query->where('active', true)->orWhere('id', $include),
-            ))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::DUMP_SITES,
+            $activeOnly ? 'active' : 'all',
+            fn (): array => $this->query()
+                ->when($activeOnly, fn (Builder $query) => $query->where('active', true))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            fn (array $ids): array => DumpSite::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     protected function defaultSort(Builder $query): void

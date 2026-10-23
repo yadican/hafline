@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Cache\PartyCache;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
@@ -71,7 +72,7 @@ class EmployeeService extends Service
             $this->ensureForParty($party);
         }
 
-        PartyCache::flush();
+        $this->flushCaches();
     }
 
     /**
@@ -161,7 +162,7 @@ class EmployeeService extends Service
                 'ended_on' => null,
             ]);
 
-            PartyCache::flush();
+            $this->flushCaches();
 
             return $employee;
         });
@@ -186,6 +187,8 @@ class EmployeeService extends Service
                 $this->syncCurrentMonthBaseSalary($updated);
             }
 
+            $this->flushCaches();
+
             return $updated->fresh(['party.person', 'periods']);
         });
     }
@@ -204,8 +207,14 @@ class EmployeeService extends Service
             $party?->roleAssignments()->where('role', PartyRole::Employee)->delete();
             $party?->unsetRelation('roleAssignments');
 
-            PartyCache::flush();
+            $this->flushCaches();
         });
+    }
+
+    private function flushCaches(): void
+    {
+        PartyCache::flush();
+        FormOptionsCache::flush(FormOptionsCache::PARTIES, FormOptionsCache::EMPLOYEES);
     }
 
     /**

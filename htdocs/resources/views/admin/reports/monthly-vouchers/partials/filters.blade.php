@@ -3,7 +3,11 @@
 @endphp
 
 <div class="panel-liste-bar haul-search-bar report-filters">
-    <x-search.form :action="route('admin.reports.monthly-vouchers')" data-report-search>
+    <x-search.form
+        :action="route('admin.reports.monthly-vouchers')"
+        data-report-search
+        data-monthly-voucher-routes="{{ json_encode($options['routesByOrientation'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP) }}"
+    >
         <x-search.select
             searchable
             hide-search
@@ -13,6 +17,7 @@
             :options="$options['orientations']"
             :value="$filters['orientation'] ?? 'site_dump'"
             required
+            data-monthly-voucher-orientation
             class="md:col-span-2"
         />
         <x-search.select
@@ -23,6 +28,7 @@
             :options="$options['routes']"
             :value="$filters['route'] ?? null"
             required
+            data-monthly-voucher-route
             class="md:col-span-2"
         />
         <x-search.select

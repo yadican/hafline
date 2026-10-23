@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Enums\PartyRole;
 use App\Models\LedgerEntry;
 use App\Models\Party;
@@ -55,18 +56,22 @@ class PartyRepository extends Repository
      */
     public function options(?PartyRole $role = null, string|array|null $include = null): array
     {
-        $include = array_filter((array) $include);
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::PARTIES,
+            $role?->value ?? 'all',
+            fn (): array => Party::query()
+                ->where('active', true)
+                ->when($role, fn (Builder $query, PartyRole $role) => $query->withRole($role))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
 
-        return Party::withTrashed()
-            ->where(fn (Builder $query) => $query
-                ->where(fn (Builder $query) => $query
-                    ->whereNull('deleted_at')
-                    ->where('active', true)
-                    ->when($role, fn (Builder $query, PartyRole $role) => $query->withRole($role)))
-                ->when($include, fn (Builder $query, array $ids) => $query->orWhereIn('id', $ids)))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            fn (array $ids): array => Party::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     /**

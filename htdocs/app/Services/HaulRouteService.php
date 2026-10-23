@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\FormOptionsCache;
 use App\Cache\HaulRouteCache;
 use App\Models\HaulRoute;
 use App\Models\RouteVehiclePrice;
@@ -34,7 +35,7 @@ class HaulRouteService extends Service
         return HaulRouteCache::rememberFirstPage(
             $filters,
             $sort,
-            fn() => $this->routes->search($filters, $sort, $perPage),
+            fn () => $this->routes->search($filters, $sort, $perPage),
         );
     }
 
@@ -73,6 +74,7 @@ class HaulRouteService extends Service
             /** @var HaulRoute $route */
             $route = $this->routes->create($attributes);
             $this->syncClassPrices($route, 'classPrices', $prices);
+            $this->flushCaches();
 
             return $route;
         });
@@ -90,6 +92,7 @@ class HaulRouteService extends Service
             /** @var HaulRoute $updated */
             $updated = $this->routes->update($route, $attributes);
             $this->syncClassPrices($updated, 'classPrices', $prices);
+            $this->flushCaches();
 
             return $updated;
         });
@@ -97,7 +100,20 @@ class HaulRouteService extends Service
 
     public function delete(HaulRoute $route): void
     {
-        $this->transaction(fn() => $this->routes->delete($route));
+        $this->transaction(function () use ($route): void {
+            $this->routes->delete($route);
+            $this->flushCaches();
+        });
+    }
+
+    private function flushCaches(): void
+    {
+        HaulRouteCache::flush();
+        FormOptionsCache::flush(
+            FormOptionsCache::HAUL_ROUTES,
+            FormOptionsCache::HAUL_ROUTE_SITES,
+            FormOptionsCache::HAUL_ROUTE_DUMPS,
+        );
     }
 
     /**
@@ -106,7 +122,7 @@ class HaulRouteService extends Service
     public function setVehiclePrice(HaulRoute $route, Vehicle $vehicle, string $price): RouteVehiclePrice
     {
         /** @var RouteVehiclePrice */
-        return $this->transaction(fn() => $route->vehiclePrices()->updateOrCreate(
+        return $this->transaction(fn () => $route->vehiclePrices()->updateOrCreate(
             ['vehicle_id' => $vehicle->id],
             ['price' => $price],
         ));
@@ -114,6 +130,6 @@ class HaulRouteService extends Service
 
     public function removeVehiclePrice(RouteVehiclePrice $price): void
     {
-        $this->transaction(fn() => $price->delete());
+        $this->transaction(fn () => $price->delete());
     }
 }

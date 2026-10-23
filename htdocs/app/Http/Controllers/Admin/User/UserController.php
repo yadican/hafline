@@ -6,8 +6,8 @@ use App\Enums\Shift;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Requests\Admin\UserRequest;
 use App\Models\Role;
-use App\Models\Site;
 use App\Models\User;
+use App\Repositories\SiteRepository;
 use App\Support\ApiPermissions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -23,6 +23,8 @@ class UserController extends AdminController
         'update' => 'edit-user',
         'destroy' => 'delete-user',
     ];
+
+    public function __construct(private SiteRepository $sites) {}
 
     public function index(): View
     {
@@ -40,7 +42,7 @@ class UserController extends AdminController
             'title' => 'Yeni kullanıcı',
             'roles' => $this->webRoles(),
             'apiRoles' => $this->apiRoles(),
-            'sites' => Site::query()->orderBy('name')->pluck('name', 'id')->all(),
+            'sites' => $this->sites->options(),
             'shifts' => Shift::options(),
         ]);
     }
@@ -69,7 +71,7 @@ class UserController extends AdminController
             'user' => $user,
             'roles' => $this->webRoles(),
             'apiRoles' => $this->apiRoles(),
-            'sites' => Site::query()->orderBy('name')->pluck('name', 'id')->all(),
+            'sites' => $this->sites->options(),
             'shifts' => Shift::options(),
             'selectedRoles' => old(
                 'roles',

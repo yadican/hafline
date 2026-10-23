@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\CariEntryKind;
 use App\Http\Requests\Admin\CariEntryRequest;
 use App\Http\Requests\Admin\CariEntrySearchRequest;
-use App\Models\Party;
+use App\Repositories\PartyRepository;
 use App\Services\CariEntryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -14,7 +14,10 @@ class CariEntryController extends AdminController
 {
     protected ?string $permissionResource = 'cari-entry';
 
-    public function __construct(private CariEntryService $entries) {}
+    public function __construct(
+        private CariEntryService $entries,
+        private PartyRepository $parties,
+    ) {}
 
     public function index(CariEntrySearchRequest $request): View
     {
@@ -25,7 +28,7 @@ class CariEntryController extends AdminController
             'entries' => $this->entries->paginate($filters),
             'filters' => $filters,
             'kinds' => CariEntryKind::options(),
-            'parties' => Party::query()->orderBy('name')->pluck('name', 'id')->all(),
+            'parties' => $this->parties->options(),
         ]);
     }
 

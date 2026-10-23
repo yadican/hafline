@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Cache\DumpSiteCache;
+use App\Cache\FormOptionsCache;
 use App\Enums\PartyRole;
 use App\Exceptions\OperationRejectedException;
 use App\Models\DumpSite;
@@ -32,7 +33,7 @@ class DumpSiteService extends Service
         return DumpSiteCache::rememberFirstPage(
             $filters,
             $sort,
-            fn() => $this->dumpSites->search($filters, $sort, $perPage),
+            fn () => $this->dumpSites->search($filters, $sort, $perPage),
         );
     }
 
@@ -65,6 +66,7 @@ class DumpSiteService extends Service
             $dumpSite = $this->dumpSites->create($attributes);
             $this->syncClassPrices($dumpSite, 'classPrices', $prices);
             $dumpSite->party->assignRole(PartyRole::DumpOperator);
+            $this->flushCaches();
 
             return $dumpSite;
         });
@@ -83,6 +85,7 @@ class DumpSiteService extends Service
             $updated = $this->dumpSites->update($dumpSite, $attributes);
             $this->syncClassPrices($updated, 'classPrices', $prices);
             $updated->party->assignRole(PartyRole::DumpOperator);
+            $this->flushCaches();
 
             return $updated;
         });
@@ -94,6 +97,21 @@ class DumpSiteService extends Service
             throw new OperationRejectedException('Bu döküm yerine bağlı güzergahlar var. Döküm yerini silmek yerine pasif yapabilirsiniz.');
         }
 
-        $this->transaction(fn() => $this->dumpSites->delete($dumpSite));
+        $this->transaction(function () use ($dumpSite): void {
+            $this->dumpSites->delete($dumpSite);
+            $this->flushCaches();
+        });
+    }
+
+    private function flushCaches(): void
+    {
+        DumpSiteCache::flush();
+        FormOptionsCache::flush(
+            FormOptionsCache::DUMP_SITES,
+            FormOptionsCache::PARTIES,
+            FormOptionsCache::HAUL_ROUTE_SITES,
+            FormOptionsCache::HAUL_ROUTE_DUMPS,
+            FormOptionsCache::HAUL_ROUTES,
+        );
     }
 }

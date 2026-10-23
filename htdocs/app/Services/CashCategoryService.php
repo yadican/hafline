@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Cache\CashCategoryCache;
+use App\Cache\FormOptionsCache;
 use App\Models\CashCategory;
 use App\Repositories\CashCategoryRepository;
 use App\Support\Sort;
@@ -33,7 +34,7 @@ class CashCategoryService extends Service
             /** @var CashCategory $cashCategory */
             $cashCategory = $this->cashCategories->create($attributes);
 
-            CashCategoryCache::flush();
+            $this->flushCaches();
 
             return $cashCategory;
         });
@@ -48,7 +49,7 @@ class CashCategoryService extends Service
             /** @var CashCategory $updated */
             $updated = $this->cashCategories->update($cashCategory, $attributes);
 
-            CashCategoryCache::flush();
+            $this->flushCaches();
 
             return $updated;
         });
@@ -58,7 +59,13 @@ class CashCategoryService extends Service
     {
         $this->transaction(function () use ($cashCategory): void {
             $this->cashCategories->delete($cashCategory);
-            CashCategoryCache::flush();
+            $this->flushCaches();
         });
+    }
+
+    private function flushCaches(): void
+    {
+        CashCategoryCache::flush();
+        FormOptionsCache::flush(FormOptionsCache::CASH_CATEGORIES);
     }
 }

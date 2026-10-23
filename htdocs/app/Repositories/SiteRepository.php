@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Cache\FormOptionsCache;
 use App\Models\Site;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -22,11 +23,11 @@ class SiteRepository extends Repository
     {
         $query = $this->query()->withCount([
             'routes',
-            'parties' => fn(Builder $query) => $query->select(DB::raw('count(distinct parties.id)')),
+            'parties' => fn (Builder $query) => $query->select(DB::raw('count(distinct parties.id)')),
         ]);
 
         $query = $this->whereTerm($query, $filters['q'] ?? null, ['name'])
-            ->when(isset($filters['active']), fn(Builder $query) => $query->where('active', $filters['active'] === '1'));
+            ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         return $this->applySort($query, $sort)
             ->paginate($perPage)
@@ -39,13 +40,21 @@ class SiteRepository extends Repository
      */
     public function options(bool $activeOnly = false, string|array|null $include = null): array
     {
-        return $this->query()
-            ->when($activeOnly, fn(Builder $query) => $query->where(
-                fn(Builder $query) => $query->where('active', true)->orWhereIn('id', array_filter((array) $include)),
-            ))
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::SITES,
+            $activeOnly ? 'active' : 'all',
+            fn (): array => $this->query()
+                ->when($activeOnly, fn (Builder $query) => $query->where('active', true))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+        );
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            fn (array $ids): array => Site::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+        );
     }
 
     protected function defaultSort(Builder $query): void

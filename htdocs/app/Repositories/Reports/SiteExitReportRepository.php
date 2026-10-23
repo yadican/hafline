@@ -4,19 +4,25 @@ namespace App\Repositories\Reports;
 
 use App\Models\Haul;
 use App\Models\Site;
-use App\Models\VehicleClass;
+use App\Repositories\SiteRepository;
+use App\Repositories\VehicleClassRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SiteExitReportRepository
 {
+    public function __construct(
+        private SiteRepository $sites,
+        private VehicleClassRepository $classes,
+    ) {}
+
     /**
      * @return array<string, string>
      */
     public function sites(): array
     {
-        return Site::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->sites->options();
     }
 
     /**
@@ -24,7 +30,7 @@ class SiteExitReportRepository
      */
     public function vehicleClasses(): array
     {
-        return VehicleClass::query()->orderBy('name')->pluck('name', 'id')->all();
+        return $this->classes->options();
     }
 
     public function findSite(string $siteId): ?Site
