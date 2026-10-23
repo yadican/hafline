@@ -10,8 +10,6 @@
         <x-table.th sort="price" first="desc">Tutar</x-table.th>
         <x-table.th sort="tonnage" first="desc" class="is-center">Ton</x-table.th>
         <x-table.th sort="hauled_at" first="desc">Tarih</x-table.th>
-        <x-table.th sort="created_at" first="desc"><abbr title="Veri giriş zamanı">VGZ</abbr></x-table.th>
-        <th>İşlem yapan</th>
         <th class="is-center">Vardiya</th>
         <th class="is-center is-actions">İşlem</th>
     </tr>

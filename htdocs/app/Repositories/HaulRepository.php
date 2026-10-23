@@ -56,15 +56,15 @@ class HaulRepository extends Repository
     {
         return [
             'ticket' => 'ticket_no',
-            'plate' => fn (Builder $query, string $direction) => $query->orderBy(
+            'plate' => fn(Builder $query, string $direction) => $query->orderBy(
                 Vehicle::withTrashed()->select('plate_key')->whereColumn('vehicles.id', 'hauls.vehicle_id'),
                 $direction,
             ),
-            'site' => fn (Builder $query, string $direction) => $query->orderBy(
+            'site' => fn(Builder $query, string $direction) => $query->orderBy(
                 Site::withTrashed()->select('name')->whereColumn('sites.id', 'hauls.site_id'),
                 $direction,
             ),
-            'dump_site' => fn (Builder $query, string $direction) => $query->orderBy(
+            'dump_site' => fn(Builder $query, string $direction) => $query->orderBy(
                 DumpSite::withTrashed()->select('name')->whereColumn('dump_sites.id', 'hauls.dump_site_id'),
                 $direction,
             ),
@@ -107,25 +107,25 @@ class HaulRepository extends Repository
         }
 
         return $query
-            ->when($filters['site'] ?? null, fn (Builder $query, string $site) => $query->where('site_id', $site))
-            ->when($filters['dump_site'] ?? null, fn (Builder $query, string $dumpSite) => $query->where('dump_site_id', $dumpSite))
-            ->when($filters['hauled_from'] ?? null, fn (Builder $query, string $from) => $query->where('hauled_at', '>=', Carbon::parse($from)))
-            ->when($filters['hauled_to'] ?? null, fn (Builder $query, string $to) => $query->where('hauled_at', '<=', Carbon::parse($to)))
-            ->when($filters['entered_from'] ?? null, fn (Builder $query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)))
-            ->when($filters['entered_to'] ?? null, fn (Builder $query, string $to) => $query->where('created_at', '<=', Carbon::parse($to)))
-            ->when($filters['owner'] ?? null, fn (Builder $query, string $owner) => $query->where('party_id', $owner))
-            ->when($filters['class'] ?? null, fn (Builder $query, string $class) => $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->where('vehicle_class_id', $class)))
+            ->when($filters['site'] ?? null, fn(Builder $query, string $site) => $query->where('site_id', $site))
+            ->when($filters['dump_site'] ?? null, fn(Builder $query, string $dumpSite) => $query->where('dump_site_id', $dumpSite))
+            ->when($filters['hauled_from'] ?? null, fn(Builder $query, string $from) => $query->where('hauled_at', '>=', Carbon::parse($from)))
+            ->when($filters['hauled_to'] ?? null, fn(Builder $query, string $to) => $query->where('hauled_at', '<=', Carbon::parse($to)))
+            ->when($filters['entered_from'] ?? null, fn(Builder $query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)))
+            ->when($filters['entered_to'] ?? null, fn(Builder $query, string $to) => $query->where('created_at', '<=', Carbon::parse($to)))
+            ->when($filters['owner'] ?? null, fn(Builder $query, string $owner) => $query->where('party_id', $owner))
+            ->when($filters['class'] ?? null, fn(Builder $query, string $class) => $query->whereHas('vehicle', fn(Builder $vehicle) => $vehicle->where('vehicle_class_id', $class)))
             ->when($filters['plate'] ?? null, function (Builder $query, string $plate): void {
-                $like = '%'.addcslashes(Vehicle::normalizePlate($plate), '%_\\').'%';
+                $like = '%' . addcslashes(Vehicle::normalizePlate($plate), '%_\\') . '%';
 
-                $query->whereHas('vehicle', fn (Builder $vehicle) => $vehicle->whereLike('plate_key', $like));
+                $query->whereHas('vehicle', fn(Builder $vehicle) => $vehicle->whereLike('plate_key', $like));
             })
-            ->when($filters['shift'] ?? null, fn (Builder $query, string $shift) => $query->where('shift', $shift))
+            ->when($filters['shift'] ?? null, fn(Builder $query, string $shift) => $query->where('shift', $shift))
             ->when($filters['ticket'] ?? null, function (Builder $query, string $ticket): void {
                 str_contains($ticket, '%')
                     ? $query->whereLike('ticket_no', $ticket)
                     : $query->where('ticket_no', $ticket);
             })
-            ->when($filters['creator'] ?? null, fn (Builder $query, string $creator) => $query->where('created_by', $creator));
+            ->when($filters['creator'] ?? null, fn(Builder $query, string $creator) => $query->where('created_by', $creator));
     }
 }
