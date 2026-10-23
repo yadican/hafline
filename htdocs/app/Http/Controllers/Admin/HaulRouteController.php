@@ -44,6 +44,21 @@ class HaulRouteController extends AdminController
         );
     }
 
+    public function show(HaulRoute $haulRoute): View
+    {
+        $haulRoute->load([
+            'site',
+            'dumpSite',
+            'classPrices.vehicleClass',
+            'vehiclePrices.vehicle.vehicleClass',
+        ]);
+
+        return view('admin.haul-routes.show', [
+            'title' => 'Güzergah detayı',
+            'haulRoute' => $haulRoute,
+        ]);
+    }
+
     public function edit(HaulRoute $haulRoute): View
     {
         $haulRoute->load(['site', 'dumpSite', 'classPrices', 'vehiclePrices.vehicle.vehicleClass']);

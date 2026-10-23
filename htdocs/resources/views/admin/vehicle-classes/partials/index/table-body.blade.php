@@ -12,8 +12,9 @@
             </td>
             <td><x-ui.active-badge :active="$vehicleClass->active" /></td>
             <x-table.actions
-                :edit="route('admin.vehicle-classes.edit', $vehicleClass)"
-                :delete="route('admin.vehicle-classes.destroy', $vehicleClass)"
+                :show="route('admin.vehicle-classes.show', $vehicleClass)"
+                :edit="auth()->user()->can('edit-vehicle-class') ? route('admin.vehicle-classes.edit', $vehicleClass) : null"
+                :delete="auth()->user()->can('delete-vehicle-class') ? route('admin.vehicle-classes.destroy', $vehicleClass) : null"
                 confirm="Araç sınıfı silinsin mi?"
                 :confirm-text="$vehicleClass->name.' listeden kaldırılacak. Bu sınıfta araç varsa silme engellenir.'"
             />

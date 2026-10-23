@@ -7,8 +7,9 @@
             <td>{{ $bank->account_no ?: '—' }}</td>
             <td><x-ui.active-badge :active="$bank->active" /></td>
             <x-table.actions
-                :edit="route('admin.banks.edit', $bank)"
-                :delete="route('admin.banks.destroy', $bank)"
+                :show="route('admin.banks.show', $bank)"
+                :edit="auth()->user()->can('edit-bank') ? route('admin.banks.edit', $bank) : null"
+                :delete="auth()->user()->can('delete-bank') ? route('admin.banks.destroy', $bank) : null"
                 confirm="Banka silinsin mi?"
                 :confirm-text="$bank->name.' listeden kaldırılacak. Geçmiş çek ve senet kayıtları etkilenmez.'"
             />

@@ -9,8 +9,9 @@
             <td class="panel-tutar"><x-ui.money :value="$haulRoute->bonus" /></td>
             <td><x-ui.active-badge :active="$haulRoute->active" /></td>
             <x-table.actions
-                :edit="route('admin.haul-routes.edit', $haulRoute)"
-                :delete="route('admin.haul-routes.destroy', $haulRoute)"
+                :show="route('admin.haul-routes.show', $haulRoute)"
+                :edit="auth()->user()->can('edit-haul-route') ? route('admin.haul-routes.edit', $haulRoute) : null"
+                :delete="auth()->user()->can('delete-haul-route') ? route('admin.haul-routes.destroy', $haulRoute) : null"
                 confirm="Güzergah silinsin mi?"
                 :confirm-text="$haulRoute->site?->name.' → '.$haulRoute->dumpSite?->name.' listeden kaldırılacak. Geçmiş taşıma fişleri etkilenmez.'"
             />

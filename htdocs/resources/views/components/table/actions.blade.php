@@ -1,4 +1,5 @@
 @props([
+    'show' => null,
     'edit' => null,
     'delete' => null,
     'confirm' => 'Kayıt silinsin mi?',
@@ -7,6 +8,12 @@
 
 <td {{ $attributes->class(['panel-actions-cell']) }}>
     {{ $slot }}
+    @if ($show)
+        <a href="{{ $show }}" class="panel-act panel-act-show" title="Detay">
+            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+            <span class="sr-only">Detay</span>
+        </a>
+    @endif
     @if ($edit)
         <a href="{{ $edit }}" class="panel-act panel-act-edit" title="Düzenle">
             <i class="fa-solid fa-pen" aria-hidden="true"></i>

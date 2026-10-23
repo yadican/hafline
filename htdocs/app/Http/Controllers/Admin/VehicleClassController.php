@@ -42,6 +42,16 @@ class VehicleClassController extends AdminController
         );
     }
 
+    public function show(VehicleClass $vehicleClass): View
+    {
+        $vehicleClass->loadCount('vehicles');
+
+        return view('admin.vehicle-classes.show', [
+            'title' => 'Araç sınıfı detayı',
+            'vehicleClass' => $vehicleClass,
+        ]);
+    }
+
     public function edit(VehicleClass $vehicleClass): View
     {
         return view('admin.vehicle-classes.edit', [

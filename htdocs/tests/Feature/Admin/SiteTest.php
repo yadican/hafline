@@ -42,6 +42,7 @@ class SiteTest extends TestCase
         $site = Site::query()->where('name', 'KARTAL MERKEZ')->firstOrFail();
         $this->assertTrue($site->active);
 
+        $this->actingAs($this->admin)->get(route('admin.sites.show', $site))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.sites.edit', $site))->assertOk();
 
         $this->actingAs($this->admin)

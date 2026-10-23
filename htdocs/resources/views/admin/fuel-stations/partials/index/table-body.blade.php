@@ -7,8 +7,9 @@
             <td class="panel-tutar"><x-ui.money :value="$fuelStation->unit_price" :decimals="4" suffix="TL/lt" /></td>
             <td><x-ui.active-badge :active="$fuelStation->active" /></td>
             <x-table.actions
-                :edit="route('admin.fuel-stations.edit', $fuelStation)"
-                :delete="route('admin.fuel-stations.destroy', $fuelStation)"
+                :show="route('admin.fuel-stations.show', $fuelStation)"
+                :edit="auth()->user()->can('edit-fuel-station') ? route('admin.fuel-stations.edit', $fuelStation) : null"
+                :delete="auth()->user()->can('delete-fuel-station') ? route('admin.fuel-stations.destroy', $fuelStation) : null"
                 confirm="Akaryakıt istasyonu silinsin mi?"
                 :confirm-text="$fuelStation->name.' listeden kaldırılacak. Geçmiş yakıt fişleri etkilenmez.'"
             />

@@ -40,6 +40,7 @@ class CashCategoryTest extends TestCase
         $category = CashCategory::query()->where('name', 'Yemek')->firstOrFail();
         $this->assertSame(CashDirection::Expense, $category->direction);
 
+        $this->actingAs($this->admin)->get(route('admin.cash-categories.show', $category))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.cash-categories.edit', $category))->assertOk();
 
         $this->actingAs($this->admin)
@@ -93,18 +94,18 @@ class CashCategoryTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.cash-categories.index', ['q' => 'maa']))
             ->assertOk()
-            ->assertSee('Maaş')
-            ->assertDontSee('Kira');
+            ->assertSee('<td>Maaş</td>', false)
+            ->assertDontSee('<td>Kira</td>', false);
 
         $this->actingAs($this->admin)
             ->get(route('admin.cash-categories.index', ['active' => '0']))
-            ->assertSee('Kira')
-            ->assertDontSee('Maaş');
+            ->assertSee('<td>Kira</td>', false)
+            ->assertDontSee('<td>Maaş</td>', false);
 
         $this->actingAs($this->admin)
             ->get(route('admin.cash-categories.index', ['direction' => 'income']))
-            ->assertSee('Faiz geliri')
-            ->assertDontSee('Maaş');
+            ->assertSee('<td>Faiz geliri</td>', false)
+            ->assertDontSee('<td>Maaş</td>', false);
     }
 
     public function test_options_offer_matching_and_shared_categories(): void

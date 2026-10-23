@@ -60,6 +60,7 @@ class FuelStationTest extends TestCase
             ->assertSee('TUZLA AKARYAKIT LTD')
             ->assertSee('KARTAL, TUZLA');
 
+        $this->actingAs($this->admin)->get(route('admin.fuel-stations.show', $station))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.fuel-stations.edit', $station))->assertOk();
 
         $this->actingAs($this->admin)

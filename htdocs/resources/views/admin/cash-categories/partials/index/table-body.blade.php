@@ -5,8 +5,9 @@
             <td><x-ui.enum-badge :value="$cashCategory->direction" text /></td>
             <td><x-ui.active-badge :active="$cashCategory->active" /></td>
             <x-table.actions
-                :edit="route('admin.cash-categories.edit', $cashCategory)"
-                :delete="route('admin.cash-categories.destroy', $cashCategory)"
+                :show="route('admin.cash-categories.show', $cashCategory)"
+                :edit="auth()->user()->can('edit-cash-category') ? route('admin.cash-categories.edit', $cashCategory) : null"
+                :delete="auth()->user()->can('delete-cash-category') ? route('admin.cash-categories.destroy', $cashCategory) : null"
                 confirm="Kasa kategorisi silinsin mi?"
                 :confirm-text="$cashCategory->name.' kategorisi listeden kaldırılacak. Geçmiş kasa kayıtları etkilenmez.'"
             />

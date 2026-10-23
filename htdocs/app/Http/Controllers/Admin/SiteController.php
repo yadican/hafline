@@ -43,6 +43,16 @@ class SiteController extends AdminController
         );
     }
 
+    public function show(Site $site): View
+    {
+        $site->load('parties', 'fuelStations', 'routes.dumpSite');
+
+        return view('admin.sites.show', [
+            'title' => 'Şantiye detayı',
+            'site' => $site,
+        ]);
+    }
+
     public function edit(Site $site): View
     {
         $site->load('parties', 'fuelStations', 'routes.dumpSite');

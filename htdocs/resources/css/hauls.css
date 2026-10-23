@@ -1,4 +1,68 @@
-/* Taşıma / makine / yakıt fişi — arama paneli kromu (layout Tailwind grid) */
+/* Taşıma / makine / yakıt fişi — arama paneli + liste nefes alanı */
+
+.haul-list .panel-title {
+	margin-bottom: 20px;
+	padding-bottom: 18px;
+}
+
+.haul-toolbar {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 10px;
+	margin-bottom: 14px;
+	padding: 12px 14px;
+	background: #fff;
+	border: 1px solid var(--ui-border-soft);
+	border-radius: var(--ui-radius);
+}
+.haul-toolbar-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 10px 16px;
+}
+.haul-toolbar-start,
+.haul-toolbar-end {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 10px;
+}
+.haul-toolbar-count {
+	display: inline-flex;
+	align-items: center;
+	min-height: 28px;
+	padding: 0 10px;
+	border-radius: 999px;
+	background: var(--ui-surface-muted);
+	border: 1px solid var(--ui-border-soft);
+	color: var(--ui-muted);
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	white-space: nowrap;
+}
+.haul-toolbar-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 0;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: var(--ui-surface-muted);
+	border: 1px solid var(--ui-border-soft);
+	color: var(--ui-muted);
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.4;
+}
+.haul-toolbar-note i {
+	margin-top: 2px;
+	color: var(--ui-search);
+	opacity: 0.9;
+}
 
 .haul-search-toggle .haul-search-chevron {
 	font-size: 12px;
@@ -8,8 +72,9 @@
 	transform: rotate(180deg);
 }
 .panel-liste-bar .haul-search-toggle.is-open {
-	background: var(--ui-steel-dark);
-	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+	background: var(--ui-search-dark);
+	border-color: var(--ui-search-dark);
+	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
 }
 .haul-search-count {
 	display: inline-flex;
@@ -19,7 +84,7 @@
 	height: 20px;
 	padding: 0 6px;
 	border-radius: 10px;
-	background: var(--ui-ochre);
+	background: rgba(255, 255, 255, 0.22);
 	color: #fff;
 	font-size: 12px;
 	font-weight: bold;
@@ -73,10 +138,28 @@
 .haul-list .panel-list-scroll {
 	overflow-x: auto;
 	-webkit-overflow-scrolling: touch;
+	background: #fff;
+	border: 1px solid var(--ui-border-soft);
+	border-radius: var(--ui-radius);
 }
 .haul-table.panel-list {
 	table-layout: auto;
 	min-width: 1180px;
+}
+.haul-table th,
+.haul-table td {
+	padding-top: 11px;
+	padding-bottom: 11px;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+.haul-table .panel-sort-link {
+	padding: 11px 10px;
+}
+.haul-table .panel-tutar {
+	color: var(--ui-ink);
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
 }
 .haul-table td.is-center,
 .haul-table th.is-center {

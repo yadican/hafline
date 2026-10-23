@@ -85,11 +85,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:view-cash-category')->group(function () {
-        Route::resource('cash-categories', CashCategoryController::class)->except(['show']);
+        Route::resource('cash-categories', CashCategoryController::class);
     });
 
     Route::middleware('can:view-bank')->group(function () {
-        Route::resource('banks', BankController::class)->except(['show']);
+        Route::resource('banks', BankController::class);
     });
 
     Route::middleware('can:view-party')->group(function () {
@@ -118,24 +118,24 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('can:view-vehicle-class')->group(function () {
-        Route::resource('vehicle-classes', VehicleClassController::class)->except(['show']);
+        Route::resource('vehicle-classes', VehicleClassController::class);
     });
 
     Route::middleware('can:view-site')->group(function () {
-        Route::resource('sites', SiteController::class)->except(['show']);
+        Route::resource('sites', SiteController::class);
     });
 
     Route::middleware('can:view-dump-site')->group(function () {
-        Route::resource('dump-sites', DumpSiteController::class)->except(['show']);
+        Route::resource('dump-sites', DumpSiteController::class);
     });
 
     Route::middleware('can:view-haul-route')->group(function () {
-        Route::resource('haul-routes', HaulRouteController::class)->except(['show']);
+        Route::resource('haul-routes', HaulRouteController::class);
         Route::resource('haul-routes.vehicle-prices', RouteVehiclePriceController::class)->only(['store', 'destroy'])->scoped();
     });
 
     Route::middleware('can:view-fuel-station')->group(function () {
-        Route::resource('fuel-stations', FuelStationController::class)->except(['show']);
+        Route::resource('fuel-stations', FuelStationController::class);
     });
 
     Route::middleware('can:view-employee')->group(function () {

@@ -2,9 +2,16 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Bank;
+use App\Models\CashCategory;
+use App\Models\DumpSite;
+use App\Models\FuelStation;
+use App\Models\HaulRoute;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\Site;
 use App\Models\User;
+use App\Models\VehicleClass;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -145,6 +152,145 @@ class RolePermissionTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('admin.banks.store'), ['name' => 'Hack Bank', 'active' => '1'])
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_bank_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-bank', 'view-dashboard']);
+
+        $bank = Bank::factory()->create(['name' => 'Görünen Banka']);
+
+        $this->actingAs($user)
+            ->get(route('admin.banks.show', $bank))
+            ->assertOk()
+            ->assertSee('Görünen Banka')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.banks.edit', $bank))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_cash_category_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-cash-category', 'view-dashboard']);
+
+        $category = CashCategory::factory()->create(['name' => 'Görünen Kategori']);
+
+        $this->actingAs($user)
+            ->get(route('admin.cash-categories.show', $category))
+            ->assertOk()
+            ->assertSee('Görünen Kategori')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.cash-categories.edit', $category))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_vehicle_class_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-vehicle-class', 'view-dashboard']);
+
+        $class = VehicleClass::factory()->create(['name' => 'Görünen Sınıf']);
+
+        $this->actingAs($user)
+            ->get(route('admin.vehicle-classes.show', $class))
+            ->assertOk()
+            ->assertSee('Görünen Sınıf')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.vehicle-classes.edit', $class))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_site_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-site', 'view-dashboard']);
+
+        $site = Site::factory()->create(['name' => 'Görünen Şantiye']);
+
+        $this->actingAs($user)
+            ->get(route('admin.sites.show', $site))
+            ->assertOk()
+            ->assertSee('Görünen Şantiye')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.sites.edit', $site))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_dump_site_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-dump-site', 'view-dashboard']);
+
+        $dumpSite = DumpSite::factory()->create(['name' => 'Görünen Döküm']);
+
+        $this->actingAs($user)
+            ->get(route('admin.dump-sites.show', $dumpSite))
+            ->assertOk()
+            ->assertSee('Görünen Döküm')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.dump-sites.edit', $dumpSite))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_haul_route_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-haul-route', 'view-dashboard']);
+
+        $route = HaulRoute::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('admin.haul-routes.show', $route))
+            ->assertOk()
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.haul-routes.edit', $route))
+            ->assertForbidden();
+    }
+
+    public function test_view_permission_can_show_fuel_station_but_cannot_edit(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-fuel-station', 'view-dashboard']);
+
+        $station = FuelStation::factory()->create(['name' => 'Görünen İstasyon']);
+
+        $this->actingAs($user)
+            ->get(route('admin.fuel-stations.show', $station))
+            ->assertOk()
+            ->assertSee('Görünen İstasyon')
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($user)
+            ->get(route('admin.fuel-stations.edit', $station))
             ->assertForbidden();
     }
 }

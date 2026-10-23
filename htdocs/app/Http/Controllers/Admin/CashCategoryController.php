@@ -42,6 +42,14 @@ class CashCategoryController extends AdminController
         );
     }
 
+    public function show(CashCategory $cashCategory): View
+    {
+        return view('admin.cash-categories.show', [
+            'title' => 'Kasa kategorisi detayı',
+            'cashCategory' => $cashCategory,
+        ]);
+    }
+
     public function edit(CashCategory $cashCategory): View
     {
         return view('admin.cash-categories.edit', [

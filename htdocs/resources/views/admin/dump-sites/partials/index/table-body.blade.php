@@ -13,8 +13,9 @@
             </td>
             <td><x-ui.active-badge :active="$dumpSite->active" /></td>
             <x-table.actions
-                :edit="route('admin.dump-sites.edit', $dumpSite)"
-                :delete="route('admin.dump-sites.destroy', $dumpSite)"
+                :show="route('admin.dump-sites.show', $dumpSite)"
+                :edit="auth()->user()->can('edit-dump-site') ? route('admin.dump-sites.edit', $dumpSite) : null"
+                :delete="auth()->user()->can('delete-dump-site') ? route('admin.dump-sites.destroy', $dumpSite) : null"
                 confirm="Döküm yeri silinsin mi?"
                 :confirm-text="$dumpSite->name.' listeden kaldırılacak. Geçmiş taşıma fişleri etkilenmez.'"
             />

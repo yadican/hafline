@@ -46,6 +46,16 @@ class FuelStationController extends AdminController
         );
     }
 
+    public function show(FuelStation $fuelStation): View
+    {
+        $fuelStation->load(['party', 'sites']);
+
+        return view('admin.fuel-stations.show', [
+            'title' => 'Akaryakıt istasyonu detayı',
+            'fuelStation' => $fuelStation,
+        ]);
+    }
+
     public function edit(FuelStation $fuelStation): View
     {
         return view('admin.fuel-stations.edit', [

@@ -9,7 +9,7 @@
             <td>{{ $log->ip_address ?: '—' }}</td>
             <td class="is-center">{{ $log->status ?: '—' }}</td>
             <x-table.actions>
-                <a href="{{ route($showRoute, $log) }}" class="panel-act panel-act-edit" title="Detay">
+                <a href="{{ route($showRoute, $log) }}" class="panel-act panel-act-show" title="Detay">
                     <i class="fa-solid fa-eye" aria-hidden="true"></i>
                     <span class="sr-only">Detay</span>
                 </a>

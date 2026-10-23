@@ -38,6 +38,7 @@ class VehicleClassTest extends TestCase
 
         $class = VehicleClass::query()->where('name', 'TIR')->firstOrFail();
 
+        $this->actingAs($this->admin)->get(route('admin.vehicle-classes.show', $class))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.vehicle-classes.edit', $class))->assertOk();
 
         $this->actingAs($this->admin)

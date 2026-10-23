@@ -44,6 +44,17 @@ class DumpSiteController extends AdminController
         );
     }
 
+    public function show(DumpSite $dumpSite): View
+    {
+        $dumpSite->load(['party', 'classPrices.vehicleClass']);
+        $dumpSite->loadCount('routes');
+
+        return view('admin.dump-sites.show', [
+            'title' => 'Döküm yeri detayı',
+            'dumpSite' => $dumpSite,
+        ]);
+    }
+
     public function edit(DumpSite $dumpSite): View
     {
         $dumpSite->load('classPrices');

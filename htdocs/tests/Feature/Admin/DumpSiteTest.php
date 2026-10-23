@@ -45,6 +45,7 @@ class DumpSiteTest extends TestCase
         $this->assertSame($operator->id, $dumpSite->party_id);
         $this->assertTrue($operator->fresh()->hasRole(PartyRole::DumpOperator));
 
+        $this->actingAs($this->admin)->get(route('admin.dump-sites.show', $dumpSite))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.dump-sites.edit', $dumpSite))->assertOk();
 
         $this->actingAs($this->admin)

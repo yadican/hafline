@@ -1,5 +1,9 @@
 @props(['heading', 'icon' => null, 'description' => null, 'breadcrumbs' => [], 'back' => null, 'meta' => null])
 
+@php
+    $hasActions = isset($actions) && ! $actions->isEmpty();
+@endphp
+
 <div class="panel-title">
     <div class="panel-title-main">
         @if ($icon)
@@ -26,8 +30,11 @@
             @endif
         </div>
     </div>
-    @if ($meta || $back)
+    @if ($meta || $back || $hasActions)
         <div class="panel-title-aside">
+            @if ($hasActions)
+                {{ $actions }}
+            @endif
             @if ($meta)
                 <span class="panel-meta">{{ $meta }}</span>
             @endif

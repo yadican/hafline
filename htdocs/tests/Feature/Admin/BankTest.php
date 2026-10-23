@@ -45,6 +45,7 @@ class BankTest extends TestCase
         $this->assertSame('Ayşe Yılmaz', $bank->representative);
         $this->assertNull($bank->account_no);
 
+        $this->actingAs($this->admin)->get(route('admin.banks.show', $bank))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.banks.edit', $bank))->assertOk();
 
         $this->actingAs($this->admin)

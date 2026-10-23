@@ -12,8 +12,9 @@
             <td class="is-center">{{ $site->parties_count ?: '—' }}</td>
             <td><x-ui.active-badge :active="$site->active" /></td>
             <x-table.actions
-                :edit="route('admin.sites.edit', $site)"
-                :delete="route('admin.sites.destroy', $site)"
+                :show="route('admin.sites.show', $site)"
+                :edit="auth()->user()->can('edit-site') ? route('admin.sites.edit', $site) : null"
+                :delete="auth()->user()->can('delete-site') ? route('admin.sites.destroy', $site) : null"
                 confirm="Şantiye silinsin mi?"
                 :confirm-text="$site->name.' listeden kaldırılacak. Geçmiş taşıma fişleri etkilenmez.'"
             />

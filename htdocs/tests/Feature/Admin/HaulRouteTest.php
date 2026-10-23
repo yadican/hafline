@@ -76,6 +76,7 @@ class HaulRouteTest extends TestCase
         RouteClassPrice::query()->create(['route_id' => $route->id, 'vehicle_class_id' => $tir->id, 'price' => 4000]);
         RouteClassPrice::query()->create(['route_id' => $route->id, 'vehicle_class_id' => $kamyon->id, 'price' => 3000]);
 
+        $this->actingAs($this->admin)->get(route('admin.haul-routes.show', $route))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.haul-routes.edit', $route))->assertOk();
 
         $this->actingAs($this->admin)

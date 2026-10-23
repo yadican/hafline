@@ -42,6 +42,14 @@ class BankController extends AdminController
         );
     }
 
+    public function show(Bank $bank): View
+    {
+        return view('admin.banks.show', [
+            'title' => 'Banka detayı',
+            'bank' => $bank,
+        ]);
+    }
+
     public function edit(Bank $bank): View
     {
         return view('admin.banks.edit', [

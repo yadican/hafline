@@ -25,13 +25,13 @@
     --color-ochre-deep: #b0782a;
     --color-ochre-dark: #8c5f20;
     --color-ochre-soft: #f3ebe0;
-    --color-paper: #f5efe4;
-    --color-canvas: #f6f4f1;
+    --color-paper: #ffffff;
+    --color-canvas: #f3f4f6;
     --color-steel: #0e1114;
     --color-ink: #2a2e32;
     --color-soil-ink: #6b4515;
-    --color-line: #d4cfc7;
-    --color-side: #ebe8e4;
+    --color-line: #d5d8de;
+    --color-side: #eceef2;
 }
 
 [x-cloak] {
@@ -820,8 +820,8 @@ span.flatpickr-weekday {
 }
 
 .panel-list .panel-badge-pasif {
-    background: #f3f1ee;
-    color: #8a847c;
+    background: var(--ui-active-bg);
+    color: var(--ui-muted);
 }
 
 .panel-list .panel-badge-gider,
@@ -1165,7 +1165,9 @@ input.panel-plate::placeholder {
 
 .panel-list th.is-actions,
 .panel-list td.panel-actions-cell {
-    width: 96px;
+    width: 120px;
+    overflow: visible;
+    text-overflow: clip;
     text-align: center;
 }
 
