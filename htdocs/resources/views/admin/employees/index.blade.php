@@ -3,7 +3,7 @@
 @section('content')
     <x-panel.page
         heading="Personel kartları"
-        icon="fa-solid fa-id-badge"
+        icon="fa-solid fa-id-card"
         description="Cari kişi kartlarına bağlı maaş ve iş dönemi bilgilerini yönetin."
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Personel' => null, 'Personel kartları' => null]"
     >

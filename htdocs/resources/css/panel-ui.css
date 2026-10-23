@@ -839,6 +839,23 @@ a.um-title.um-active {
 .panel-liste-bar form.grid > * {
 	min-width: 0;
 }
+/* Grid toolbar buton grubu: yazı kadar genişlik, sığmazsa alta; mobilde satırı doldur */
+.panel-liste-bar form.grid .panel-liste-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	min-width: min-content; /* grid > * min-width:0 ezmesin, butonlar kesilmesin */
+}
+@media (max-width: 767px) {
+	.panel-liste-bar form.grid .panel-liste-actions {
+		min-width: 0;
+	}
+	.panel-liste-bar form.grid .panel-liste-actions > .panel-btn {
+		flex: 1 1 0;
+		justify-content: center;
+	}
+}
 .panel-liste-bar form.grid .select2-container,
 .panel-liste-bar form.grid .panel-date,
 .panel-liste-bar form.grid .panel-field,

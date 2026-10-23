@@ -42,6 +42,7 @@
 .vehicle-periodic-report.panel-wrap,
 .owner-periodic-report.panel-wrap,
 .ticket-control-report.panel-wrap,
+.employee-salaries-report.panel-wrap,
 .vehicle-monthly-report .panel,
 .vehicle-site-monthly-report .panel,
 .vehicle-balance-report .panel,
@@ -53,6 +54,7 @@
 .vehicle-periodic-report .panel,
 .owner-periodic-report .panel,
 .ticket-control-report .panel,
+.employee-salaries-report .panel,
 .vehicle-monthly-report .panel-body,
 .vehicle-site-monthly-report .panel-body,
 .vehicle-balance-report .panel-body,
@@ -64,6 +66,7 @@
 .vehicle-periodic-report .panel-body,
 .owner-periodic-report .panel-body,
 .ticket-control-report .panel-body,
+.employee-salaries-report .panel-body,
 .vehicle-monthly-report .report-matrix,
 .vehicle-site-monthly-report .report-matrix,
 .vehicle-balance-report .report-matrix,
@@ -74,7 +77,8 @@
 .dump-site-payment-report .report-matrix,
 .vehicle-periodic-report .report-matrix,
 .owner-periodic-report .report-matrix,
-.ticket-control-report .report-matrix {
+.ticket-control-report .report-matrix,
+.employee-salaries-report .report-matrix {
 	max-width: 100%;
 	min-width: 0;
 }
@@ -89,7 +93,8 @@
 .dump-site-payment-report .panel-body,
 .vehicle-periodic-report .panel-body,
 .owner-periodic-report .panel-body,
-.ticket-control-report .panel-body {
+.ticket-control-report .panel-body,
+.employee-salaries-report .panel-body {
 	overflow-x: clip;
 }
 
@@ -106,7 +111,8 @@
 .dump-site-payment-report .panel-list-scroll,
 .vehicle-periodic-report .panel-list-scroll,
 .owner-periodic-report .panel-list-scroll,
-.ticket-control-report .panel-list-scroll {
+.ticket-control-report .panel-list-scroll,
+.employee-salaries-report .panel-list-scroll {
 	max-width: 100%;
 	width: 100%;
 	overflow-x: auto;
@@ -355,6 +361,60 @@
 	gap: 8px;
 }
 
+/* Personel maaş kartı: içerik genişliği, sağa hizalı tutar/input */
+.employee-salary-table.panel-list {
+	table-layout: auto;
+	width: max-content;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.employee-salary-table th,
+.employee-salary-table td {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.employee-salary-table th:nth-child(1),
+.employee-salary-table td:nth-child(1) {
+	width: 2.5rem;
+	padding-inline: 10px;
+}
+
+.employee-salary-table .employee-salary-name {
+	font-weight: 600;
+}
+
+.employee-salary-table .employee-salary-index {
+	color: var(--ui-muted, #6b7280);
+	font-variant-numeric: tabular-nums;
+}
+
+.employee-salary-table .employee-salary-edit {
+	overflow: visible;
+	background: var(--ui-ochre-soft, #f3ebe0);
+}
+
+.employee-salary-table tbody tr:nth-child(even) .employee-salary-edit {
+	background: color-mix(in srgb, var(--ui-ochre-soft, #f3ebe0) 70%, var(--ui-surface-muted, #f8f9fb));
+}
+
+.employee-salary-table tbody tr:hover .employee-salary-edit {
+	background: color-mix(in srgb, var(--ui-ochre-soft, #f3ebe0) 55%, var(--ui-active-bg, #e8eaee));
+}
+
+.employee-salary-table .employee-salary-edit input.slct {
+	display: block;
+	margin-left: auto;
+	border-radius: 6px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.employee-salary-table .employee-salary-payable {
+	font-weight: 700;
+}
+
 @media print {
 	body:has(.site-exit-report) .app-topbar,
 	body:has(.site-exit-report) .um-cell,
@@ -392,6 +452,9 @@
 	body:has(.ticket-control-report) .app-topbar,
 	body:has(.ticket-control-report) .um-cell,
 	body:has(.ticket-control-report) .app-footer,
+	body:has(.employee-salaries-report) .app-topbar,
+	body:has(.employee-salaries-report) .um-cell,
+	body:has(.employee-salaries-report) .app-footer,
 	.site-exit-report .panel-title,
 	.site-exit-report .site-exit-filters,
 	.site-exit-report .site-exit-actions,
@@ -427,7 +490,10 @@
 	.owner-periodic-report .report-actions,
 	.ticket-control-report .panel-title,
 	.ticket-control-report .report-filters,
-	.ticket-control-report .report-actions {
+	.ticket-control-report .report-actions,
+	.employee-salaries-report .panel-title,
+	.employee-salaries-report .report-filters,
+	.employee-salaries-report .report-actions {
 		display: none !important;
 	}
 
@@ -442,8 +508,22 @@
 	.dump-site-payment-report .panel-list-scroll,
 	.vehicle-periodic-report .panel-list-scroll,
 	.owner-periodic-report .panel-list-scroll,
-	.ticket-control-report .panel-list-scroll {
+	.ticket-control-report .panel-list-scroll,
+	.employee-salaries-report .panel-list-scroll {
 		overflow: visible;
+	}
+
+	.employee-salary-table .employee-salary-edit {
+		background: transparent !important;
+	}
+
+	.employee-salary-table .employee-salary-edit input.slct {
+		width: auto;
+		height: auto;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		box-shadow: none;
 	}
 
 	.report-table.panel-list,
