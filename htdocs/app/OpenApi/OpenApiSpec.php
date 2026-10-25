@@ -64,7 +64,7 @@ MD
     required: ['login', 'password'],
     properties: [
         new OA\Property(property: 'login', type: 'string', description: 'Kullanıcı adı veya e-posta', example: 'hafline.api'),
-        new OA\Property(property: 'password', type: 'string', format: 'password', example: 'password'),
+        new OA\Property(property: 'password', type: 'string', format: 'password', example: 'HafLine34!'),
     ]
 )]
 #[OA\Schema(
