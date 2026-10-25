@@ -61,7 +61,7 @@ docker compose up -d postgres app scheduler
 ```
 
 - [ ] `postgres`, `app`, `scheduler` “Recreated / Started”
-- [ ] `web`, `redis`, `rabbitmq`, `kafka`, `db_backup` **yeniden başlatılmadı** (gerek yok)
+- [ ] `web`, `redis`, `db_backup` **yeniden başlatılmadı** (gerek yok)
 - [ ] `postgres` birkaç saniye kesinti verir; veri `./data/postgres` bind mount’unda, kaybolmaz
 
 `"APP_URL" variable is not set` uyarısı zararsızdır (kök `.env`’deki `L5_SWAGGER_CONST_HOST`), yok say.
