@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class AuditLogRepository extends Repository
 {
@@ -43,8 +44,8 @@ class AuditLogRepository extends Repository
             ->when($filters['method'] ?? null, fn (Builder $query, string $method) => $query->where('method', $method))
             ->when($filters['ip'] ?? null, fn (Builder $query, string $ip) => $query->where('ip_address', $ip))
             ->when($filters['user_id'] ?? null, fn (Builder $query, string $userId) => $query->where('user_id', $userId))
-            ->when($filters['from'] ?? null, fn (Builder $query, string $from) => $query->whereDate('created_at', '>=', $from))
-            ->when($filters['to'] ?? null, fn (Builder $query, string $to) => $query->whereDate('created_at', '<=', $to));
+            ->when($filters['from'] ?? null, fn (Builder $query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
+            ->when($filters['to'] ?? null, fn (Builder $query, string $to) => $query->where('created_at', '<', Carbon::parse($to)->addDay()->startOfDay()));
 
         return $this->applySort($query, $sort)
             ->paginate($perPage)

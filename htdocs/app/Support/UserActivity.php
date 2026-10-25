@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Http\Middleware\PreventDuplicateSubmissions;
 use App\Models\AuditLog;
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -40,9 +41,24 @@ class UserActivity
     ];
 
     /**
+     * Session values must be read here: by the time the returned write runs,
+     * the session has been saved, its error bag serialized and its flash data aged.
+     *
      * @param  array<string, array<string, mixed>>  $before
+     * @return Closure(): void
      */
-    public function record(Request $request, Response $response, ?string $actorId, array $before): void
+    public function prepare(Request $request, Response $response, ?string $actorId, array $before): Closure
+    {
+        $context = $this->context($request, $response);
+
+        return fn () => $this->record($request, $response, $actorId, $before, $context);
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $before
+     * @param  array<string, mixed>  $context
+     */
+    private function record(Request $request, Response $response, ?string $actorId, array $before, array $context): void
     {
         $models = $this->models($request);
         $subject = Arr::last($models);
@@ -70,7 +86,7 @@ class UserActivity
             'status' => $response->getStatusCode(),
             'payload' => $this->payload($request),
             'response' => $this->responseBody($response),
-            'context' => $this->context($request, $response),
+            'context' => $context,
         ]);
     }
 

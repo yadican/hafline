@@ -93,6 +93,23 @@ class DashboardTest extends TestCase
             ->assertSee(route('admin.reports.cash-movements'), false);
     }
 
+    public function test_day_counts_include_both_ends_of_the_day_only(): void
+    {
+        $this->travelTo(today()->setTime(12, 0));
+
+        Haul::factory()->create(['hauled_at' => today()->subDay()->setTime(23, 59, 59)]);
+        Haul::factory()->create(['hauled_at' => today()->setTime(0, 0)]);
+        Haul::factory()->create(['hauled_at' => today()->setTime(23, 59, 59)]);
+        Haul::factory()->create(['hauled_at' => today()->addDay()->setTime(0, 0)]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('stats', fn (array $stats): bool => collect($stats)->firstWhere('label', 'Bugün taşıma')['value'] === 2
+                && collect($stats)->firstWhere('label', 'Bugün taşıma')['previous'] === 1)
+            ->assertViewHas('recentHauls', fn (array $recent): bool => count($recent['items']) === 2);
+    }
+
     public function test_dashboard_widgets_respect_permissions(): void
     {
         (new RolePermissionSeeder)->run();

@@ -172,6 +172,18 @@ class UserActivityLogTest extends TestCase
         $this->assertSame(200, $log->status);
     }
 
+    public function test_page_opened_after_a_redirect_keeps_the_flashed_message(): void
+    {
+        $admin = User::factory()->yonetici()->create();
+
+        $this->actingAs($admin)
+            ->withSession(['success' => 'Kayıt oluşturuldu.', '_flash' => ['old' => ['success'], 'new' => []]])
+            ->get(route('admin.examples.index'))
+            ->assertOk();
+
+        $this->assertSame('Kayıt oluşturuldu.', AuditLog::query()->sole()->context['messages']['success']);
+    }
+
     public function test_audit_log_screens_are_not_recorded(): void
     {
         $admin = User::factory()->yonetici()->create();

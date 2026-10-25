@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
+use function Illuminate\Support\defer;
+
 /**
  * Every request is stored with the posted fields, the record before
- * and after, and the request that carried them.
+ * and after, and the request that carried them. The row is written after
+ * the response has been sent, including for 4xx/5xx responses.
  */
 class RecordUserActivity
 {
@@ -28,7 +31,7 @@ class RecordUserActivity
         $response = $next($request);
 
         try {
-            $this->activity->record($request, $response, $actorId, $before);
+            defer($this->activity->prepare($request, $response, $actorId, $before))->always();
         } catch (Throwable $exception) {
             report($exception);
         }

@@ -238,7 +238,8 @@ class DashboardService extends Service
             function () use ($today): array {
                 return Haul::query()
                     ->with(['vehicle:id,plate', 'site:id,name', 'dumpSite:id,name'])
-                    ->whereDate('hauled_at', $today)
+                    ->where('hauled_at', '>=', $today->copy()->startOfDay())
+                    ->where('hauled_at', '<', $today->copy()->addDay()->startOfDay())
                     ->orderByDesc('hauled_at')
                     ->limit(8)
                     ->get()
@@ -306,7 +307,10 @@ class DashboardService extends Service
     {
         return (int) DashboardCache::remember(
             $cacheKey,
-            fn (): int => $model::query()->whereDate($column, $day)->count(),
+            fn (): int => $model::query()
+                ->where($column, '>=', $day->copy()->startOfDay())
+                ->where($column, '<', $day->copy()->addDay()->startOfDay())
+                ->count(),
         );
     }
 

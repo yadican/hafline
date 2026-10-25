@@ -11,6 +11,8 @@ services:
       context: ./docker/php
     container_name: hafline-app
     networks: [hafline]
+    environment:
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
     volumes:
       - ./htdocs:/var/www/html
       - ./data:/var/www/data
@@ -26,6 +28,8 @@ services:
     image: hafline-app:latest
     container_name: hafline-scheduler
     networks: [hafline]
+    environment:
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
     working_dir: /var/www/html
     command: ["php", "artisan", "schedule:work"]
     volumes:
@@ -57,6 +61,8 @@ services:
     image: postgres:latest
     container_name: hafline-postgres
     networks: [hafline]
+    # JIT compile time exceeds execution time for this app's short OLTP queries.
+    command: ["postgres", "-c", "jit=off"]
     environment:
       POSTGRES_DB: hafline
       POSTGRES_USER: hafline
