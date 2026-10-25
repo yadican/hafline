@@ -9,6 +9,10 @@ export const colors = {
   selected: '#E8F1FC',
   danger: '#D92D20',
   dangerSurface: '#FEF3F2',
+  success: '#067647',
+  successSurface: '#ECFDF3',
+  warning: '#B54708',
+  warningSurface: '#FFFAEB',
 } as const;
 
 export const spacing = {

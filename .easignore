@@ -1,0 +1,28 @@
+# EAS reads this file from the git root and uploads the whole repository, so everything
+# except the mobile app stays local. When this file exists, .gitignore files are not applied.
+/*
+!/mobile/
+
+# mirrors mobile/.gitignore
+/mobile/.expo/
+/mobile/dist/
+/mobile/web-build/
+/mobile/expo-env.d.ts
+/mobile/.kotlin/
+/mobile/ios/
+/mobile/android/
+/mobile/example/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+.env*.local
+*.tsbuildinfo

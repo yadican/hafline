@@ -5,6 +5,7 @@ import { errorMessage } from '@/api/errors';
 import type { FieldSession } from '@/api/types';
 import { useAuth, useSignedInUser } from '@/auth/auth-provider';
 import { Button } from '@/components/button';
+import { InfoRow } from '@/components/info-row';
 import { ErrorBanner, ErrorState, LoadingState } from '@/components/screen-state';
 import { useCloseSession, useCurrentSession } from '@/features/field-session/queries';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -39,8 +40,7 @@ export default function HomeScreen() {
       {session.data ? (
         <>
           <SessionCard session={session.data} />
-          <Button title="Plaka tara" onPress={() => undefined} disabled />
-          <Text style={styles.hint}>Plaka tarama bir sonraki adımda eklenecek.</Text>
+          <Button title="Plaka tara" onPress={() => router.push('/scan')} />
           <Button title="Oturumu değiştir" variant="secondary" onPress={() => router.push('/session')} />
           <Button title="Oturumu kapat" variant="danger" onPress={confirmClose} loading={closeSession.isPending} />
         </>
@@ -80,15 +80,6 @@ function SessionCard({ session }: { session: FieldSession }) {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   content: {
     gap: spacing.md,
@@ -111,22 +102,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontWeight: '700',
     color: colors.text,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  infoLabel: {
-    fontSize: fontSize.body,
-    color: colors.muted,
-  },
-  infoValue: {
-    flexShrink: 1,
-    fontSize: fontSize.body,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'right',
   },
   hint: {
     fontSize: fontSize.small,

@@ -1,10 +1,14 @@
+import { File } from 'expo-file-system';
+
 import { unwrap, type ApiClient } from './client';
 import type {
   FieldSession,
   HaulOptions,
+  HaulTicket,
   LoginRequest,
   LoginResponse,
   NamedOption,
+  PlateScan,
   Shift,
 } from './types';
 
@@ -49,4 +53,35 @@ export async function lockSession(
 
 export function closeSession(client: ApiClient): Promise<unknown> {
   return unwrap<unknown>(client.DELETE('/api/v1/field-sessions/current'));
+}
+
+export function scanPlate(client: ApiClient, fieldSessionId: string, photoUri: string): Promise<PlateScan> {
+  const form = new FormData();
+  // Expo's fetch rejects React Native's { uri, name, type } descriptors; parts must be Blob-like.
+  form.append('file', new File(photoUri));
+  form.append('field_session_id', fieldSessionId);
+
+  return unwrap<PlateScan>(
+    client.POST('/api/v1/hauls/scan', {
+      body: form as unknown as { file: string; field_session_id: string },
+      bodySerializer: () => form,
+    }),
+  );
+}
+
+export async function createHaul(
+  client: ApiClient,
+  body: { plate: string; scan_id: string; field_session_id: string },
+): Promise<HaulTicket> {
+  const result = await unwrap<{ data: HaulTicket }>(client.POST('/api/v1/hauls', { body }));
+
+  return result.data;
+}
+
+export async function fetchHaul(client: ApiClient, haulId: string): Promise<HaulTicket> {
+  const result = await unwrap<{ data: HaulTicket }>(
+    client.GET('/api/v1/hauls/{haul}', { params: { path: { haul: haulId } } }),
+  );
+
+  return result.data;
 }

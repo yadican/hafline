@@ -38,6 +38,8 @@ function RootNavigator() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ title: 'Hafline Saha' }} />
         <Stack.Screen name="session" options={{ title: 'Oturum Seçimi' }} />
+        <Stack.Screen name="scan" options={{ title: 'Plaka Tara' }} />
+        <Stack.Screen name="ticket/[id]" options={{ title: 'Fiş' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
