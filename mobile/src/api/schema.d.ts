@@ -13,7 +13,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login and receive a JWT */
+        /**
+         * Adım 1 · Giriş yap, token al
+         * @description Dönen token diğer tüm isteklerde `Authorization: Bearer <token>` olarak gönderilir.
+         */
         post: operations["authLogin"];
         delete?: never;
         options?: never;
@@ -30,7 +33,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Invalidate the current JWT */
+        /** Çıkış yap (token geçersiz olur) */
         post: operations["authLogout"];
         delete?: never;
         options?: never;
@@ -45,7 +48,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get dashboard summary for the authenticated user */
+        /** Kullanıcı ve özet sayılar */
         get: operations["dashboardShow"];
         put?: never;
         post?: never;
@@ -65,8 +68,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Lock site, dump site and shift for the field operator session
-         * @description Pick values from GET /hauls/options (sites, shifts) and GET /hauls/dump-sites?site_id=… then POST them here to lock the operator session on the server.
+         * Adım 4 · Saha oturumunu aç (field_session_id üretir)
+         * @description Şantiye, döküm yeri ve vardiyayı kilitler. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, `POST /hauls/scan` ve `POST /hauls` isteklerinde `field_session_id` olarak gönderilir.
          */
         post: operations["fieldSessionsLock"];
         delete?: never;
@@ -82,11 +85,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the operator active field session */
+        /**
+         * Açık oturumu getir
+         * @description Uygulama açılışında çağrılır. Açık oturum yoksa `data: null` döner.
+         */
         get: operations["fieldSessionsCurrent"];
         put?: never;
         post?: never;
-        /** Close the active field session */
+        /** Açık oturumu kapat */
         delete: operations["fieldSessionsClose"];
         options?: never;
         head?: never;
@@ -100,7 +106,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Sites and shifts for a field session */
+        /**
+         * Adım 2 · Şantiye ve vardiya listesi
+         * @description Oturum açma ekranındaki seçimler için. `sites[].id` > `site_id`, `shifts[].value` > `shift`.
+         */
         get: operations["haulsOptions"];
         put?: never;
         post?: never;
@@ -117,7 +126,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Dump sites with an active route for the given site */
+        /**
+         * Adım 3 · Şantiyenin döküm yerleri
+         * @description Sadece seçilen şantiyeyle aktif güzergahı olan döküm yerleri döner. `dump_sites[].id` > `dump_site_id`.
+         */
         get: operations["haulsDumpSites"];
         put?: never;
         post?: never;
@@ -136,7 +148,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload a plate photo, store it privately, and run OCR */
+        /**
+         * Adım 5 · Plaka fotoğrafını oku (scan_id üretir)
+         * @description Fotoğraf saklanır ve OCR'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir. `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.
+         */
         post: operations["haulsScan"];
         delete?: never;
         options?: never;
@@ -154,8 +169,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create a haul from a confirmed plate scan
-         * @description Site/dump/shift come from the locked field session. Send only plate, scan_id and field_session_id.
+         * Adım 6 · Fişi kaydet
+         * @description Şantiye, döküm yeri ve vardiya oturumdan alınır; fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.
          */
         post: operations["haulsStore"];
         delete?: never;
@@ -172,8 +187,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Today hauls for the locked site / dump / shift session
-         * @description Requires an open field session. List is filtered automatically by that session site_id, dump_site_id and shift.
+         * Açık oturumun bugünkü fişleri
+         * @description Kullanıcının açık oturumundaki şantiye, döküm yeri ve vardiyaya göre bugünkü fişler; en yeni önce, en fazla 100.
          */
         get: operations["haulsSession"];
         put?: never;
@@ -191,7 +206,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Print DTO for a haul */
+        /**
+         * Adım 7 · Fişi tekrar getir (yazdırma verisi)
+         * @description Fişi kesen kullanıcı, açık oturumunun şantiye, döküm yeri ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.
+         */
         get: operations["haulsShow"];
         put?: never;
         post?: never;
@@ -208,7 +226,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Private haul photo (signed URL) */
+        /**
+         * Fişin plaka fotoğrafı (imzalı adres)
+         * @description Token gerekmez; adres fiş verisindeki `photo_url` alanından olduğu gibi kullanılır. İmza ve süre adresin içindedir.
+         */
         get: operations["haulsPhoto"];
         put?: never;
         post?: never;
@@ -225,7 +246,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the authenticated user */
+        /** Giriş yapan kullanıcı */
         get: operations["profileShow"];
         put?: never;
         post?: never;
@@ -239,23 +260,242 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        User: {
-            /** @example 1 */
-            id: number;
-            /** @example Ada Lovelace */
+        NamedOption: {
+            /**
+             * Format: uuid
+             * @example 01a172ee-f413-7048-88d9-7a690733cf2a
+             */
+            id: string;
+            /** @example ADALAR HEYBELİ */
             name: string;
-            /** @example ada */
+        };
+        ShiftOption: {
+            /**
+             * @example day
+             * @enum {string}
+             */
+            value: "day" | "night";
+            /** @example Gündüz */
+            label: string;
+        };
+        HaulOptionsResponse: {
+            sites: components["schemas"]["NamedOption"][];
+            shifts: components["schemas"]["ShiftOption"][];
+        };
+        DumpSitesResponse: {
+            dump_sites: components["schemas"]["NamedOption"][];
+        };
+        FieldSessionRequest: {
+            /**
+             * Format: uuid
+             * @description GET /hauls/options > sites[].id
+             * @example 01a172ee-f413-7048-88d9-7a690733cf2a
+             */
+            site_id: string;
+            /**
+             * Format: uuid
+             * @description GET /hauls/dump-sites > dump_sites[].id
+             * @example 01a172ee-f9ae-70ac-a3f5-b7cb76efdf99
+             */
+            dump_site_id: string;
+            /**
+             * @description GET /hauls/options > shifts[].value
+             * @example day
+             * @enum {string}
+             */
+            shift: "day" | "night";
+        };
+        FieldSession: {
+            /**
+             * Format: uuid
+             * @description Sonraki isteklerde field_session_id olarak gönderilir
+             * @example 01a1745d-96cf-7091-809a-ae092f874703
+             */
+            id: string;
+            /** Format: uuid */
+            site_id: string;
+            /** @example ADALAR HEYBELİ */
+            site_name: string | null;
+            /** Format: uuid */
+            dump_site_id: string;
+            /** @example ERZURUM SAHA */
+            dump_site_name: string | null;
+            /**
+             * @example day
+             * @enum {string}
+             */
+            shift: "day" | "night";
+            /** @example Gündüz */
+            shift_label: string;
+            /**
+             * Format: date-time
+             * @example 2026-10-25T21:21:00+03:00
+             */
+            locked_at: string;
+        };
+        FieldSessionResponse: {
+            data: components["schemas"]["FieldSession"];
+        };
+        CurrentFieldSessionResponse: {
+            /** @description Açık oturum yoksa null */
+            data: components["schemas"]["FieldSession"] | null;
+        };
+        PlateScanResult: {
+            /**
+             * @description OCR plaka bulabildi mi
+             * @example true
+             */
+            success: boolean;
+            /**
+             * Format: uuid
+             * @description POST /hauls için gerekli. 1 saat geçerli.
+             * @example 01a17493-00d0-71e2-a9ac-55171280c960
+             */
+            scan_id: string;
+            /** Format: uuid */
+            field_session_id: string;
+            /**
+             * @description OCR'ın okuduğu metin (boşluksuz olabilir)
+             * @example 01HCU728
+             */
+            plate: string | null;
+            /**
+             * Format: float
+             * @description 0–1 arası. Yüksek olması doğruluk garantisi değildir.
+             * @example 0.93
+             */
+            confidence: number | null;
+            /**
+             * @description Okunan metin Türk plaka biçimine uyuyor mu
+             * @example true
+             */
+            matched_regex: boolean;
+            vehicle: {
+                /** Format: uuid */
+                id: string | null;
+                /**
+                 * @description Sistemde kayıtlı yazım
+                 * @example 01 HCU 728
+                 */
+                plate: string | null;
+                /** @example true */
+                found: boolean;
+            };
+            /**
+             * @description Aracın bugün kayıtlı sahibi var mı
+             * @example true
+             */
+            owner_on_date: boolean;
+            /**
+             * @description Okunan plakayla doğrudan fiş kesilebilir mi
+             * @example true
+             */
+            can_create: boolean;
+            /**
+             * @description can_create false ise sebebi
+             * @example null
+             */
+            message: string | null;
+        };
+        HaulStoreRequest: {
+            /**
+             * @description Kullanıcının onayladığı plaka. Kayıtlı bir araç olmalı.
+             * @example 01 HCU 728
+             */
+            plate: string;
+            /**
+             * Format: uuid
+             * @description POST /hauls/scan > scan_id
+             */
+            scan_id: string;
+            /**
+             * Format: uuid
+             * @description POST /field-sessions > data.id
+             */
+            field_session_id: string;
+        };
+        /** @description Fiş yazdırma verisi */
+        HaulTicket: {
+            /** Format: uuid */
+            id: string;
+            /** @example SEFER HAREKET FİŞİ */
+            title: string;
+            /** @example 20261025-235232-63 */
+            ticket_no: string;
+            /** Format: date-time */
+            hauled_at: string;
+            /** @example 25/10/2026 23:52 */
+            hauled_at_label: string;
+            /** @example 72 DLH 681 */
+            plate: string | null;
+            /** @example ADALAR HEYBELİ */
+            site_name: string | null;
+            /** @example ERZURUM SAHA */
+            dump_site_name: string | null;
+            /**
+             * @example day
+             * @enum {string}
+             */
+            shift: "day" | "night";
+            /** @example Gündüz */
+            shift_label: string;
+            /** @example 0 */
+            tonnage: number;
+            /**
+             * @description Fiş QR kodunun içeriği
+             * @example 01a1749f-863a-71fc-83b9-7fd9051a7681
+             */
+            qr_payload: string;
+            /**
+             * Format: uri
+             * @description Plaka fotoğrafı için imzalı, süreli adres
+             */
+            photo_url: string | null;
+        };
+        HaulTicketResponse: {
+            data: components["schemas"]["HaulTicket"];
+        };
+        SessionHaul: {
+            /** Format: uuid */
+            id: string;
+            /** @example 20261025-235232-63 */
+            ticket_no: string;
+            /** @example 72 DLH 681 */
+            plate: string | null;
+            /** @example 25/10/2026 23:52 */
+            hauled_at_label: string;
+            site_name: string | null;
+            dump_site_name: string | null;
+            /** @enum {string} */
+            shift: "day" | "night";
+            /** Format: uuid */
+            field_session_id: string | null;
+        };
+        SessionHaulsResponse: {
+            session: components["schemas"]["FieldSession"];
+            /** @description Bugünkü fişler, en yeni önce, en fazla 100 */
+            data: components["schemas"]["SessionHaul"][];
+        };
+        User: {
+            /**
+             * Format: uuid
+             * @example 01a17400-5296-7180-b4ae-4a96279c4bc1
+             */
+            id: string;
+            /** @example Hafline Api */
+            name: string;
+            /** @example hafline.api */
             username: string | null;
             /**
              * Format: email
-             * @example ada@hafline.test
+             * @example hafline@hafline.net
              */
             email?: string | null;
         };
         LoginRequest: {
             /**
-             * @description Email or username
-             * @example admin@hafline.test
+             * @description Kullanıcı adı veya e-posta
+             * @example hafline.api
              */
             login: string;
             /**
@@ -270,22 +510,33 @@ export interface components {
             /** @example Bearer */
             token_type: string;
             /**
-             * @description Seconds until the JWT expires
+             * @description Token geçerlilik süresi (saniye)
              * @example 3600
              */
             expires_in: number;
             user: components["schemas"]["User"];
         };
         ValidationError: {
-            /** @example login zorunludur. (and 1 more error) */
-            message?: string;
-            errors?: {
+            /** @example Geçerli bir saha oturumu seçin veya yeniden sabitleyin. */
+            message: string;
+            /**
+             * @example {
+             *       "field_session_id": [
+             *         "Geçerli bir saha oturumu seçin veya yeniden sabitleyin."
+             *       ]
+             *     }
+             */
+            errors: {
                 [key: string]: string[];
             };
         };
         UnauthenticatedError: {
             /** @example Unauthenticated. */
-            message?: string;
+            message: string;
+        };
+        ErrorResponse: {
+            /** @example User does not have the right permissions. */
+            message: string;
         };
         MessageResponse: {
             /** @example Çıkış yapıldı. */
@@ -336,7 +587,7 @@ export interface operations {
                     "application/json": components["schemas"]["LoginResponse"];
                 };
             };
-            /** @description Validation failed */
+            /** @description Eksik alan veya hatalı kullanıcı adı / şifre (errors.login) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -414,39 +665,45 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /**
-                     * Format: uuid
-                     * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
-                     */
-                    site_id: string;
-                    /**
-                     * Format: uuid
-                     * @example b2c3d4e5-f6a7-8901-bcde-f12345678901
-                     */
-                    dump_site_id: string;
-                    /**
-                     * @example day
-                     * @enum {string}
-                     */
-                    shift: "day" | "night";
-                };
+                "application/json": components["schemas"]["FieldSessionRequest"];
             };
         };
         responses: {
-            /** @description Session locked */
+            /** @description Oturum açıldı */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["FieldSessionResponse"];
+                };
             };
-            /** @description Validation failed */
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Eksik/geçersiz alan veya şantiye ile döküm yeri arasında aktif güzergah yok */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
             };
         };
     };
@@ -459,12 +716,32 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Active session or null data */
+            /** @description Açık oturum veya null */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CurrentFieldSessionResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -477,12 +754,32 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Session closed */
+            /** @description Oturum kapatıldı (açık oturum yoksa da 200) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -495,32 +792,39 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Session option lists */
+            /** @description Listeler */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HaulOptionsResponse"];
+                };
             };
-            /** @description Unauthenticated */
+            /** @description Token yok veya süresi dolmuş */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
             };
-            /** @description Forbidden */
+            /** @description field-haul.operate yetkisi yok */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
     haulsDumpSites: {
         parameters: {
             query: {
+                /** @description GET /hauls/options > sites[].id */
                 site_id: string;
             };
             header?: never;
@@ -529,19 +833,41 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Dump site list */
+            /** @description Döküm yeri listesi (boş olabilir) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DumpSitesResponse"];
+                };
             };
-            /** @description Validation failed */
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description site_id eksik veya UUID değil */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
             };
         };
     };
@@ -555,44 +881,73 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    /** Format: binary */
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px
+                     */
                     file: string;
                     /**
                      * Format: uuid
-                     * @description Active field session id
+                     * @description POST /field-sessions > data.id
                      */
                     field_session_id: string;
                 };
             };
         };
         responses: {
-            /** @description Scan result */
+            /** @description Okuma sonucu (plaka okunamasa da 200; success alanına bakın) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PlateScanResult"];
+                };
             };
-            /** @description Invalid image or missing session */
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Geçersiz görsel veya açık olmayan oturum */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
             };
-            /** @description Too many requests */
+            /** @description Dakikada 20 istek sınırı aşıldı */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
-            /** @description OCR unavailable */
+            /** @description OCR servisine ulaşılamadı (tarama kaydı oluşmaz) */
             502: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -605,33 +960,54 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** @example 34 ABC 123 */
-                    plate: string;
-                    /** Format: uuid */
-                    scan_id: string;
-                    /**
-                     * Format: uuid
-                     * @description id from POST /field-sessions
-                     */
-                    field_session_id: string;
-                };
+                "application/json": components["schemas"]["HaulStoreRequest"];
             };
         };
         responses: {
-            /** @description Haul created with print payload */
+            /** @description Fiş kaydedildi */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HaulTicketResponse"];
+                };
             };
-            /** @description Validation failed */
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Kayıtlı olmayan plaka, aracın bugün sahibi yok, süresi dolmuş scan_id veya kapalı oturum */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Dakikada 30 istek sınırı aşıldı */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -644,19 +1020,41 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Session context + haul list */
+            /** @description Oturum ve fiş listesi */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SessionHaulsResponse"];
+                };
             };
-            /** @description No active field session */
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Açık oturum yok */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
             };
         };
     };
@@ -665,25 +1063,48 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description POST /hauls > data.id */
                 haul: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Print payload */
+            /** @description Fiş yazdırma verisi */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HaulTicketResponse"];
+                };
             };
-            /** @description Not found */
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -701,21 +1122,23 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description JPEG image */
+            /** @description Görsel */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "image/jpeg": string;
+                };
             };
-            /** @description Invalid signature */
+            /** @description İmza geçersiz veya süresi dolmuş */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Not found */
+            /** @description Fotoğraf yok */
             404: {
                 headers: {
                     [name: string]: unknown;

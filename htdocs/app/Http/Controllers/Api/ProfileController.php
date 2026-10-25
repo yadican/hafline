@@ -12,9 +12,9 @@ class ProfileController extends Controller
     #[OA\Get(
         path: '/api/v1/me',
         operationId: 'profileShow',
-        summary: 'Get the authenticated user',
+        summary: 'Giriş yapan kullanıcı',
         security: [['bearerAuth' => []]],
-        tags: ['Profile'],
+        tags: ['Profil'],
         responses: [
             new OA\Response(
                 response: 200,

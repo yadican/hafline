@@ -35,14 +35,15 @@ export function createApiClient({ baseUrl, token, onUnauthorized }: ClientOption
   return client;
 }
 
-type FetchResult = {
-  data?: unknown;
+type FetchResult<T> = {
+  data?: T;
   error?: unknown;
   response: Response;
 };
 
-export async function unwrap<T>(request: Promise<FetchResult>): Promise<T> {
-  let result: FetchResult;
+/** Resolves with the typed body of a successful response; rejects with an ApiError otherwise. */
+export async function unwrap<T>(request: Promise<FetchResult<T>>): Promise<T> {
+  let result: FetchResult<T>;
 
   try {
     result = await request;

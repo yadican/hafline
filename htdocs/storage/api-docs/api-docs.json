@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Hafline API",
-        "description": "Hafline v1 HTTP API (JWT Bearer token).",
+        "description": "Hafline saha uygulamasının HTTP API'si. Tüm istekler `Accept: application/json` ile gönderilir.\n\n### Saha akışı (sırayla)\n\n| # | İstek | Ne için |\n|---|---|---|\n| 1 | `POST /api/v1/auth/login` | `token` alınır. Sağ üstteki **Authorize** butonuna yapıştırılır. |\n| 2 | `GET /api/v1/hauls/options` | Şantiye ve vardiya listesi |\n| 3 | `GET /api/v1/hauls/dump-sites?site_id=…` | Seçilen şantiyenin döküm yerleri |\n| 4 | `POST /api/v1/field-sessions` | Şantiye + döküm yeri + vardiya kilitlenir. Dönen **`data.id` = `field_session_id`** |\n| 5 | `POST /api/v1/hauls/scan` | Plaka fotoğrafı yüklenir (multipart). Okunan plaka, araç eşleşmesi ve **`scan_id`** döner. |\n| 6 | `POST /api/v1/hauls` | `plate` + `scan_id` + `field_session_id` ile fiş kaydedilir (201). |\n| 7 | `GET /api/v1/hauls/{haul}` | Fişi tekrar yazdırmak için aynı fiş verisi |\n\nUygulama açılışında açık oturum `GET /api/v1/field-sessions/current` ile kontrol edilir; varsa 2–4 atlanır.\n\n### Kurallar\n\n- **Token:** JWT, 60 dakika geçerli. Süresi dolunca 401 döner, yeniden giriş gerekir.\n- **Yetki:** Saha uçları `field-haul.operate` izni ister; yoksa 403 döner.\n- **Doğrulama hatası (422):** `{ \"message\": \"...\", \"errors\": { \"alan\": [\"mesaj\"] } }`\n- **Diğer hatalar:** `{ \"message\": \"...\" }`",
         "version": "1.0.0"
     },
     "servers": [
@@ -15,9 +15,10 @@
         "/api/v1/auth/login": {
             "post": {
                 "tags": [
-                    "Auth"
+                    "1. Giriş"
                 ],
-                "summary": "Login and receive a JWT",
+                "summary": "Adım 1 · Giriş yap, token al",
+                "description": "Dönen token diğer tüm isteklerde `Authorization: Bearer <token>` olarak gönderilir.",
                 "operationId": "authLogin",
                 "requestBody": {
                     "required": true,
@@ -41,7 +42,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation failed",
+                        "description": "Eksik alan veya hatalı kullanıcı adı / şifre (errors.login)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -56,9 +57,9 @@
         "/api/v1/auth/logout": {
             "post": {
                 "tags": [
-                    "Auth"
+                    "1. Giriş"
                 ],
-                "summary": "Invalidate the current JWT",
+                "summary": "Çıkış yap (token geçersiz olur)",
                 "operationId": "authLogout",
                 "responses": {
                     "200": {
@@ -92,9 +93,9 @@
         "/api/v1/dashboard": {
             "get": {
                 "tags": [
-                    "Dashboard"
+                    "Profil"
                 ],
-                "summary": "Get dashboard summary for the authenticated user",
+                "summary": "Kullanıcı ve özet sayılar",
                 "operationId": "dashboardShow",
                 "responses": {
                     "200": {
@@ -128,52 +129,61 @@
         "/api/v1/field-sessions": {
             "post": {
                 "tags": [
-                    "FieldSessions"
+                    "2. Saha oturumu"
                 ],
-                "summary": "Lock site, dump site and shift for the field operator session",
-                "description": "Pick values from GET /hauls/options (sites, shifts) and GET /hauls/dump-sites?site_id=… then POST them here to lock the operator session on the server.",
+                "summary": "Adım 4 · Saha oturumunu aç (field_session_id üretir)",
+                "description": "Şantiye, döküm yeri ve vardiyayı kilitler. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, `POST /hauls/scan` ve `POST /hauls` isteklerinde `field_session_id` olarak gönderilir.",
                 "operationId": "fieldSessionsLock",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "site_id",
-                                    "dump_site_id",
-                                    "shift"
-                                ],
-                                "properties": {
-                                    "site_id": {
-                                        "type": "string",
-                                        "format": "uuid",
-                                        "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-                                    },
-                                    "dump_site_id": {
-                                        "type": "string",
-                                        "format": "uuid",
-                                        "example": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
-                                    },
-                                    "shift": {
-                                        "type": "string",
-                                        "example": "day",
-                                        "enum": [
-                                            "day",
-                                            "night"
-                                        ]
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/FieldSessionRequest"
                             }
                         }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Session locked"
+                        "description": "Oturum açıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FieldSessionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation failed"
+                        "description": "Eksik/geçersiz alan veya şantiye ile döküm yeri arasında aktif güzergah yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -186,13 +196,41 @@
         "/api/v1/field-sessions/current": {
             "get": {
                 "tags": [
-                    "FieldSessions"
+                    "2. Saha oturumu"
                 ],
-                "summary": "Get the operator active field session",
+                "summary": "Açık oturumu getir",
+                "description": "Uygulama açılışında çağrılır. Açık oturum yoksa `data: null` döner.",
                 "operationId": "fieldSessionsCurrent",
                 "responses": {
                     "200": {
-                        "description": "Active session or null data"
+                        "description": "Açık oturum veya null",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CurrentFieldSessionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -203,13 +241,40 @@
             },
             "delete": {
                 "tags": [
-                    "FieldSessions"
+                    "2. Saha oturumu"
                 ],
-                "summary": "Close the active field session",
+                "summary": "Açık oturumu kapat",
                 "operationId": "fieldSessionsClose",
                 "responses": {
                     "200": {
-                        "description": "Session closed"
+                        "description": "Oturum kapatıldı (açık oturum yoksa da 200)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -222,19 +287,41 @@
         "/api/v1/hauls/options": {
             "get": {
                 "tags": [
-                    "Hauls"
+                    "2. Saha oturumu"
                 ],
-                "summary": "Sites and shifts for a field session",
+                "summary": "Adım 2 · Şantiye ve vardiya listesi",
+                "description": "Oturum açma ekranındaki seçimler için. `sites[].id` > `site_id`, `shifts[].value` > `shift`.",
                 "operationId": "haulsOptions",
                 "responses": {
                     "200": {
-                        "description": "Session option lists"
+                        "description": "Listeler",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulOptionsResponse"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "Unauthenticated"
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Forbidden"
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -247,14 +334,16 @@
         "/api/v1/hauls/dump-sites": {
             "get": {
                 "tags": [
-                    "Hauls"
+                    "2. Saha oturumu"
                 ],
-                "summary": "Dump sites with an active route for the given site",
+                "summary": "Adım 3 · Şantiyenin döküm yerleri",
+                "description": "Sadece seçilen şantiyeyle aktif güzergahı olan döküm yerleri döner. `dump_sites[].id` > `dump_site_id`.",
                 "operationId": "haulsDumpSites",
                 "parameters": [
                     {
                         "name": "site_id",
                         "in": "query",
+                        "description": "GET /hauls/options > sites[].id",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -264,10 +353,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Dump site list"
+                        "description": "Döküm yeri listesi (boş olabilir)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DumpSitesResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation failed"
+                        "description": "site_id eksik veya UUID değil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -280,9 +403,10 @@
         "/api/v1/hauls/scan": {
             "post": {
                 "tags": [
-                    "Hauls"
+                    "3. Plaka ve fiş"
                 ],
-                "summary": "Upload a plate photo, store it privately, and run OCR",
+                "summary": "Adım 5 · Plaka fotoğrafını oku (scan_id üretir)",
+                "description": "Fotoğraf saklanır ve OCR'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir. `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.",
                 "operationId": "haulsScan",
                 "requestBody": {
                     "required": true,
@@ -295,11 +419,12 @@
                                 ],
                                 "properties": {
                                     "file": {
+                                        "description": "JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px",
                                         "type": "string",
                                         "format": "binary"
                                     },
                                     "field_session_id": {
-                                        "description": "Active field session id",
+                                        "description": "POST /field-sessions > data.id",
                                         "type": "string",
                                         "format": "uuid"
                                     }
@@ -311,16 +436,64 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Scan result"
+                        "description": "Okuma sonucu (plaka okunamasa da 200; success alanına bakın)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlateScanResult"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Invalid image or missing session"
+                        "description": "Geçersiz görsel veya açık olmayan oturum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Too many requests"
+                        "description": "Dakikada 20 istek sınırı aşıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "502": {
-                        "description": "OCR unavailable"
+                        "description": "OCR servisine ulaşılamadı (tarama kaydı oluşmaz)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -333,47 +506,71 @@
         "/api/v1/hauls": {
             "post": {
                 "tags": [
-                    "Hauls"
+                    "3. Plaka ve fiş"
                 ],
-                "summary": "Create a haul from a confirmed plate scan",
-                "description": "Site/dump/shift come from the locked field session. Send only plate, scan_id and field_session_id.",
+                "summary": "Adım 6 · Fişi kaydet",
+                "description": "Şantiye, döküm yeri ve vardiya oturumdan alınır; fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.",
                 "operationId": "haulsStore",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "plate",
-                                    "scan_id",
-                                    "field_session_id"
-                                ],
-                                "properties": {
-                                    "plate": {
-                                        "type": "string",
-                                        "example": "34 ABC 123"
-                                    },
-                                    "scan_id": {
-                                        "type": "string",
-                                        "format": "uuid"
-                                    },
-                                    "field_session_id": {
-                                        "description": "id from POST /field-sessions",
-                                        "type": "string",
-                                        "format": "uuid"
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/HaulStoreRequest"
                             }
                         }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Haul created with print payload"
+                        "description": "Fiş kaydedildi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation failed"
+                        "description": "Kayıtlı olmayan plaka, aracın bugün sahibi yok, süresi dolmuş scan_id veya kapalı oturum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Dakikada 30 istek sınırı aşıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -386,17 +583,51 @@
         "/api/v1/hauls/session": {
             "get": {
                 "tags": [
-                    "Hauls"
+                    "3. Plaka ve fiş"
                 ],
-                "summary": "Today hauls for the locked site / dump / shift session",
-                "description": "Requires an open field session. List is filtered automatically by that session site_id, dump_site_id and shift.",
+                "summary": "Açık oturumun bugünkü fişleri",
+                "description": "Kullanıcının açık oturumundaki şantiye, döküm yeri ve vardiyaya göre bugünkü fişler; en yeni önce, en fazla 100.",
                 "operationId": "haulsSession",
                 "responses": {
                     "200": {
-                        "description": "Session context + haul list"
+                        "description": "Oturum ve fiş listesi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionHaulsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "No active field session"
+                        "description": "Açık oturum yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -409,14 +640,16 @@
         "/api/v1/hauls/{haul}": {
             "get": {
                 "tags": [
-                    "Hauls"
+                    "3. Plaka ve fiş"
                 ],
-                "summary": "Print DTO for a haul",
+                "summary": "Adım 7 · Fişi tekrar getir (yazdırma verisi)",
+                "description": "Fişi kesen kullanıcı, açık oturumunun şantiye, döküm yeri ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.",
                 "operationId": "haulsShow",
                 "parameters": [
                     {
                         "name": "haul",
                         "in": "path",
+                        "description": "POST /hauls > data.id",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -426,10 +659,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Print payload"
+                        "description": "Fiş yazdırma verisi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Not found"
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -442,9 +709,10 @@
         "/api/v1/hauls/{haul}/photo": {
             "get": {
                 "tags": [
-                    "Hauls"
+                    "3. Plaka ve fiş"
                 ],
-                "summary": "Private haul photo (signed URL)",
+                "summary": "Fişin plaka fotoğrafı (imzalı adres)",
+                "description": "Token gerekmez; adres fiş verisindeki `photo_url` alanından olduğu gibi kullanılır. İmza ve süre adresin içindedir.",
                 "operationId": "haulsPhoto",
                 "parameters": [
                     {
@@ -475,13 +743,21 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "JPEG image"
+                        "description": "Görsel",
+                        "content": {
+                            "image/jpeg": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Invalid signature"
+                        "description": "İmza geçersiz veya süresi dolmuş"
                     },
                     "404": {
-                        "description": "Not found"
+                        "description": "Fotoğraf yok"
                     }
                 }
             }
@@ -489,9 +765,9 @@
         "/api/v1/me": {
             "get": {
                 "tags": [
-                    "Profile"
+                    "Profil"
                 ],
-                "summary": "Get the authenticated user",
+                "summary": "Giriş yapan kullanıcı",
                 "operationId": "profileShow",
                 "responses": {
                     "200": {
@@ -525,6 +801,477 @@
     },
     "components": {
         "schemas": {
+            "NamedOption": {
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "01a172ee-f413-7048-88d9-7a690733cf2a"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "ADALAR HEYBELİ"
+                    }
+                },
+                "type": "object"
+            },
+            "ShiftOption": {
+                "required": [
+                    "value",
+                    "label"
+                ],
+                "properties": {
+                    "value": {
+                        "type": "string",
+                        "example": "day",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "label": {
+                        "type": "string",
+                        "example": "Gündüz"
+                    }
+                },
+                "type": "object"
+            },
+            "HaulOptionsResponse": {
+                "required": [
+                    "sites",
+                    "shifts"
+                ],
+                "properties": {
+                    "sites": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedOption"
+                        }
+                    },
+                    "shifts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShiftOption"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "DumpSitesResponse": {
+                "required": [
+                    "dump_sites"
+                ],
+                "properties": {
+                    "dump_sites": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedOption"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "FieldSessionRequest": {
+                "required": [
+                    "site_id",
+                    "dump_site_id",
+                    "shift"
+                ],
+                "properties": {
+                    "site_id": {
+                        "description": "GET /hauls/options > sites[].id",
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "01a172ee-f413-7048-88d9-7a690733cf2a"
+                    },
+                    "dump_site_id": {
+                        "description": "GET /hauls/dump-sites > dump_sites[].id",
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "01a172ee-f9ae-70ac-a3f5-b7cb76efdf99"
+                    },
+                    "shift": {
+                        "description": "GET /hauls/options > shifts[].value",
+                        "type": "string",
+                        "example": "day",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "FieldSession": {
+                "required": [
+                    "id",
+                    "site_id",
+                    "site_name",
+                    "dump_site_id",
+                    "dump_site_name",
+                    "shift",
+                    "shift_label",
+                    "locked_at"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "Sonraki isteklerde field_session_id olarak gönderilir",
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "01a1745d-96cf-7091-809a-ae092f874703"
+                    },
+                    "site_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "example": "ADALAR HEYBELİ",
+                        "nullable": true
+                    },
+                    "dump_site_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "dump_site_name": {
+                        "type": "string",
+                        "example": "ERZURUM SAHA",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "example": "day",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "shift_label": {
+                        "type": "string",
+                        "example": "Gündüz"
+                    },
+                    "locked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-10-25T21:21:00+03:00"
+                    }
+                },
+                "type": "object"
+            },
+            "FieldSessionResponse": {
+                "required": [
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/FieldSession"
+                    }
+                },
+                "type": "object"
+            },
+            "CurrentFieldSessionResponse": {
+                "required": [
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "description": "Açık oturum yoksa null",
+                        "nullable": true,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FieldSession"
+                            }
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "PlateScanResult": {
+                "required": [
+                    "success",
+                    "scan_id",
+                    "field_session_id",
+                    "plate",
+                    "confidence",
+                    "matched_regex",
+                    "vehicle",
+                    "owner_on_date",
+                    "can_create",
+                    "message"
+                ],
+                "properties": {
+                    "success": {
+                        "description": "OCR plaka bulabildi mi",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "scan_id": {
+                        "description": "POST /hauls için gerekli. 1 saat geçerli.",
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "01a17493-00d0-71e2-a9ac-55171280c960"
+                    },
+                    "field_session_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "plate": {
+                        "description": "OCR'ın okuduğu metin (boşluksuz olabilir)",
+                        "type": "string",
+                        "example": "01HCU728",
+                        "nullable": true
+                    },
+                    "confidence": {
+                        "description": "0–1 arası. Yüksek olması doğruluk garantisi değildir.",
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.93,
+                        "nullable": true
+                    },
+                    "matched_regex": {
+                        "description": "Okunan metin Türk plaka biçimine uyuyor mu",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "vehicle": {
+                        "required": [
+                            "id",
+                            "plate",
+                            "found"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                            },
+                            "plate": {
+                                "description": "Sistemde kayıtlı yazım",
+                                "type": "string",
+                                "example": "01 HCU 728",
+                                "nullable": true
+                            },
+                            "found": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "owner_on_date": {
+                        "description": "Aracın bugün kayıtlı sahibi var mı",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "can_create": {
+                        "description": "Okunan plakayla doğrudan fiş kesilebilir mi",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "description": "can_create false ise sebebi",
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "HaulStoreRequest": {
+                "required": [
+                    "plate",
+                    "scan_id",
+                    "field_session_id"
+                ],
+                "properties": {
+                    "plate": {
+                        "description": "Kullanıcının onayladığı plaka. Kayıtlı bir araç olmalı.",
+                        "type": "string",
+                        "example": "01 HCU 728",
+                        "maxLength": 20
+                    },
+                    "scan_id": {
+                        "description": "POST /hauls/scan > scan_id",
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "field_session_id": {
+                        "description": "POST /field-sessions > data.id",
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "type": "object"
+            },
+            "HaulTicket": {
+                "description": "Fiş yazdırma verisi",
+                "required": [
+                    "id",
+                    "title",
+                    "ticket_no",
+                    "hauled_at",
+                    "hauled_at_label",
+                    "plate",
+                    "site_name",
+                    "dump_site_name",
+                    "shift",
+                    "shift_label",
+                    "tonnage",
+                    "qr_payload",
+                    "photo_url"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "SEFER HAREKET FİŞİ"
+                    },
+                    "ticket_no": {
+                        "type": "string",
+                        "example": "20261025-235232-63"
+                    },
+                    "hauled_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "hauled_at_label": {
+                        "type": "string",
+                        "example": "25/10/2026 23:52"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "72 DLH 681",
+                        "nullable": true
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "example": "ADALAR HEYBELİ",
+                        "nullable": true
+                    },
+                    "dump_site_name": {
+                        "type": "string",
+                        "example": "ERZURUM SAHA",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "example": "day",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "shift_label": {
+                        "type": "string",
+                        "example": "Gündüz"
+                    },
+                    "tonnage": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "qr_payload": {
+                        "description": "Fiş QR kodunun içeriği",
+                        "type": "string",
+                        "example": "01a1749f-863a-71fc-83b9-7fd9051a7681"
+                    },
+                    "photo_url": {
+                        "description": "Plaka fotoğrafı için imzalı, süreli adres",
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "HaulTicketResponse": {
+                "required": [
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/HaulTicket"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionHaul": {
+                "required": [
+                    "id",
+                    "ticket_no",
+                    "plate",
+                    "hauled_at_label",
+                    "site_name",
+                    "dump_site_name",
+                    "shift",
+                    "field_session_id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "ticket_no": {
+                        "type": "string",
+                        "example": "20261025-235232-63"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "72 DLH 681",
+                        "nullable": true
+                    },
+                    "hauled_at_label": {
+                        "type": "string",
+                        "example": "25/10/2026 23:52"
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "dump_site_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "field_session_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "SessionHaulsResponse": {
+                "required": [
+                    "session",
+                    "data"
+                ],
+                "properties": {
+                    "session": {
+                        "$ref": "#/components/schemas/FieldSession"
+                    },
+                    "data": {
+                        "description": "Bugünkü fişler, en yeni önce, en fazla 100",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SessionHaul"
+                        }
+                    }
+                },
+                "type": "object"
+            },
             "User": {
                 "required": [
                     "id",
@@ -533,22 +1280,23 @@
                 ],
                 "properties": {
                     "id": {
-                        "type": "integer",
-                        "example": 1
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "01a17400-5296-7180-b4ae-4a96279c4bc1"
                     },
                     "name": {
                         "type": "string",
-                        "example": "Ada Lovelace"
+                        "example": "Hafline Api"
                     },
                     "username": {
                         "type": "string",
-                        "example": "ada",
+                        "example": "hafline.api",
                         "nullable": true
                     },
                     "email": {
                         "type": "string",
                         "format": "email",
-                        "example": "ada@hafline.test",
+                        "example": "hafline@hafline.net",
                         "nullable": true
                     }
                 },
@@ -561,9 +1309,9 @@
                 ],
                 "properties": {
                     "login": {
-                        "description": "Email or username",
+                        "description": "Kullanıcı adı veya e-posta",
                         "type": "string",
-                        "example": "admin@hafline.test"
+                        "example": "hafline.api"
                     },
                     "password": {
                         "type": "string",
@@ -590,7 +1338,7 @@
                         "example": "Bearer"
                     },
                     "expires_in": {
-                        "description": "Seconds until the JWT expires",
+                        "description": "Token geçerlilik süresi (saniye)",
                         "type": "integer",
                         "example": 3600
                     },
@@ -601,13 +1349,22 @@
                 "type": "object"
             },
             "ValidationError": {
+                "required": [
+                    "message",
+                    "errors"
+                ],
                 "properties": {
                     "message": {
                         "type": "string",
-                        "example": "login zorunludur. (and 1 more error)"
+                        "example": "Geçerli bir saha oturumu seçin veya yeniden sabitleyin."
                     },
                     "errors": {
                         "type": "object",
+                        "example": {
+                            "field_session_id": [
+                                "Geçerli bir saha oturumu seçin veya yeniden sabitleyin."
+                            ]
+                        },
                         "additionalProperties": {
                             "type": "array",
                             "items": {
@@ -619,10 +1376,25 @@
                 "type": "object"
             },
             "UnauthenticatedError": {
+                "required": [
+                    "message"
+                ],
                 "properties": {
                     "message": {
                         "type": "string",
                         "example": "Unauthenticated."
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "required": [
+                    "message"
+                ],
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "User does not have the right permissions."
                     }
                 },
                 "type": "object"
@@ -688,7 +1460,7 @@
         "securitySchemes": {
             "bearerAuth": {
                 "type": "http",
-                "description": "Paste the JWT returned by POST /api/v1/auth/login (without the Bearer prefix).",
+                "description": "POST /api/v1/auth/login cevabındaki token (Bearer öneki olmadan).",
                 "bearerFormat": "JWT",
                 "scheme": "bearer"
             }
@@ -696,24 +1468,20 @@
     },
     "tags": [
         {
-            "name": "Auth",
-            "description": "Authentication"
+            "name": "1. Giriş",
+            "description": "Token alma ve çıkış"
         },
         {
-            "name": "Profile",
-            "description": "Authenticated user profile"
+            "name": "2. Saha oturumu",
+            "description": "Şantiye, döküm yeri ve vardiya seçimi; oturumu açma, okuma ve kapatma"
         },
         {
-            "name": "Dashboard",
-            "description": "Dashboard summary"
+            "name": "3. Plaka ve fiş",
+            "description": "Plaka fotoğrafı okuma, fiş kaydı ve fişi tekrar alma"
         },
         {
-            "name": "Hauls",
-            "description": "Field haul scan and ticket creation"
-        },
-        {
-            "name": "FieldSessions",
-            "description": "Locked site / dump / shift session for field operators"
+            "name": "Profil",
+            "description": "Giriş yapan kullanıcı ve özet"
         }
     ]
 }

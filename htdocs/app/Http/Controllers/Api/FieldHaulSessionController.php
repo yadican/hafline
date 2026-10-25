@@ -16,24 +16,19 @@ class FieldHaulSessionController extends Controller
     #[OA\Post(
         path: '/api/v1/field-sessions',
         operationId: 'fieldSessionsLock',
-        summary: 'Lock site, dump site and shift for the field operator session',
-        description: 'Pick values from GET /hauls/options (sites, shifts) and GET /hauls/dump-sites?site_id=… then POST them here to lock the operator session on the server.',
+        summary: 'Adım 4 · Saha oturumunu aç (field_session_id üretir)',
+        description: 'Şantiye, döküm yeri ve vardiyayı kilitler. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, `POST /hauls/scan` ve `POST /hauls` isteklerinde `field_session_id` olarak gönderilir.',
         security: [['bearerAuth' => []]],
-        tags: ['FieldSessions'],
+        tags: ['2. Saha oturumu'],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                required: ['site_id', 'dump_site_id', 'shift'],
-                properties: [
-                    new OA\Property(property: 'site_id', type: 'string', format: 'uuid', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'),
-                    new OA\Property(property: 'dump_site_id', type: 'string', format: 'uuid', example: 'b2c3d4e5-f6a7-8901-bcde-f12345678901'),
-                    new OA\Property(property: 'shift', type: 'string', enum: ['day', 'night'], example: 'day'),
-                ]
-            )
+            content: new OA\JsonContent(ref: '#/components/schemas/FieldSessionRequest')
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Session locked'),
-            new OA\Response(response: 422, description: 'Validation failed'),
+            new OA\Response(response: 201, description: 'Oturum açıldı', content: new OA\JsonContent(ref: '#/components/schemas/FieldSessionResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Eksik/geçersiz alan veya şantiye ile döküm yeri arasında aktif güzergah yok', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
         ]
     )]
     public function store(FieldHaulSessionRequest $request): JsonResponse
@@ -46,11 +41,14 @@ class FieldHaulSessionController extends Controller
     #[OA\Get(
         path: '/api/v1/field-sessions/current',
         operationId: 'fieldSessionsCurrent',
-        summary: 'Get the operator active field session',
+        summary: 'Açık oturumu getir',
+        description: 'Uygulama açılışında çağrılır. Açık oturum yoksa `data: null` döner.',
         security: [['bearerAuth' => []]],
-        tags: ['FieldSessions'],
+        tags: ['2. Saha oturumu'],
         responses: [
-            new OA\Response(response: 200, description: 'Active session or null data'),
+            new OA\Response(response: 200, description: 'Açık oturum veya null', content: new OA\JsonContent(ref: '#/components/schemas/CurrentFieldSessionResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function current(Request $request): JsonResponse
@@ -63,11 +61,13 @@ class FieldHaulSessionController extends Controller
     #[OA\Delete(
         path: '/api/v1/field-sessions/current',
         operationId: 'fieldSessionsClose',
-        summary: 'Close the active field session',
+        summary: 'Açık oturumu kapat',
         security: [['bearerAuth' => []]],
-        tags: ['FieldSessions'],
+        tags: ['2. Saha oturumu'],
         responses: [
-            new OA\Response(response: 200, description: 'Session closed'),
+            new OA\Response(response: 200, description: 'Oturum kapatıldı (açık oturum yoksa da 200)', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function destroy(Request $request): JsonResponse

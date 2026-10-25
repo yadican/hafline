@@ -13,9 +13,9 @@ class DashboardController extends Controller
     #[OA\Get(
         path: '/api/v1/dashboard',
         operationId: 'dashboardShow',
-        summary: 'Get dashboard summary for the authenticated user',
+        summary: 'Kullanıcı ve özet sayılar',
         security: [['bearerAuth' => []]],
-        tags: ['Dashboard'],
+        tags: ['Profil'],
         responses: [
             new OA\Response(
                 response: 200,

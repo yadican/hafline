@@ -28,13 +28,14 @@ class HaulController extends Controller
     #[OA\Get(
         path: '/api/v1/hauls/options',
         operationId: 'haulsOptions',
-        summary: 'Sites and shifts for a field session',
+        summary: 'Adım 2 · Şantiye ve vardiya listesi',
+        description: 'Oturum açma ekranındaki seçimler için. `sites[].id` > `site_id`, `shifts[].value` > `shift`.',
         security: [['bearerAuth' => []]],
-        tags: ['Hauls'],
+        tags: ['2. Saha oturumu'],
         responses: [
-            new OA\Response(response: 200, description: 'Session option lists'),
-            new OA\Response(response: 401, description: 'Unauthenticated'),
-            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 200, description: 'Listeler', content: new OA\JsonContent(ref: '#/components/schemas/HaulOptionsResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function options(): JsonResponse
@@ -45,15 +46,18 @@ class HaulController extends Controller
     #[OA\Get(
         path: '/api/v1/hauls/dump-sites',
         operationId: 'haulsDumpSites',
-        summary: 'Dump sites with an active route for the given site',
+        summary: 'Adım 3 · Şantiyenin döküm yerleri',
+        description: 'Sadece seçilen şantiyeyle aktif güzergahı olan döküm yerleri döner. `dump_sites[].id` > `dump_site_id`.',
         security: [['bearerAuth' => []]],
-        tags: ['Hauls'],
+        tags: ['2. Saha oturumu'],
         parameters: [
-            new OA\Parameter(name: 'site_id', in: 'query', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'site_id', in: 'query', required: true, description: 'GET /hauls/options > sites[].id', schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Dump site list'),
-            new OA\Response(response: 422, description: 'Validation failed'),
+            new OA\Response(response: 200, description: 'Döküm yeri listesi (boş olabilir)', content: new OA\JsonContent(ref: '#/components/schemas/DumpSitesResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'site_id eksik veya UUID değil', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
         ]
     )]
     public function dumpSites(Request $request): JsonResponse
@@ -70,9 +74,10 @@ class HaulController extends Controller
     #[OA\Post(
         path: '/api/v1/hauls/scan',
         operationId: 'haulsScan',
-        summary: 'Upload a plate photo, store it privately, and run OCR',
+        summary: 'Adım 5 · Plaka fotoğrafını oku (scan_id üretir)',
+        description: 'Fotoğraf saklanır ve OCR\'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir. `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.',
         security: [['bearerAuth' => []]],
-        tags: ['Hauls'],
+        tags: ['3. Plaka ve fiş'],
         requestBody: new OA\RequestBody(
             required: true,
             content: [
@@ -81,18 +86,20 @@ class HaulController extends Controller
                     schema: new OA\Schema(
                         required: ['file', 'field_session_id'],
                         properties: [
-                            new OA\Property(property: 'file', type: 'string', format: 'binary'),
-                            new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid', description: 'Active field session id'),
+                            new OA\Property(property: 'file', type: 'string', format: 'binary', description: 'JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px'),
+                            new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid', description: 'POST /field-sessions > data.id'),
                         ]
                     )
                 ),
             ]
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Scan result'),
-            new OA\Response(response: 422, description: 'Invalid image or missing session'),
-            new OA\Response(response: 429, description: 'Too many requests'),
-            new OA\Response(response: 502, description: 'OCR unavailable'),
+            new OA\Response(response: 200, description: 'Okuma sonucu (plaka okunamasa da 200; success alanına bakın)', content: new OA\JsonContent(ref: '#/components/schemas/PlateScanResult')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Geçersiz görsel veya açık olmayan oturum', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+            new OA\Response(response: 429, description: 'Dakikada 20 istek sınırı aşıldı', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 502, description: 'OCR servisine ulaşılamadı (tarama kaydı oluşmaz)', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function scan(HaulScanRequest $request): JsonResponse
@@ -113,24 +120,20 @@ class HaulController extends Controller
     #[OA\Post(
         path: '/api/v1/hauls',
         operationId: 'haulsStore',
-        summary: 'Create a haul from a confirmed plate scan',
-        description: 'Site/dump/shift come from the locked field session. Send only plate, scan_id and field_session_id.',
+        summary: 'Adım 6 · Fişi kaydet',
+        description: 'Şantiye, döküm yeri ve vardiya oturumdan alınır; fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.',
         security: [['bearerAuth' => []]],
-        tags: ['Hauls'],
+        tags: ['3. Plaka ve fiş'],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                required: ['plate', 'scan_id', 'field_session_id'],
-                properties: [
-                    new OA\Property(property: 'plate', type: 'string', example: '34 ABC 123'),
-                    new OA\Property(property: 'scan_id', type: 'string', format: 'uuid'),
-                    new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid', description: 'id from POST /field-sessions'),
-                ]
-            )
+            content: new OA\JsonContent(ref: '#/components/schemas/HaulStoreRequest')
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Haul created with print payload'),
-            new OA\Response(response: 422, description: 'Validation failed'),
+            new OA\Response(response: 201, description: 'Fiş kaydedildi', content: new OA\JsonContent(ref: '#/components/schemas/HaulTicketResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Kayıtlı olmayan plaka, aracın bugün sahibi yok, süresi dolmuş scan_id veya kapalı oturum', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+            new OA\Response(response: 429, description: 'Dakikada 30 istek sınırı aşıldı', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function store(HaulStoreRequest $request): JsonResponse
@@ -151,13 +154,15 @@ class HaulController extends Controller
     #[OA\Get(
         path: '/api/v1/hauls/session',
         operationId: 'haulsSession',
-        summary: 'Today hauls for the locked site / dump / shift session',
-        description: 'Requires an open field session. List is filtered automatically by that session site_id, dump_site_id and shift.',
+        summary: 'Açık oturumun bugünkü fişleri',
+        description: 'Kullanıcının açık oturumundaki şantiye, döküm yeri ve vardiyaya göre bugünkü fişler; en yeni önce, en fazla 100.',
         security: [['bearerAuth' => []]],
-        tags: ['Hauls'],
+        tags: ['3. Plaka ve fiş'],
         responses: [
-            new OA\Response(response: 200, description: 'Session context + haul list'),
-            new OA\Response(response: 422, description: 'No active field session'),
+            new OA\Response(response: 200, description: 'Oturum ve fiş listesi', content: new OA\JsonContent(ref: '#/components/schemas/SessionHaulsResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Açık oturum yok', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
         ]
     )]
     public function session(Request $request): JsonResponse
@@ -170,15 +175,18 @@ class HaulController extends Controller
     #[OA\Get(
         path: '/api/v1/hauls/{haul}',
         operationId: 'haulsShow',
-        summary: 'Print DTO for a haul',
+        summary: 'Adım 7 · Fişi tekrar getir (yazdırma verisi)',
+        description: 'Fişi kesen kullanıcı, açık oturumunun şantiye, döküm yeri ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.',
         security: [['bearerAuth' => []]],
-        tags: ['Hauls'],
+        tags: ['3. Plaka ve fiş'],
         parameters: [
-            new OA\Parameter(name: 'haul', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'haul', in: 'path', required: true, description: 'POST /hauls > data.id', schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Print payload'),
-            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 200, description: 'Fiş yazdırma verisi', content: new OA\JsonContent(ref: '#/components/schemas/HaulTicketResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Fiş yok veya bu kullanıcı/oturum için görünmüyor', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function show(Request $request, Haul $haul): HaulPrintResource
@@ -189,17 +197,18 @@ class HaulController extends Controller
     #[OA\Get(
         path: '/api/v1/hauls/{haul}/photo',
         operationId: 'haulsPhoto',
-        summary: 'Private haul photo (signed URL)',
-        tags: ['Hauls'],
+        summary: 'Fişin plaka fotoğrafı (imzalı adres)',
+        description: 'Token gerekmez; adres fiş verisindeki `photo_url` alanından olduğu gibi kullanılır. İmza ve süre adresin içindedir.',
+        tags: ['3. Plaka ve fiş'],
         parameters: [
             new OA\Parameter(name: 'haul', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
             new OA\Parameter(name: 'expires', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'signature', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'JPEG image'),
-            new OA\Response(response: 403, description: 'Invalid signature'),
-            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 200, description: 'Görsel', content: new OA\MediaType(mediaType: 'image/jpeg', schema: new OA\Schema(type: 'string', format: 'binary'))),
+            new OA\Response(response: 403, description: 'İmza geçersiz veya süresi dolmuş'),
+            new OA\Response(response: 404, description: 'Fotoğraf yok'),
         ]
     )]
     public function photo(Haul $haul): BinaryFileResponse
