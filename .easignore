@@ -1,7 +1,7 @@
 # EAS reads this file from the git root and uploads the whole repository, so everything
 # except the mobile app stays local. When this file exists, .gitignore files are not applied.
 /*
-!/mobile/
+!/mobile
 
 # mirrors mobile/.gitignore
 /mobile/.expo/
