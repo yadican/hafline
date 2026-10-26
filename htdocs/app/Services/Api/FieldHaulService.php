@@ -3,6 +3,7 @@
 namespace App\Services\Api;
 
 use App\Enums\Shift;
+use App\Enums\TicketKind;
 use App\Models\FieldHaulSession;
 use App\Models\Haul;
 use App\Models\HaulScan;
@@ -11,11 +12,11 @@ use App\Models\Vehicle;
 use App\Services\Api\Ocr\PlateScanClient;
 use App\Services\HaulService;
 use App\Services\Service;
+use App\Services\TicketNumbers;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 class FieldHaulService extends Service
 {
@@ -23,6 +24,7 @@ class FieldHaulService extends Service
         private HaulService $hauls,
         private SecureImageIngest $images,
         private PlateScanClient $ocr,
+        private TicketNumbers $ticketNumbers,
     ) {}
 
     /**
@@ -211,7 +213,7 @@ class FieldHaulService extends Service
             ]);
         }
 
-        $ticketNo = $this->nextTicketNo();
+        $ticketNo = $this->ticketNumbers->next(TicketKind::Haul);
         $shift = $session->shift instanceof Shift ? $session->shift->value : (string) $session->shift;
 
         /** @var Collection<int, Haul> $created */
@@ -416,18 +418,5 @@ class FieldHaulService extends Service
             ->value('path');
 
         return is_string($path) && $path !== '' ? $this->images->url($path) : null;
-    }
-
-    private function nextTicketNo(): string
-    {
-        for ($i = 0; $i < 10; $i++) {
-            $ticket = now()->format('Ymd-His').'-'.str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT);
-
-            if (! $this->hauls->ticketTaken($ticket)) {
-                return $ticket;
-            }
-        }
-
-        throw new RuntimeException('Fiş numarası üretilemedi.');
     }
 }

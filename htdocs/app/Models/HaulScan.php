@@ -21,6 +21,7 @@ class HaulScan extends Model
         'user_id',
         'field_haul_session_id',
         'haul_id',
+        'machine_work_id',
         'path',
         'checksum',
         'status',
@@ -51,6 +52,22 @@ class HaulScan extends Model
     public function haul(): BelongsTo
     {
         return $this->belongsTo(Haul::class);
+    }
+
+    /**
+     * @return BelongsTo<MachineWork, $this>
+     */
+    public function machineWork(): BelongsTo
+    {
+        return $this->belongsTo(MachineWork::class);
+    }
+
+    /**
+     * Not yet attached to a haul or a machine work ticket.
+     */
+    public function isUnattached(): bool
+    {
+        return $this->haul_id === null && $this->machine_work_id === null;
     }
 
     public function isPending(): bool

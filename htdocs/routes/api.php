@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FieldHaulSessionController;
 use App\Http\Controllers\Api\HaulController;
+use App\Http\Controllers\Api\MachineWorkController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Support\ApiPermissions;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,20 @@ Route::prefix('v1')->group(function () {
             Route::post('hauls', [HaulController::class, 'store'])
                 ->middleware('throttle:30,1')
                 ->name('api.hauls.store');
+
+            Route::get('machine-works/options', [MachineWorkController::class, 'options'])->name('api.machine-works.options');
+            Route::get('machine-works/machines', [MachineWorkController::class, 'machines'])->name('api.machine-works.machines');
+            Route::get('machine-works/check-plate', [MachineWorkController::class, 'checkPlate'])->name('api.machine-works.check-plate');
+            Route::get('machine-works/session', [MachineWorkController::class, 'session'])->name('api.machine-works.session');
+            Route::post('machine-works/scan', [MachineWorkController::class, 'scan'])
+                ->middleware('throttle:20,1')
+                ->name('api.machine-works.scan');
+            Route::post('machine-works', [MachineWorkController::class, 'store'])
+                ->middleware('throttle:30,1')
+                ->name('api.machine-works.store');
+            Route::get('machine-works/{machineWork}', [MachineWorkController::class, 'show'])->name('api.machine-works.show');
+            Route::put('machine-works/{machineWork}', [MachineWorkController::class, 'update'])->name('api.machine-works.update');
+            Route::delete('machine-works/{machineWork}', [MachineWorkController::class, 'destroy'])->name('api.machine-works.destroy');
         });
     });
 });

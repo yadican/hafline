@@ -770,6 +770,638 @@
                 }
             }
         },
+        "/api/v1/machine-works/options": {
+            "get": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Operatör listesi",
+                "description": "`operators[].id` > `operator_id`. `salaried` true ise operatör personeldir, `operator_rate` gönderilmez. Değilse `last_rate` operatörün son fişindeki ücrettir; forma ön değer olarak konur.",
+                "operationId": "machineWorksOptions",
+                "responses": {
+                    "200": {
+                        "description": "Operatörler",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachineWorkOptionsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/machine-works/machines": {
+            "get": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Makine plakası ara (elle giriş için)",
+                "description": "Saatlik çalışan aktif makineler; plakada geçen en az 2 karakter. En fazla 10 sonuç.",
+                "operationId": "machineWorksMachines",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "34 MK"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Eşleşen makineler (boş olabilir)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachineSearchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/machine-works/check-plate": {
+            "get": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Elle girilen plakayı doğrula",
+                "description": "Plaka kayıtlı, saatlik çalışan bir makine mi ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler. `rate_required` true ise makinenin bugün geçerli saat ücreti yoktur; fişte `hourly_rate` girilmelidir.",
+                "operationId": "machineWorksCheckPlate",
+                "parameters": [
+                    {
+                        "name": "plate",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "34 MK 100",
+                            "maxLength": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kontrol sonucu",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachinePlateCheck"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "plate eksik",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/machine-works/scan": {
+            "post": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Makine plakasını fotoğraftan oku (isteğe bağlı)",
+                "description": "Fotoğraf saklanır ve OCR'dan geçirilir; sonuç `check-plate` ile aynı kontrolleri içerir. Dönen `scan_id` 1 saat geçerlidir ve `POST /machine-works` isteğine eklenirse fotoğraf fişe bağlanır. Dakikada en fazla 20 istek.",
+                "operationId": "machineWorksScan",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file",
+                                    "field_session_id"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "description": "JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "field_session_id": {
+                                        "description": "POST /field-sessions > data.id",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Okuma sonucu (plaka okunamasa da 200; success alanına bakın)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachinePlateScanResult"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Geçersiz görsel veya açık olmayan oturum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Dakikada 20 istek sınırı aşıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "OCR servisine ulaşılamadı (tarama kaydı oluşmaz)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/machine-works": {
+            "post": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Makine çalışma fişini kaydet",
+                "description": "Şantiye ve vardiya oturumdan, tarih bugünden alınır; fiş numarası (`M-` önekli) ve makine sahibi sunucuda belirlenir. `hourly_rate` boşsa makinenin bugün geçerli saat ücreti kullanılır. Personel olmayan operatör seçildiyse `operator_rate` zorunludur. `scan_id` yoksa plaka elle girilmiş sayılır. Dakikada en fazla 30 istek.",
+                "operationId": "machineWorksStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MachineWorkStoreRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Fiş kaydedildi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachineWorkTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Kayıtlı/saatlik olmayan plaka, sahibi olmayan makine, eksik ücret, süresi dolmuş scan_id veya kapalı oturum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Dakikada 30 istek sınırı aşıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/machine-works/session": {
+            "get": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Açık oturumun bugünkü makine fişleri",
+                "description": "Kullanıcının açık oturumundaki şantiye ve vardiyaya göre bugünkü makine fişleri; en yeni önce, en fazla 100.",
+                "operationId": "machineWorksSession",
+                "responses": {
+                    "200": {
+                        "description": "Oturum ve fiş listesi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionMachineWorksResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Açık oturum yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/machine-works/{machineWork}": {
+            "get": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Makine fişini tekrar getir (yazdırma verisi)",
+                "description": "Fişi kesen kullanıcı, açık oturumunun şantiye ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.",
+                "operationId": "machineWorksShow",
+                "parameters": [
+                    {
+                        "name": "machineWork",
+                        "in": "path",
+                        "description": "POST /machine-works > data.id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fiş yazdırma verisi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachineWorkTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Makine fişini düzenle",
+                "description": "Fiş numarası, tarih, şantiye ve vardiya değişmez. Plaka, saat, ücret ve operatör kayıttaki kurallarla yeniden doğrulanır; cari kayıtları güncellenir. Görme kuralı `GET /machine-works/{machineWork}` ile aynıdır.",
+                "operationId": "machineWorksUpdate",
+                "parameters": [
+                    {
+                        "name": "machineWork",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MachineWorkUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Fiş güncellendi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MachineWorkTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Geçersiz alan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "4. Makine fişi"
+                ],
+                "summary": "Makine fişini sil",
+                "description": "Fiş ve cari kayıtları geri alınır. Görme kuralı `GET /machine-works/{machineWork}` ile aynıdır.",
+                "operationId": "machineWorksDestroy",
+                "parameters": [
+                    {
+                        "name": "machineWork",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fiş silindi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/me": {
             "get": {
                 "tags": [
@@ -1151,7 +1783,7 @@
                     },
                     "ticket_no": {
                         "type": "string",
-                        "example": "20261025-235232-63"
+                        "example": "T-20261025-235232-63"
                     },
                     "hauled_at": {
                         "type": "string",
@@ -1235,7 +1867,7 @@
                     },
                     "ticket_no": {
                         "type": "string",
-                        "example": "20261025-235232-63"
+                        "example": "T-20261025-235232-63"
                     },
                     "plate": {
                         "type": "string",
@@ -1283,6 +1915,511 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/SessionHaul"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "MachineOperatorOption": {
+                "required": [
+                    "id",
+                    "name",
+                    "salaried",
+                    "last_rate"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Kemal Usta"
+                    },
+                    "salaried": {
+                        "description": "Personel ise true; fişte operatör ücreti yazılmaz",
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "last_rate": {
+                        "description": "Son fişteki operatör saat ücreti",
+                        "type": "string",
+                        "example": "350.00",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "MachineWorkOptionsResponse": {
+                "required": [
+                    "operators"
+                ],
+                "properties": {
+                    "operators": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MachineOperatorOption"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "MachineSearchResponse": {
+                "required": [
+                    "machines"
+                ],
+                "properties": {
+                    "machines": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "plate",
+                                "owner_name",
+                                "class_name",
+                                "hourly_rate"
+                            ],
+                            "properties": {
+                                "plate": {
+                                    "type": "string",
+                                    "example": "34 MK 100"
+                                },
+                                "owner_name": {
+                                    "type": "string",
+                                    "example": "ABC Hafriyat",
+                                    "nullable": true
+                                },
+                                "class_name": {
+                                    "type": "string",
+                                    "example": "Ekskavatör",
+                                    "nullable": true
+                                },
+                                "hourly_rate": {
+                                    "description": "Güncel saat ücreti",
+                                    "type": "string",
+                                    "example": "1500.00",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "MachinePlateCheck": {
+                "required": [
+                    "vehicle",
+                    "hourly",
+                    "owner_on_date",
+                    "owner_name",
+                    "hourly_rate",
+                    "rate_required",
+                    "can_create",
+                    "message"
+                ],
+                "properties": {
+                    "vehicle": {
+                        "required": [
+                            "id",
+                            "plate",
+                            "found"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                            },
+                            "plate": {
+                                "description": "Sistemde kayıtlı yazım",
+                                "type": "string",
+                                "example": "34 MK 100",
+                                "nullable": true
+                            },
+                            "found": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "hourly": {
+                        "description": "Araç tipi saatlik çalışıyor mu",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "owner_on_date": {
+                        "description": "Makinenin bugün kayıtlı sahibi var mı",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "owner_name": {
+                        "type": "string",
+                        "example": "ABC Hafriyat",
+                        "nullable": true
+                    },
+                    "hourly_rate": {
+                        "description": "Bugün geçerli saat ücreti",
+                        "type": "string",
+                        "example": "1500.00",
+                        "nullable": true
+                    },
+                    "rate_required": {
+                        "description": "Tanımlı ücret yok; fişte hourly_rate girilmeli",
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "can_create": {
+                        "description": "Bu plakayla fiş kesilebilir mi",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "description": "can_create false ise sebebi; rate_required true ise uyarı",
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "MachinePlateScanResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/MachinePlateCheck"
+                    },
+                    {
+                        "required": [
+                            "success",
+                            "scan_id",
+                            "field_session_id",
+                            "plate",
+                            "confidence",
+                            "matched_regex"
+                        ],
+                        "properties": {
+                            "success": {
+                                "description": "OCR plaka bulabildi mi",
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "scan_id": {
+                                "description": "POST /machine-works için isteğe bağlı. 1 saat geçerli.",
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "field_session_id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "plate": {
+                                "description": "OCR'ın okuduğu metin (boşluksuz olabilir)",
+                                "type": "string",
+                                "example": "34MK100",
+                                "nullable": true
+                            },
+                            "confidence": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.93,
+                                "nullable": true
+                            },
+                            "matched_regex": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "MachineWorkUpdateRequest": {
+                "required": [
+                    "plate",
+                    "hours"
+                ],
+                "properties": {
+                    "plate": {
+                        "description": "Kayıtlı, saatlik çalışan bir makine",
+                        "type": "string",
+                        "example": "34 MK 100",
+                        "maxLength": 20
+                    },
+                    "hours": {
+                        "description": "0'dan büyük, en fazla 2 ondalık; \"4,5\" de kabul edilir",
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.5,
+                        "maximum": 24,
+                        "minimum": 0
+                    },
+                    "hourly_rate": {
+                        "description": "Boşsa makinenin o tarihte geçerli saat ücreti kullanılır",
+                        "type": "number",
+                        "format": "float",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "operator_id": {
+                        "description": "GET /machine-works/options > operators[].id",
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "operator_rate": {
+                        "description": "Personel olmayan operatör için zorunlu",
+                        "type": "number",
+                        "format": "float",
+                        "example": 350,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "MachineWorkStoreRequest": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/MachineWorkUpdateRequest"
+                    },
+                    {
+                        "required": [
+                            "field_session_id"
+                        ],
+                        "properties": {
+                            "field_session_id": {
+                                "description": "POST /field-sessions > data.id",
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "scan_id": {
+                                "description": "POST /machine-works/scan > scan_id. Elle girişte gönderilmez.",
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "MachineWorkTicket": {
+                "description": "Makine fişi yazdırma verisi",
+                "required": [
+                    "id",
+                    "title",
+                    "ticket_no",
+                    "worked_on",
+                    "worked_on_label",
+                    "plate",
+                    "class_name",
+                    "owner_name",
+                    "site_name",
+                    "shift",
+                    "shift_label",
+                    "hours",
+                    "hours_label",
+                    "hourly_rate",
+                    "amount",
+                    "operator",
+                    "operator_rate",
+                    "operator_amount",
+                    "qr_payload",
+                    "photo_url"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "MAKİNE ÇALIŞMA FİŞİ"
+                    },
+                    "ticket_no": {
+                        "type": "string",
+                        "example": "M-20261026-183012-07"
+                    },
+                    "worked_on": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-10-26"
+                    },
+                    "worked_on_label": {
+                        "type": "string",
+                        "example": "26/10/2026"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "34 MK 100",
+                        "nullable": true
+                    },
+                    "class_name": {
+                        "type": "string",
+                        "example": "Ekskavatör",
+                        "nullable": true
+                    },
+                    "owner_name": {
+                        "type": "string",
+                        "example": "ABC Hafriyat",
+                        "nullable": true
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "example": "ADALAR HEYBELİ",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "example": "day",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "shift_label": {
+                        "type": "string",
+                        "example": "Gündüz"
+                    },
+                    "hours": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.5
+                    },
+                    "hours_label": {
+                        "type": "string",
+                        "example": "4,5"
+                    },
+                    "hourly_rate": {
+                        "type": "string",
+                        "example": "1500.00"
+                    },
+                    "amount": {
+                        "type": "string",
+                        "example": "6750.00"
+                    },
+                    "operator": {
+                        "required": [
+                            "id",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Kemal Usta"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "operator_rate": {
+                        "type": "string",
+                        "example": "350.00",
+                        "nullable": true
+                    },
+                    "operator_amount": {
+                        "type": "string",
+                        "example": "1575.00",
+                        "nullable": true
+                    },
+                    "qr_payload": {
+                        "description": "Fiş QR kodunun içeriği",
+                        "type": "string"
+                    },
+                    "photo_url": {
+                        "description": "Plaka fotoğrafı; elle girilen fişlerde null",
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "MachineWorkTicketResponse": {
+                "required": [
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/MachineWorkTicket"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionMachineWork": {
+                "required": [
+                    "id",
+                    "ticket_no",
+                    "plate",
+                    "worked_on_label",
+                    "site_name",
+                    "shift",
+                    "operator_name",
+                    "hours",
+                    "amount"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "ticket_no": {
+                        "type": "string",
+                        "example": "M-20261026-183012-07"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "34 MK 100",
+                        "nullable": true
+                    },
+                    "worked_on_label": {
+                        "type": "string",
+                        "example": "26/10/2026"
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "operator_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "hours": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.5
+                    },
+                    "amount": {
+                        "type": "string",
+                        "example": "6750.00"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionMachineWorksResponse": {
+                "required": [
+                    "session",
+                    "data"
+                ],
+                "properties": {
+                    "session": {
+                        "$ref": "#/components/schemas/FieldSession"
+                    },
+                    "data": {
+                        "description": "Bugünkü makine fişleri, en yeni önce, en fazla 100",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SessionMachineWork"
                         }
                     }
                 },
@@ -1494,6 +2631,10 @@
         {
             "name": "3. Plaka ve fiş",
             "description": "Plaka fotoğrafı okuma, fiş kaydı ve fişi tekrar alma"
+        },
+        {
+            "name": "4. Makine fişi",
+            "description": "Saatlik makine çalışma fişi: plakayı fotoğraftan okuma veya elle girip doğrulama, fiş kaydı, listeleme, düzenleme ve silme. Şantiye ve vardiya açık saha oturumundan alınır."
         },
         {
             "name": "Profil",

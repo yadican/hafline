@@ -112,10 +112,10 @@ class SecureImageIngest
         Storage::disk(self::DISK)->delete($path);
     }
 
-    public function moveAttached(string $fromPath, string $haulId): string
+    public function moveAttached(string $fromPath, string $ticketId, string $folder = 'haul-photos'): string
     {
         $extension = pathinfo($fromPath, PATHINFO_EXTENSION) ?: 'jpg';
-        $toPath = $this->datedPath('haul-photos', $haulId.'.'.$extension);
+        $toPath = $this->datedPath($folder, $ticketId.'.'.$extension);
 
         if ($fromPath !== $toPath) {
             Storage::disk(self::DISK)->move($fromPath, $toPath);
@@ -136,6 +136,7 @@ class SecureImageIngest
     /**
      * haul-scans/2026/10/22/23/{field_session_id}-{YmdHisv}.jpg
      * haul-photos/2026/10/22/23/{haul_id}.jpg
+     * machine-photos/2026/10/22/23/{machine_work_id}.jpg
      */
     private function datedPath(string $prefix, string $filename, ?Carbon $at = null): string
     {

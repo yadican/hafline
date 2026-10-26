@@ -130,7 +130,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
         new OA\Property(property: 'title', type: 'string', example: 'SEFER HAREKET FİŞİ'),
-        new OA\Property(property: 'ticket_no', type: 'string', example: '20261025-235232-63'),
+        new OA\Property(property: 'ticket_no', type: 'string', example: 'T-20261025-235232-63'),
         new OA\Property(property: 'hauled_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'hauled_at_label', type: 'string', example: '25/10/2026 23:52'),
         new OA\Property(property: 'plate', type: 'string', nullable: true, example: '72 DLH 681'),
@@ -157,7 +157,7 @@ use OpenApi\Attributes as OA;
     required: ['id', 'ticket_no', 'plate', 'hauled_at_label', 'site_name', 'dump_site_name', 'shift', 'field_session_id'],
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'ticket_no', type: 'string', example: '20261025-235232-63'),
+        new OA\Property(property: 'ticket_no', type: 'string', example: 'T-20261025-235232-63'),
         new OA\Property(property: 'plate', type: 'string', nullable: true, example: '72 DLH 681'),
         new OA\Property(property: 'hauled_at_label', type: 'string', example: '25/10/2026 23:52'),
         new OA\Property(property: 'site_name', type: 'string', nullable: true),

@@ -219,6 +219,7 @@ class FieldHaulApiTest extends TestCase
             ->assertJsonStructure(['data' => ['ticket_no', 'photo_url', 'qr_payload']]);
 
         $haul = Haul::query()->firstOrFail();
+        $this->assertMatchesRegularExpression('/^T-\d{8}-\d{6}-\d{2}$/', $haul->ticket_no);
         $this->assertSame($this->user->id, $haul->created_by);
         $this->assertSame($sessionId, $haul->field_haul_session_id);
         $this->assertSame(22, $haul->tonnage);
