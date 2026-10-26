@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError, errorMessage } from '@/api/errors';
 import type { Shift } from '@/api/types';
 import { Button } from '@/components/button';
-import { OptionList } from '@/components/option-list';
+import { SelectField } from '@/components/select-field';
 import { ErrorBanner, ErrorState, LoadingState } from '@/components/screen-state';
 import { useCurrentSession, useDumpSites, useHaulOptions, useLockSession } from '@/features/field-session/queries';
 import { colors, fontSize, fonts, spacing } from '@/theme';
@@ -56,7 +56,9 @@ export default function SessionScreen() {
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Section title="1. Şantiye">
-        <OptionList
+        <SelectField
+          title="Şantiye seçin"
+          placeholder="Şantiye seçin"
           options={options.data.sites.map((site) => ({ value: site.id, label: site.name }))}
           selected={siteId}
           onSelect={selectSite}
@@ -72,7 +74,9 @@ export default function SessionScreen() {
         ) : dumpSites.isError ? (
           <ErrorBanner message={errorMessage(dumpSites.error)} />
         ) : (
-          <OptionList
+          <SelectField
+            title="Döküm yeri seçin"
+            placeholder="Döküm yeri seçin"
             options={dumpSites.data.map((site) => ({ value: site.id, label: site.name }))}
             selected={dumpSiteId}
             onSelect={setDumpSiteId}
@@ -82,7 +86,9 @@ export default function SessionScreen() {
       </Section>
 
       <Section title="3. Vardiya">
-        <OptionList
+        <SelectField
+          title="Vardiya seçin"
+          placeholder="Vardiya seçin"
           options={options.data.shifts.map((item) => ({ value: item.value, label: item.label }))}
           selected={shift}
           onSelect={(value) => setShift(value as Shift)}
