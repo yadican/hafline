@@ -17,7 +17,7 @@ class FieldHaulSessionController extends Controller
         path: '/api/v1/field-sessions',
         operationId: 'fieldSessionsLock',
         summary: 'Adım 4 · Saha oturumunu aç (field_session_id üretir)',
-        description: 'Şantiye, döküm yeri ve vardiyayı kilitler. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, `POST /hauls/scan` ve `POST /hauls` isteklerinde `field_session_id` olarak gönderilir.',
+        description: 'Şantiye ve vardiyayı, verilirse döküm yerini de kilitler. Döküm yeri sadece taşıma fişi için zorunludur; makine ve yakıt fişi döküm yeri olmadan kesilebilir. Döküm yerini sonradan seçmek veya değiştirmek için aynı şantiye ve vardiyayla tekrar çağrılır. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, fiş isteklerinde `field_session_id` olarak gönderilir.',
         security: [['bearerAuth' => []]],
         tags: ['2. Saha oturumu'],
         requestBody: new OA\RequestBody(
@@ -28,7 +28,7 @@ class FieldHaulSessionController extends Controller
             new OA\Response(response: 201, description: 'Oturum açıldı', content: new OA\JsonContent(ref: '#/components/schemas/FieldSessionResponse')),
             new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
             new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
-            new OA\Response(response: 422, description: 'Eksik/geçersiz alan veya şantiye ile döküm yeri arasında aktif güzergah yok', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+            new OA\Response(response: 422, description: 'Eksik/geçersiz alan veya döküm yeri verildiyse şantiye ile arasında aktif güzergah yok', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
         ]
     )]
     public function store(FieldHaulSessionRequest $request): JsonResponse

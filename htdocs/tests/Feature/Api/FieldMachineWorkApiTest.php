@@ -290,7 +290,6 @@ class FieldMachineWorkApiTest extends TestCase
         return $this->api()
             ->postJson('/api/v1/field-sessions', [
                 'site_id' => $this->route->site_id,
-                'dump_site_id' => $this->route->dump_site_id,
                 'shift' => 'day',
             ])
             ->assertCreated()

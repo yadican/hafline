@@ -140,7 +140,7 @@
                     "2. Saha oturumu"
                 ],
                 "summary": "Adım 4 · Saha oturumunu aç (field_session_id üretir)",
-                "description": "Şantiye, döküm yeri ve vardiyayı kilitler. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, `POST /hauls/scan` ve `POST /hauls` isteklerinde `field_session_id` olarak gönderilir.",
+                "description": "Şantiye ve vardiyayı, verilirse döküm yerini de kilitler. Döküm yeri sadece taşıma fişi için zorunludur; makine ve yakıt fişi döküm yeri olmadan kesilebilir. Döküm yerini sonradan seçmek veya değiştirmek için aynı şantiye ve vardiyayla tekrar çağrılır. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, fiş isteklerinde `field_session_id` olarak gönderilir.",
                 "operationId": "fieldSessionsLock",
                 "requestBody": {
                     "required": true,
@@ -184,7 +184,7 @@
                         }
                     },
                     "422": {
-                        "description": "Eksik/geçersiz alan veya şantiye ile döküm yeri arasında aktif güzergah yok",
+                        "description": "Eksik/geçersiz alan veya döküm yeri verildiyse şantiye ile arasında aktif güzergah yok",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1243,7 +1243,7 @@
                         }
                     },
                     "422": {
-                        "description": "Geçersiz görsel veya açık olmayan oturum",
+                        "description": "Geçersiz görsel, açık olmayan oturum veya oturumda döküm yeri seçilmemiş (`dump_site_id`)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1286,7 +1286,7 @@
                     "3. Plaka ve fiş"
                 ],
                 "summary": "Adım 6 · Fişi kaydet",
-                "description": "Şantiye, döküm yeri ve vardiya oturumdan alınır; fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.",
+                "description": "Plaka elle yazılabilir ya da `POST /hauls/scan` ile okunup onaylanabilir; tarama yapıldıysa `scan_id` gönderilir ve fotoğraf fişe bağlanır. Şantiye, döküm yeri ve vardiya oturumdan alınır; oturumda döküm yeri yoksa 422 (`dump_site_id`) döner. Fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.",
                 "operationId": "haulsStore",
                 "requestBody": {
                     "required": true,
@@ -1330,7 +1330,7 @@
                         }
                     },
                     "422": {
-                        "description": "Kayıtlı olmayan plaka, aracın bugün sahibi yok, süresi dolmuş scan_id veya kapalı oturum",
+                        "description": "Kayıtlı olmayan plaka, aracın bugün sahibi yok, gönderildiyse süresi dolmuş scan_id, kapalı oturum veya oturumda döküm yeri yok",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2439,7 +2439,6 @@
             "FieldSessionRequest": {
                 "required": [
                     "site_id",
-                    "dump_site_id",
                     "shift"
                 ],
                 "properties": {
@@ -2450,10 +2449,11 @@
                         "example": "01a172ee-f413-7048-88d9-7a690733cf2a"
                     },
                     "dump_site_id": {
-                        "description": "GET /hauls/dump-sites > dump_sites[].id",
+                        "description": "GET /hauls/dump-sites > dump_sites[].id. Makine ve yakıt fişi için gerekmez; taşıma fişi için zorunludur.",
                         "type": "string",
                         "format": "uuid",
-                        "example": "01a172ee-f9ae-70ac-a3f5-b7cb76efdf99"
+                        "example": "01a172ee-f9ae-70ac-a3f5-b7cb76efdf99",
+                        "nullable": true
                     },
                     "shift": {
                         "description": "GET /hauls/options > shifts[].value",
@@ -2495,8 +2495,10 @@
                         "nullable": true
                     },
                     "dump_site_id": {
+                        "description": "Döküm yeri seçilmediyse null; bu durumda taşıma fişi kesilemez",
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
                     },
                     "dump_site_name": {
                         "type": "string",
@@ -2700,21 +2702,21 @@
             "HaulStoreRequest": {
                 "required": [
                     "plate",
-                    "scan_id",
                     "field_session_id",
                     "tonnage"
                 ],
                 "properties": {
                     "plate": {
-                        "description": "Kullanıcının onayladığı plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.",
+                        "description": "Elle yazılan veya taramadan onaylanan plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.",
                         "type": "string",
                         "example": "01 HCU 728",
                         "maxLength": 20
                     },
                     "scan_id": {
-                        "description": "POST /hauls/scan > scan_id",
+                        "description": "POST /hauls/scan > scan_id. Fotoğraf çekildiyse gönderilir ve fişe bağlanır; plaka elle girildiyse boş bırakılır.",
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
                     },
                     "field_session_id": {
                         "description": "POST /field-sessions > data.id",

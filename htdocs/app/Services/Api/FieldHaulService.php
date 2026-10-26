@@ -150,6 +150,8 @@ class FieldHaulService extends Service
             ]);
         }
 
+        $this->assertHasDumpSite($session);
+
         // OCR the original upload — ingest downscales/re-encodes and can corrupt plate glyphs (E→K).
         $this->images->assertAcceptable($file);
         $ocr = $this->ocr->scan($file->getRealPath());
@@ -182,7 +184,7 @@ class FieldHaulService extends Service
     }
 
     /**
-     * @param  array{site_id: string, dump_site_id: string, shift: string}  $data
+     * @param  array{site_id: string, dump_site_id?: ?string, shift: string}  $data
      * @return array<string, mixed>
      */
     public function lockSession(array $data, User $user): array
@@ -197,7 +199,7 @@ class FieldHaulService extends Service
             $session = FieldHaulSession::query()->create([
                 'user_id' => $user->id,
                 'site_id' => $data['site_id'],
-                'dump_site_id' => $data['dump_site_id'],
+                'dump_site_id' => $data['dump_site_id'] ?? null,
                 'shift' => $data['shift'],
                 'locked_at' => now(),
             ]);
@@ -232,7 +234,7 @@ class FieldHaulService extends Service
     }
 
     /**
-     * @param  array{plate: string, scan_id: string, field_session_id: string, tonnage: int}  $data
+     * @param  array{plate: string, scan_id?: ?string, field_session_id: string, tonnage: int}  $data
      * @return array<string, mixed>
      */
     public function store(array $data, User $user): array
@@ -249,17 +251,9 @@ class FieldHaulService extends Service
             ]);
         }
 
-        $scan = HaulScan::query()
-            ->whereKey($data['scan_id'])
-            ->where('user_id', $user->id)
-            ->where('field_haul_session_id', $session->id)
-            ->first();
+        $this->assertHasDumpSite($session);
 
-        if (! $scan || ! $scan->isPending() || $scan->haul_id !== null) {
-            throw ValidationException::withMessages([
-                'scan_id' => 'Geçersiz veya süresi dolmuş tarama. Yeni fotoğraf çekin.',
-            ]);
-        }
+        $scan = empty($data['scan_id']) ? null : $this->pendingScan($user, $session, (string) $data['scan_id']);
 
         $ticketNo = $this->ticketNumbers->next(TicketKind::Haul);
         $shift = $session->shift instanceof Shift ? $session->shift->value : (string) $session->shift;
@@ -281,15 +275,32 @@ class FieldHaulService extends Service
         $haul->update(['field_haul_session_id' => $session->id]);
         $haul->load(['site', 'dumpSite', 'vehicle']);
 
-        $path = $this->images->moveAttached($scan->path, $haul->id);
-
-        $scan->update([
-            'haul_id' => $haul->id,
-            'path' => $path,
-            'status' => HaulScan::STATUS_ATTACHED,
-        ]);
+        if ($scan) {
+            $scan->update([
+                'haul_id' => $haul->id,
+                'path' => $this->images->moveAttached($scan->path, $haul->id),
+                'status' => HaulScan::STATUS_ATTACHED,
+            ]);
+        }
 
         return $this->printPayload($haul);
+    }
+
+    private function pendingScan(User $user, FieldHaulSession $session, string $scanId): HaulScan
+    {
+        $scan = HaulScan::query()
+            ->whereKey($scanId)
+            ->where('user_id', $user->id)
+            ->where('field_haul_session_id', $session->id)
+            ->first();
+
+        if (! $scan || ! $scan->isPending() || ! $scan->isUnattached()) {
+            throw ValidationException::withMessages([
+                'scan_id' => 'Geçersiz veya süresi dolmuş tarama. Yeni fotoğraf çekin ya da plakayı elle girin.',
+            ]);
+        }
+
+        return $scan;
     }
 
     /**
@@ -340,7 +351,7 @@ class FieldHaulService extends Service
 
         if (! $session) {
             throw ValidationException::withMessages([
-                'field_session_id' => 'Önce şantiye, döküm yeri ve vardiya oturumunu sabitleyin.',
+                'field_session_id' => 'Önce şantiye ve vardiyayı seçin.',
             ]);
         }
 
@@ -423,6 +434,15 @@ class FieldHaulService extends Service
             || $haulShift !== $shift
         ) {
             abort(404);
+        }
+    }
+
+    private function assertHasDumpSite(FieldHaulSession $session): void
+    {
+        if ($session->dump_site_id === null) {
+            throw ValidationException::withMessages([
+                'dump_site_id' => 'Taşıma fişi için önce döküm yerini seçin.',
+            ]);
         }
     }
 

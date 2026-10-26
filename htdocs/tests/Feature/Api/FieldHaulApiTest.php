@@ -112,6 +112,53 @@ class FieldHaulApiTest extends TestCase
             ->assertJsonPath('data', null);
     }
 
+    public function test_session_without_dump_site_cannot_write_haul_tickets(): void
+    {
+        $sessionId = $this->api()
+            ->postJson('/api/v1/field-sessions', [
+                'site_id' => $this->route->site_id,
+                'shift' => 'day',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.dump_site_id', null)
+            ->json('data.id');
+
+        $this->api()
+            ->post('/api/v1/hauls/scan', [
+                'file' => $this->platePhoto(),
+                'field_session_id' => $sessionId,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('dump_site_id');
+
+        $this->api()
+            ->postJson('/api/v1/hauls', [
+                'plate' => '34 ABC 123',
+                'scan_id' => fake()->uuid(),
+                'field_session_id' => $sessionId,
+                'tonnage' => 22,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('dump_site_id');
+
+        $this->assertSame(0, Haul::query()->count());
+        $this->assertSame(0, HaulScan::query()->count());
+    }
+
+    public function test_session_dump_site_must_have_an_active_route_from_the_site(): void
+    {
+        $unrelated = HaulRoute::factory()->create();
+
+        $this->api()
+            ->postJson('/api/v1/field-sessions', [
+                'site_id' => $this->route->site_id,
+                'dump_site_id' => $unrelated->dump_site_id,
+                'shift' => 'day',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('dump_site_id');
+    }
+
     public function test_options_and_dump_sites_require_auth(): void
     {
         $this->getJson('/api/v1/hauls/options')->assertUnauthorized();
@@ -318,6 +365,27 @@ class FieldHaulApiTest extends TestCase
         $photoUrl = $response->json('data.photo_url');
         $this->assertStringContainsString('/media/'.$scan->path, $photoUrl);
         $this->get($photoUrl)->assertOk();
+    }
+
+    public function test_a_typed_plate_creates_a_haul_without_a_photo(): void
+    {
+        $sessionId = $this->lockSession();
+
+        $this->api()
+            ->postJson('/api/v1/hauls', [
+                'plate' => '34abc123',
+                'field_session_id' => $sessionId,
+                'tonnage' => 18,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.plate', '34 ABC 123')
+            ->assertJsonPath('data.tonnage', 18)
+            ->assertJsonPath('data.photo_url', null);
+
+        $haul = Haul::query()->sole();
+        $this->assertSame($this->route->dump_site_id, $haul->dump_site_id);
+        $this->assertSame($sessionId, $haul->field_haul_session_id);
+        $this->assertSame(0, HaulScan::query()->count());
     }
 
     public function test_unsigned_photo_url_is_forbidden(): void

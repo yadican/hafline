@@ -29,6 +29,8 @@ class HaulStoreRequest extends FormRequest
     }
 
     /**
+     * The plate may be typed by hand or confirmed from a scan, as on machine tickets.
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -39,7 +41,7 @@ class HaulStoreRequest extends FormRequest
                     $fail('Kayıtlı bir plaka girin.');
                 }
             }],
-            'scan_id' => ['required', 'uuid'],
+            'scan_id' => ['nullable', 'uuid'],
             'field_session_id' => ['required', 'uuid', function (string $attribute, mixed $value, Closure $fail): void {
                 $session = FieldHaulSession::query()
                     ->whereKey($value)

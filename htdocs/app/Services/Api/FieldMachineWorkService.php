@@ -249,7 +249,7 @@ class FieldMachineWorkService extends Service
 
         if (! $session) {
             throw ValidationException::withMessages([
-                'field_session_id' => 'Önce şantiye, döküm yeri ve vardiya oturumunu sabitleyin.',
+                'field_session_id' => 'Önce şantiye ve vardiyayı seçin.',
             ]);
         }
 

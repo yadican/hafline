@@ -42,10 +42,10 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'FieldSessionRequest',
     type: 'object',
-    required: ['site_id', 'dump_site_id', 'shift'],
+    required: ['site_id', 'shift'],
     properties: [
         new OA\Property(property: 'site_id', type: 'string', format: 'uuid', description: 'GET /hauls/options > sites[].id', example: '01a172ee-f413-7048-88d9-7a690733cf2a'),
-        new OA\Property(property: 'dump_site_id', type: 'string', format: 'uuid', description: 'GET /hauls/dump-sites > dump_sites[].id', example: '01a172ee-f9ae-70ac-a3f5-b7cb76efdf99'),
+        new OA\Property(property: 'dump_site_id', type: 'string', format: 'uuid', nullable: true, description: 'GET /hauls/dump-sites > dump_sites[].id. Makine ve yakıt fişi için gerekmez; taşıma fişi için zorunludur.', example: '01a172ee-f9ae-70ac-a3f5-b7cb76efdf99'),
         new OA\Property(property: 'shift', type: 'string', enum: ['day', 'night'], description: 'GET /hauls/options > shifts[].value', example: 'day'),
     ]
 )]
@@ -57,7 +57,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', type: 'string', format: 'uuid', description: 'Sonraki isteklerde field_session_id olarak gönderilir', example: '01a1745d-96cf-7091-809a-ae092f874703'),
         new OA\Property(property: 'site_id', type: 'string', format: 'uuid'),
         new OA\Property(property: 'site_name', type: 'string', nullable: true, example: 'ADALAR HEYBELİ'),
-        new OA\Property(property: 'dump_site_id', type: 'string', format: 'uuid'),
+        new OA\Property(property: 'dump_site_id', type: 'string', format: 'uuid', nullable: true, description: 'Döküm yeri seçilmediyse null; bu durumda taşıma fişi kesilemez'),
         new OA\Property(property: 'dump_site_name', type: 'string', nullable: true, example: 'ERZURUM SAHA'),
         new OA\Property(property: 'shift', type: 'string', enum: ['day', 'night'], example: 'day'),
         new OA\Property(property: 'shift_label', type: 'string', example: 'Gündüz'),
@@ -147,10 +147,10 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'HaulStoreRequest',
     type: 'object',
-    required: ['plate', 'scan_id', 'field_session_id', 'tonnage'],
+    required: ['plate', 'field_session_id', 'tonnage'],
     properties: [
-        new OA\Property(property: 'plate', type: 'string', maxLength: 20, description: 'Kullanıcının onayladığı plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.', example: '01 HCU 728'),
-        new OA\Property(property: 'scan_id', type: 'string', format: 'uuid', description: 'POST /hauls/scan > scan_id'),
+        new OA\Property(property: 'plate', type: 'string', maxLength: 20, description: 'Elle yazılan veya taramadan onaylanan plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.', example: '01 HCU 728'),
+        new OA\Property(property: 'scan_id', type: 'string', format: 'uuid', nullable: true, description: 'POST /hauls/scan > scan_id. Fotoğraf çekildiyse gönderilir ve fişe bağlanır; plaka elle girildiyse boş bırakılır.'),
         new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid', description: 'POST /field-sessions > data.id'),
         new OA\Property(property: 'tonnage', type: 'integer', minimum: 0, maximum: 1000, description: 'Kullanıcının girdiği tonaj', example: 22),
     ]
