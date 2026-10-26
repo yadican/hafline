@@ -6,6 +6,8 @@ import { InfoRow } from '@/components/info-row';
 import { ErrorState, LoadingState } from '@/components/screen-state';
 import { SavedBanner, TicketActions, TicketCard } from '@/components/ticket-card';
 import { useDeleteHaul, useHaulTicket } from '@/features/haul/queries';
+import { PrintActions } from '@/features/print/print-actions';
+import type { ReceiptLine } from '@/features/print/receipt';
 import { spacing } from '@/theme';
 
 export default function HaulTicketScreen() {
@@ -21,19 +23,27 @@ export default function HaulTicketScreen() {
     return <ErrorState error={ticket.error} onRetry={() => void ticket.refetch()} />;
   }
 
+  const haul = ticket.data;
+  const lines: ReceiptLine[] = [
+    { label: 'Tarih', value: haul.hauled_at_label },
+    { label: 'Plaka', value: haul.plate ?? '-' },
+    { label: 'Şantiye', value: haul.site_name ?? '-' },
+    { label: 'Döküm yeri', value: haul.dump_site_name ?? '-' },
+    { label: 'Vardiya', value: haul.shift_label },
+    { label: 'Tonaj', value: String(haul.tonnage) },
+  ];
+
   return (
     <ScrollView contentContainerStyle={styles.content}>
       {saved ? <SavedBanner /> : null}
 
-      <TicketCard title={ticket.data.title} ticketNo={ticket.data.ticket_no}>
-        <InfoRow label="Tarih" value={ticket.data.hauled_at_label} />
-        <InfoRow label="Plaka" value={ticket.data.plate ?? '-'} />
-        <InfoRow label="Şantiye" value={ticket.data.site_name ?? '-'} />
-        <InfoRow label="Döküm yeri" value={ticket.data.dump_site_name ?? '-'} />
-        <InfoRow label="Vardiya" value={ticket.data.shift_label} />
-        <InfoRow label="Tonaj" value={String(ticket.data.tonnage)} />
+      <TicketCard title={haul.title} ticketNo={haul.ticket_no}>
+        {lines.map((line) => (
+          <InfoRow key={line.label} label={line.label} value={line.value} />
+        ))}
       </TicketCard>
 
+      <PrintActions receipt={{ title: haul.title, ticketNo: haul.ticket_no, lines, qrPayload: haul.qr_payload }} />
       <Button title="Yeni taşıma fişi" variant="create" onPress={() => router.replace('/hauls/new')} />
       <TicketActions
         onEdit={() => router.push({ pathname: '/hauls/[id]/edit', params: { id } })}

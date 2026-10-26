@@ -6,6 +6,8 @@ import { InfoRow } from '@/components/info-row';
 import { ErrorState, LoadingState } from '@/components/screen-state';
 import { SavedBanner, TicketActions, TicketCard } from '@/components/ticket-card';
 import { useDeleteMachineWork, useMachineWorkTicket } from '@/features/machine-work/queries';
+import { PrintActions } from '@/features/print/print-actions';
+import type { ReceiptLine } from '@/features/print/receipt';
 import { spacing } from '@/theme';
 import { formatMoney } from '@/utils/number';
 
@@ -23,26 +25,32 @@ export default function MachineWorkTicketScreen() {
   }
 
   const work = ticket.data;
+  const lines: ReceiptLine[] = [
+    { label: 'Tarih', value: work.worked_on_label },
+    { label: 'Plaka', value: work.plate ?? '-' },
+    { label: 'Makine', value: work.class_name ?? '-' },
+    { label: 'Sahibi', value: work.owner_name ?? '-' },
+    { label: 'Şantiye', value: work.site_name ?? '-' },
+    { label: 'Vardiya', value: work.shift_label },
+    { label: 'Saat', value: work.hours_label },
+    { label: 'Saat ücreti', value: formatMoney(work.hourly_rate) },
+    { label: 'Tutar', value: formatMoney(work.amount) },
+    { label: 'Operatör', value: work.operator?.name ?? '-' },
+    ...(work.operator_rate ? [{ label: 'Operatör ücreti', value: formatMoney(work.operator_rate) }] : []),
+    ...(work.operator_amount ? [{ label: 'Operatör tutarı', value: formatMoney(work.operator_amount) }] : []),
+  ];
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
       {saved ? <SavedBanner /> : null}
 
       <TicketCard title={work.title} ticketNo={work.ticket_no}>
-        <InfoRow label="Tarih" value={work.worked_on_label} />
-        <InfoRow label="Plaka" value={work.plate ?? '-'} />
-        <InfoRow label="Makine" value={work.class_name ?? '-'} />
-        <InfoRow label="Sahibi" value={work.owner_name ?? '-'} />
-        <InfoRow label="Şantiye" value={work.site_name ?? '-'} />
-        <InfoRow label="Vardiya" value={work.shift_label} />
-        <InfoRow label="Saat" value={work.hours_label} />
-        <InfoRow label="Saat ücreti" value={formatMoney(work.hourly_rate)} />
-        <InfoRow label="Tutar" value={formatMoney(work.amount)} />
-        <InfoRow label="Operatör" value={work.operator?.name ?? '-'} />
-        {work.operator_rate ? <InfoRow label="Operatör ücreti" value={formatMoney(work.operator_rate)} /> : null}
-        {work.operator_amount ? <InfoRow label="Operatör tutarı" value={formatMoney(work.operator_amount)} /> : null}
+        {lines.map((line) => (
+          <InfoRow key={line.label} label={line.label} value={line.value} />
+        ))}
       </TicketCard>
 
+      <PrintActions receipt={{ title: work.title, ticketNo: work.ticket_no, lines, qrPayload: work.qr_payload }} />
       <Button title="Yeni makine fişi" variant="create" onPress={() => router.replace('/machine-works/new')} />
       <TicketActions
         onEdit={() => router.push({ pathname: '/machine-works/[id]/edit', params: { id } })}
