@@ -30,11 +30,22 @@ COPY uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# www-data takes the WSL user's UID/GID so files written through the bind mounts stay owned by that user.
+ARG UID=1001
+ARG GID=1001
+RUN groupmod -o -g ${GID} www-data \
+    && usermod -o -u ${UID} -g ${GID} www-data \
+    && chown www-data:www-data /var/www
+
+ENV COMPOSER_HOME=/tmp/composer
+
 WORKDIR /var/www/html
 
 # Supervisord config dosyasını kopyala
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 9000
+
+USER www-data
 
 CMD ["php-fpm"]
