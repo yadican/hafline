@@ -86,6 +86,16 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 & $adb shell am start -a android.intent.action.VIEW -d "exp://192.168.1.200:8081"
 ```
 
+Metro `--localhost` ile başlatıldıysa (sadece emülatörle çalışırken) `192.168.1.200:8081` cevap vermez. Emülatörü Metro'ya `adb reverse` ile bağla ve `localhost` adresini aç:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb reverse tcp:8081 tcp:8081
+& $adb shell am start -a android.intent.action.VIEW -d "exp://localhost:8081" host.exp.exponent
+```
+
+`adb reverse` emülatör her kapanıp açıldığında sıfırlanır; yeniden çalıştır. Bu modda telefonlar Metro'ya ulaşamaz.
+
 Test kullanıcısı: `hafline.api` (saha fişi yetkisi var).
 
 ---
@@ -261,6 +271,7 @@ npx eas-cli@latest build -p android --profile preview --non-interactive
 | OCR: torch `LoadLibraryExW` hatası | İlk yükleme yavaş / yarıda kesildi | Tekrar başlat. Sürerse hata mesajının **son satırına** bak. |
 | Tarama "Plaka okuma servisine ulaşılamadı" (502) | OCR servisi kapalı | 2.2'deki adımlarla başlat. Şu an bu durumda fiş kesilemiyor (tarama kaydı oluşmuyor); backend'de çözülecek. |
 | Kod değişikliği emülatörde görünmüyor | Açık olan uygulama Expo Go değil, kurulu APK (`com.hafline.saha`) | APK'yı kapat, Expo Go'dan aç (bölüm 2.4). Metro `CI=1` ile başlatıldıysa dosya izleme kapalıdır; `CI` olmadan yeniden başlat. |
+| Expo Go açık ama kod değişikliği görünmüyor, eski ekran duruyor | Metro `--localhost` ile çalışıyor; Expo Go `192.168.1.200:8081`'e ulaşamayıp önbellekteki eski paketi gösteriyor. Kontrol: `curl.exe http://192.168.1.200:8081/status` cevap vermiyor, `curl.exe http://localhost:8081/status` veriyor. | Emülatör için bölüm 2.4'teki `adb reverse` + `exp://localhost:8081`. Telefon da kullanılacaksa Metro'yu bölüm 2.3'teki gibi `--lan` ve `REACT_NATIVE_PACKAGER_HOSTNAME` ile yeniden başlat. |
 | APK açılınca siyah ekran | Emülatör ekranı uykuda | Ekrana tıkla / `adb shell input keyevent KEYCODE_WAKEUP` |
 | Token 1 saatte doluyor | API'de yenileme endpoint'i yok | Backend'de `auth/refresh` eklenecek; şimdilik tekrar giriş. |
 
