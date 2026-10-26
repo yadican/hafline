@@ -103,7 +103,8 @@
                 "tags": [
                     "Profil"
                 ],
-                "summary": "Kullanıcı ve özet sayılar",
+                "summary": "Saha kullanıcısının kendi fiş özeti",
+                "description": "Giriş yapan kullanıcının kendi kestiği taşıma, makine ve yakıt fişlerinin bugün / dün / bu ay sayıları, bugün girdiği son 10 fiş ve açık saha oturumu. Kasa verisi içermez.",
                 "operationId": "dashboardShow",
                 "responses": {
                     "200": {
@@ -4083,36 +4084,115 @@
                 },
                 "type": "object"
             },
+            "DashboardCounts": {
+                "description": "Kullanıcının kendi kestiği fiş sayıları (fiş tarihine göre)",
+                "required": [
+                    "today",
+                    "yesterday",
+                    "month"
+                ],
+                "properties": {
+                    "today": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "yesterday": {
+                        "type": "integer",
+                        "example": 9
+                    },
+                    "month": {
+                        "description": "Ay başından bugüne",
+                        "type": "integer",
+                        "example": 210
+                    }
+                },
+                "type": "object"
+            },
+            "DashboardRecentItem": {
+                "required": [
+                    "type",
+                    "id",
+                    "time",
+                    "plate",
+                    "summary"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "example": "haul",
+                        "enum": [
+                            "haul",
+                            "machine_work",
+                            "fuel_receipt"
+                        ]
+                    },
+                    "id": {
+                        "description": "Tipine göre GET /hauls/{id}, /machine-works/{id} veya /fuel-receipts/{id}",
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "time": {
+                        "description": "Fişin girildiği saat",
+                        "type": "string",
+                        "example": "14:32"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "34 ABC 123",
+                        "nullable": true
+                    },
+                    "summary": {
+                        "type": "string",
+                        "example": "ADALAR HEYBELİ → ERZURUM SAHA"
+                    }
+                },
+                "type": "object"
+            },
             "DashboardResponse": {
                 "required": [
                     "user",
-                    "counts"
+                    "field_session",
+                    "counts",
+                    "recent"
                 ],
                 "properties": {
                     "user": {
                         "$ref": "#/components/schemas/User"
                     },
+                    "field_session": {
+                        "description": "Açık oturum yoksa null",
+                        "nullable": true,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FieldSession"
+                            }
+                        ]
+                    },
                     "counts": {
                         "required": [
-                            "sites",
-                            "vehicles",
-                            "hauls"
+                            "hauls",
+                            "machine_works",
+                            "fuel_receipts"
                         ],
                         "properties": {
-                            "sites": {
-                                "type": "integer",
-                                "example": 0
-                            },
-                            "vehicles": {
-                                "type": "integer",
-                                "example": 0
-                            },
                             "hauls": {
-                                "type": "integer",
-                                "example": 0
+                                "$ref": "#/components/schemas/DashboardCounts"
+                            },
+                            "machine_works": {
+                                "$ref": "#/components/schemas/DashboardCounts"
+                            },
+                            "fuel_receipts": {
+                                "$ref": "#/components/schemas/DashboardCounts"
                             }
                         },
                         "type": "object"
+                    },
+                    "recent": {
+                        "description": "Bugün girilen son fişler, en yeni önce, en fazla 10",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardRecentItem"
+                        }
                     }
                 },
                 "type": "object"

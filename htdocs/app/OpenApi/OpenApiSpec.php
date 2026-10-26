@@ -109,20 +109,55 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'DashboardCounts',
+    type: 'object',
+    description: 'Kullanıcının kendi kestiği fiş sayıları (fiş tarihine göre)',
+    required: ['today', 'yesterday', 'month'],
+    properties: [
+        new OA\Property(property: 'today', type: 'integer', example: 12),
+        new OA\Property(property: 'yesterday', type: 'integer', example: 9),
+        new OA\Property(property: 'month', type: 'integer', description: 'Ay başından bugüne', example: 210),
+    ]
+)]
+#[OA\Schema(
+    schema: 'DashboardRecentItem',
+    type: 'object',
+    required: ['type', 'id', 'time', 'plate', 'summary'],
+    properties: [
+        new OA\Property(property: 'type', type: 'string', enum: ['haul', 'machine_work', 'fuel_receipt'], example: 'haul'),
+        new OA\Property(property: 'id', type: 'string', format: 'uuid', description: 'Tipine göre GET /hauls/{id}, /machine-works/{id} veya /fuel-receipts/{id}'),
+        new OA\Property(property: 'time', type: 'string', description: 'Fişin girildiği saat', example: '14:32'),
+        new OA\Property(property: 'plate', type: 'string', nullable: true, example: '34 ABC 123'),
+        new OA\Property(property: 'summary', type: 'string', example: 'ADALAR HEYBELİ → ERZURUM SAHA'),
+    ]
+)]
+#[OA\Schema(
     schema: 'DashboardResponse',
     type: 'object',
-    required: ['user', 'counts'],
+    required: ['user', 'field_session', 'counts', 'recent'],
     properties: [
         new OA\Property(property: 'user', ref: '#/components/schemas/User'),
         new OA\Property(
+            property: 'field_session',
+            description: 'Açık oturum yoksa null',
+            nullable: true,
+            allOf: [new OA\Schema(ref: '#/components/schemas/FieldSession')]
+        ),
+        new OA\Property(
             property: 'counts',
             type: 'object',
-            required: ['sites', 'vehicles', 'hauls'],
+            required: ['hauls', 'machine_works', 'fuel_receipts'],
             properties: [
-                new OA\Property(property: 'sites', type: 'integer', example: 0),
-                new OA\Property(property: 'vehicles', type: 'integer', example: 0),
-                new OA\Property(property: 'hauls', type: 'integer', example: 0),
+                new OA\Property(property: 'hauls', ref: '#/components/schemas/DashboardCounts'),
+                new OA\Property(property: 'machine_works', ref: '#/components/schemas/DashboardCounts'),
+                new OA\Property(property: 'fuel_receipts', ref: '#/components/schemas/DashboardCounts'),
             ]
+        ),
+        new OA\Property(
+            property: 'recent',
+            type: 'array',
+            description: 'Bugün girilen son fişler, en yeni önce, en fazla 10',
+            items: new OA\Items(ref: '#/components/schemas/DashboardRecentItem')
         ),
     ]
 )]
