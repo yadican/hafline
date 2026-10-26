@@ -292,6 +292,648 @@
                 ]
             }
         },
+        "/api/v1/fuel-receipts/options": {
+            "get": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Yakıt yeri listesi",
+                "description": "Açık oturumdaki şantiyeye hizmet veren aktif yakıt yerleri (şantiye bağlanmamış istasyonlar her şantiyede görünür). `stations[].id` > `fuel_station_id`. `unit_price` istasyonun güncel fiyatıdır; forma ön değer olarak konur.",
+                "operationId": "fuelReceiptsOptions",
+                "responses": {
+                    "200": {
+                        "description": "Yakıt yerleri",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelReceiptOptionsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Açık oturum yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/fuel-receipts/vehicles": {
+            "get": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Araç plakası ara (elle giriş için)",
+                "description": "Aktif araçlar; plakada geçen en az 2 karakter. En fazla 10 sonuç.",
+                "operationId": "fuelReceiptsVehicles",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "34 AB"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Eşleşen araçlar (boş olabilir)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelVehicleSearchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/fuel-receipts/check-plate": {
+            "get": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Elle girilen plakayı doğrula",
+                "description": "Plaka kayıtlı bir araç mı ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler.",
+                "operationId": "fuelReceiptsCheckPlate",
+                "parameters": [
+                    {
+                        "name": "plate",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "34 AB 123",
+                            "maxLength": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kontrol sonucu",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelPlateCheck"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "plate eksik",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/fuel-receipts/scan": {
+            "post": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Araç plakasını fotoğraftan oku (isteğe bağlı)",
+                "description": "Fotoğraf saklanır ve OCR'dan geçirilir; sonuç `check-plate` ile aynı kontrolleri içerir. Dönen `scan_id` 1 saat geçerlidir ve `POST /fuel-receipts` isteğine eklenirse fotoğraf fişe bağlanır. Dakikada en fazla 20 istek.",
+                "operationId": "fuelReceiptsScan",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file",
+                                    "field_session_id"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "description": "JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "field_session_id": {
+                                        "description": "POST /field-sessions > data.id",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Okuma sonucu (plaka okunamasa da 200; success alanına bakın)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelPlateScanResult"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Geçersiz görsel veya açık olmayan oturum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Dakikada 20 istek sınırı aşıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "OCR servisine ulaşılamadı (tarama kaydı oluşmaz)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/fuel-receipts": {
+            "post": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Yakıt fişini kaydet",
+                "description": "Şantiye ve vardiya oturumdan, tarih bugünden alınır; fiş numarası (`Y-` önekli), araç sahibi ve istasyonun firması sunucuda belirlenir. `unit_price` boşsa istasyonun güncel fiyatı kullanılır. Yakıt yeri oturumdaki şantiyeye bağlı olmalıdır. `scan_id` yoksa plaka elle girilmiş sayılır. Dakikada en fazla 30 istek.",
+                "operationId": "fuelReceiptsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FuelReceiptStoreRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Fiş kaydedildi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelReceiptTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Kayıtlı olmayan plaka, sahibi olmayan araç, şantiyeye bağlı olmayan yakıt yeri, eksik fiyat, süresi dolmuş scan_id veya kapalı oturum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Dakikada 30 istek sınırı aşıldı",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/fuel-receipts/session": {
+            "get": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Açık oturumun bugünkü yakıt fişleri",
+                "description": "Kullanıcının açık oturumundaki şantiye ve vardiyaya göre bugünkü yakıt fişleri; en yeni önce, en fazla 100.",
+                "operationId": "fuelReceiptsSession",
+                "responses": {
+                    "200": {
+                        "description": "Oturum ve fiş listesi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionFuelReceiptsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Açık oturum yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/fuel-receipts/{fuelReceipt}": {
+            "get": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Yakıt fişini tekrar getir (yazdırma verisi)",
+                "description": "Fişi kesen kullanıcı, açık oturumunun şantiye ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.",
+                "operationId": "fuelReceiptsShow",
+                "parameters": [
+                    {
+                        "name": "fuelReceipt",
+                        "in": "path",
+                        "description": "POST /fuel-receipts > data.id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fiş yazdırma verisi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelReceiptTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Yakıt fişini düzenle",
+                "description": "Fiş numarası, tarih, şantiye ve vardiya değişmez. Plaka, yakıt yeri, litre ve fiyat kayıttaki kurallarla yeniden doğrulanır; cari kaydı güncellenir. Görme kuralı `GET /fuel-receipts/{fuelReceipt}` ile aynıdır.",
+                "operationId": "fuelReceiptsUpdate",
+                "parameters": [
+                    {
+                        "name": "fuelReceipt",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FuelReceiptUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Fiş güncellendi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FuelReceiptTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Geçersiz alan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "5. Yakıt fişi"
+                ],
+                "summary": "Yakıt fişini sil",
+                "description": "Fiş ve cari kaydı geri alınır. Görme kuralı `GET /fuel-receipts/{fuelReceipt}` ile aynıdır.",
+                "operationId": "fuelReceiptsDestroy",
+                "parameters": [
+                    {
+                        "name": "fuelReceipt",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fiş silindi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/hauls/options": {
             "get": {
                 "tags": [
@@ -408,13 +1050,140 @@
                 ]
             }
         },
+        "/api/v1/hauls/vehicles": {
+            "get": {
+                "tags": [
+                    "3. Plaka ve fiş"
+                ],
+                "summary": "Taşıma aracı plakası ara (elle giriş için)",
+                "description": "Sefer başı ücretlenen aktif araçlar; saatlik çalışan makineler listelenmez. Plakada geçen en az 2 karakter. En fazla 10 sonuç.",
+                "operationId": "haulsVehicles",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "34 AB"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Eşleşen araçlar (boş olabilir)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulVehicleSearchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/hauls/check-plate": {
+            "get": {
+                "tags": [
+                    "3. Plaka ve fiş"
+                ],
+                "summary": "Elle girilen plakayı doğrula",
+                "description": "Plaka kayıtlı bir taşıma aracı mı (makine değil) ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler.",
+                "operationId": "haulsCheckPlate",
+                "parameters": [
+                    {
+                        "name": "plate",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "34 AB 123",
+                            "maxLength": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kontrol sonucu",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulPlateCheck"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "plate eksik",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/hauls/scan": {
             "post": {
                 "tags": [
                     "3. Plaka ve fiş"
                 ],
                 "summary": "Adım 5 · Plaka fotoğrafını oku (scan_id üretir)",
-                "description": "Fotoğraf saklanır ve OCR'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir. `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.",
+                "description": "Fotoğraf saklanır ve OCR'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir ve `check-plate` ile aynı kontrollerden geçer (makine plakaları reddedilir). `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.",
                 "operationId": "haulsScan",
                 "requestBody": {
                     "required": true,
@@ -672,6 +1441,158 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/HaulTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "3. Plaka ve fiş"
+                ],
+                "summary": "Fişi düzenle",
+                "description": "Sadece plaka ve tonaj değişir; fiş numarası, tarih, şantiye, döküm yeri ve vardiya aynı kalır. Plaka değişirse fiyatlar yeniden hesaplanır ve cari kayıtları güncellenir. Görme kuralı `GET /hauls/{haul}` ile aynıdır.",
+                "operationId": "haulsUpdate",
+                "parameters": [
+                    {
+                        "name": "haul",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HaulUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Fiş güncellendi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulTicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Fiş yok veya bu kullanıcı/oturum için görünmüyor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Kayıtlı olmayan plaka, aracın fiş tarihinde sahibi yok veya geçersiz tonaj",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "3. Plaka ve fiş"
+                ],
+                "summary": "Fişi sil",
+                "description": "Fiş ve cari kayıtları geri alınır. Görme kuralı `GET /hauls/{haul}` ile aynıdır.",
+                "operationId": "haulsDestroy",
+                "parameters": [
+                    {
+                        "name": "haul",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fiş silindi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
                                 }
                             }
                         }
@@ -1630,53 +2551,50 @@
                 },
                 "type": "object"
             },
-            "PlateScanResult": {
+            "HaulVehicleSearchResponse": {
                 "required": [
-                    "success",
-                    "scan_id",
-                    "field_session_id",
-                    "plate",
-                    "confidence",
-                    "matched_regex",
+                    "vehicles"
+                ],
+                "properties": {
+                    "vehicles": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "plate",
+                                "owner_name",
+                                "class_name"
+                            ],
+                            "properties": {
+                                "plate": {
+                                    "type": "string",
+                                    "example": "01 HCU 728"
+                                },
+                                "owner_name": {
+                                    "type": "string",
+                                    "example": "ABC Hafriyat",
+                                    "nullable": true
+                                },
+                                "class_name": {
+                                    "type": "string",
+                                    "example": "Kamyon",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "HaulPlateCheck": {
+                "required": [
                     "vehicle",
                     "owner_on_date",
+                    "owner_name",
                     "can_create",
                     "message"
                 ],
                 "properties": {
-                    "success": {
-                        "description": "OCR plaka bulabildi mi",
-                        "type": "boolean",
-                        "example": true
-                    },
-                    "scan_id": {
-                        "description": "POST /hauls için gerekli. 1 saat geçerli.",
-                        "type": "string",
-                        "format": "uuid",
-                        "example": "01a17493-00d0-71e2-a9ac-55171280c960"
-                    },
-                    "field_session_id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "plate": {
-                        "description": "OCR'ın okuduğu metin (boşluksuz olabilir)",
-                        "type": "string",
-                        "example": "01HCU728",
-                        "nullable": true
-                    },
-                    "confidence": {
-                        "description": "0–1 arası. Yüksek olması doğruluk garantisi değildir.",
-                        "type": "number",
-                        "format": "float",
-                        "example": 0.93,
-                        "nullable": true
-                    },
-                    "matched_regex": {
-                        "description": "Okunan metin Türk plaka biçimine uyuyor mu",
-                        "type": "boolean",
-                        "example": true
-                    },
                     "vehicle": {
                         "required": [
                             "id",
@@ -1707,8 +2625,13 @@
                         "type": "boolean",
                         "example": true
                     },
+                    "owner_name": {
+                        "type": "string",
+                        "example": "ABC Hafriyat",
+                        "nullable": true
+                    },
                     "can_create": {
-                        "description": "Okunan plakayla doğrudan fiş kesilebilir mi",
+                        "description": "Bu plakayla taşıma fişi kesilebilir mi (makine plakalarında false)",
                         "type": "boolean",
                         "example": true
                     },
@@ -1721,6 +2644,59 @@
                 },
                 "type": "object"
             },
+            "PlateScanResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/HaulPlateCheck"
+                    },
+                    {
+                        "required": [
+                            "success",
+                            "scan_id",
+                            "field_session_id",
+                            "plate",
+                            "confidence",
+                            "matched_regex"
+                        ],
+                        "properties": {
+                            "success": {
+                                "description": "OCR plaka bulabildi mi",
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "scan_id": {
+                                "description": "POST /hauls için gerekli. 1 saat geçerli.",
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "01a17493-00d0-71e2-a9ac-55171280c960"
+                            },
+                            "field_session_id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "plate": {
+                                "description": "OCR'ın okuduğu metin (boşluksuz olabilir)",
+                                "type": "string",
+                                "example": "01HCU728",
+                                "nullable": true
+                            },
+                            "confidence": {
+                                "description": "0–1 arası. Yüksek olması doğruluk garantisi değildir.",
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.93,
+                                "nullable": true
+                            },
+                            "matched_regex": {
+                                "description": "Okunan metin Türk plaka biçimine uyuyor mu",
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
             "HaulStoreRequest": {
                 "required": [
                     "plate",
@@ -1730,7 +2706,7 @@
                 ],
                 "properties": {
                     "plate": {
-                        "description": "Kullanıcının onayladığı plaka. Kayıtlı bir araç olmalı.",
+                        "description": "Kullanıcının onayladığı plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.",
                         "type": "string",
                         "example": "01 HCU 728",
                         "maxLength": 20
@@ -1747,6 +2723,27 @@
                     },
                     "tonnage": {
                         "description": "Kullanıcının girdiği tonaj",
+                        "type": "integer",
+                        "example": 22,
+                        "maximum": 1000,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "HaulUpdateRequest": {
+                "required": [
+                    "plate",
+                    "tonnage"
+                ],
+                "properties": {
+                    "plate": {
+                        "description": "Kayıtlı bir araç; fiş tarihinde sahibi olmalı",
+                        "type": "string",
+                        "example": "01 HCU 728",
+                        "maxLength": 20
+                    },
+                    "tonnage": {
                         "type": "integer",
                         "example": 22,
                         "maximum": 1000,
@@ -1915,6 +2912,515 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/SessionHaul"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "FuelStationOption": {
+                "required": [
+                    "id",
+                    "name",
+                    "firm_name",
+                    "unit_price"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "MERKEZ PETROL"
+                    },
+                    "firm_name": {
+                        "description": "İstasyonun cari firması",
+                        "type": "string",
+                        "example": "Merkez Akaryakıt Ltd.",
+                        "nullable": true
+                    },
+                    "unit_price": {
+                        "description": "Güncel litre fiyatı (0 ise fişte unit_price girilmeli)",
+                        "type": "string",
+                        "example": "48.7500"
+                    }
+                },
+                "type": "object"
+            },
+            "FuelReceiptOptionsResponse": {
+                "required": [
+                    "stations"
+                ],
+                "properties": {
+                    "stations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FuelStationOption"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "FuelVehicleSearchResponse": {
+                "required": [
+                    "vehicles"
+                ],
+                "properties": {
+                    "vehicles": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "plate",
+                                "owner_name",
+                                "class_name"
+                            ],
+                            "properties": {
+                                "plate": {
+                                    "type": "string",
+                                    "example": "34 AB 123"
+                                },
+                                "owner_name": {
+                                    "type": "string",
+                                    "example": "ABC Hafriyat",
+                                    "nullable": true
+                                },
+                                "class_name": {
+                                    "type": "string",
+                                    "example": "Kamyon",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "FuelPlateCheck": {
+                "required": [
+                    "vehicle",
+                    "owner_on_date",
+                    "owner_name",
+                    "can_create",
+                    "message"
+                ],
+                "properties": {
+                    "vehicle": {
+                        "required": [
+                            "id",
+                            "plate",
+                            "found"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                            },
+                            "plate": {
+                                "description": "Sistemde kayıtlı yazım",
+                                "type": "string",
+                                "example": "34 AB 123",
+                                "nullable": true
+                            },
+                            "found": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "owner_on_date": {
+                        "description": "Aracın bugün kayıtlı sahibi var mı",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "owner_name": {
+                        "type": "string",
+                        "example": "ABC Hafriyat",
+                        "nullable": true
+                    },
+                    "can_create": {
+                        "description": "Bu plakayla fiş kesilebilir mi",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "description": "can_create false ise sebebi",
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "FuelPlateScanResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/FuelPlateCheck"
+                    },
+                    {
+                        "required": [
+                            "success",
+                            "scan_id",
+                            "field_session_id",
+                            "plate",
+                            "confidence",
+                            "matched_regex"
+                        ],
+                        "properties": {
+                            "success": {
+                                "description": "OCR plaka bulabildi mi",
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "scan_id": {
+                                "description": "POST /fuel-receipts için isteğe bağlı. 1 saat geçerli.",
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "field_session_id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "plate": {
+                                "description": "OCR'ın okuduğu metin (boşluksuz olabilir)",
+                                "type": "string",
+                                "example": "34AB123",
+                                "nullable": true
+                            },
+                            "confidence": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.93,
+                                "nullable": true
+                            },
+                            "matched_regex": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "FuelReceiptUpdateRequest": {
+                "required": [
+                    "plate",
+                    "fuel_station_id",
+                    "quantity"
+                ],
+                "properties": {
+                    "plate": {
+                        "description": "Kayıtlı bir araç",
+                        "type": "string",
+                        "example": "34 AB 123",
+                        "maxLength": 20
+                    },
+                    "fuel_station_id": {
+                        "description": "GET /fuel-receipts/options > stations[].id",
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "quantity": {
+                        "description": "Litre; 0'dan büyük, en fazla 2 ondalık; \"45,5\" de kabul edilir",
+                        "type": "number",
+                        "format": "float",
+                        "example": 120,
+                        "maximum": 99999,
+                        "minimum": 0
+                    },
+                    "unit_price": {
+                        "description": "Boşsa istasyonun güncel fiyatı kullanılır; en fazla 4 ondalık",
+                        "type": "number",
+                        "format": "float",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "km": {
+                        "description": "Aracın kilometresi",
+                        "type": "integer",
+                        "example": 152300,
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "received_by": {
+                        "description": "Yakıtı alan kişi",
+                        "type": "string",
+                        "example": "Mehmet Yılmaz",
+                        "nullable": true,
+                        "maxLength": 80
+                    },
+                    "haul_ticket_count": {
+                        "description": "Taşıma fiş adedi",
+                        "type": "integer",
+                        "example": 4,
+                        "nullable": true,
+                        "maximum": 999,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "FuelReceiptStoreRequest": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/FuelReceiptUpdateRequest"
+                    },
+                    {
+                        "required": [
+                            "field_session_id"
+                        ],
+                        "properties": {
+                            "field_session_id": {
+                                "description": "POST /field-sessions > data.id",
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "scan_id": {
+                                "description": "POST /fuel-receipts/scan > scan_id. Elle girişte gönderilmez.",
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "FuelReceiptTicket": {
+                "description": "Yakıt fişi yazdırma verisi",
+                "required": [
+                    "id",
+                    "title",
+                    "ticket_no",
+                    "issued_on",
+                    "issued_on_label",
+                    "plate",
+                    "class_name",
+                    "owner_name",
+                    "site_name",
+                    "shift",
+                    "shift_label",
+                    "station",
+                    "firm_name",
+                    "quantity",
+                    "quantity_label",
+                    "unit_price",
+                    "amount",
+                    "km",
+                    "received_by",
+                    "haul_ticket_count",
+                    "qr_payload",
+                    "photo_url"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "YAKIT FİŞİ"
+                    },
+                    "ticket_no": {
+                        "type": "string",
+                        "example": "Y-20261026-191530-42"
+                    },
+                    "issued_on": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-10-26"
+                    },
+                    "issued_on_label": {
+                        "type": "string",
+                        "example": "26/10/2026"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "34 AB 123",
+                        "nullable": true
+                    },
+                    "class_name": {
+                        "type": "string",
+                        "example": "Kamyon",
+                        "nullable": true
+                    },
+                    "owner_name": {
+                        "type": "string",
+                        "example": "ABC Hafriyat",
+                        "nullable": true
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "example": "ADALAR HEYBELİ",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "example": "day",
+                        "nullable": true,
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "shift_label": {
+                        "type": "string",
+                        "example": "Gündüz",
+                        "nullable": true
+                    },
+                    "station": {
+                        "required": [
+                            "id",
+                            "name"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "MERKEZ PETROL"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "firm_name": {
+                        "type": "string",
+                        "example": "Merkez Akaryakıt Ltd.",
+                        "nullable": true
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120.5
+                    },
+                    "quantity_label": {
+                        "type": "string",
+                        "example": "120,5"
+                    },
+                    "unit_price": {
+                        "type": "string",
+                        "example": "48.7500"
+                    },
+                    "amount": {
+                        "type": "string",
+                        "example": "5874.38"
+                    },
+                    "km": {
+                        "type": "integer",
+                        "example": 152300,
+                        "nullable": true
+                    },
+                    "received_by": {
+                        "type": "string",
+                        "example": "Mehmet Yılmaz",
+                        "nullable": true
+                    },
+                    "haul_ticket_count": {
+                        "type": "integer",
+                        "example": 4,
+                        "nullable": true
+                    },
+                    "qr_payload": {
+                        "description": "Fiş QR kodunun içeriği",
+                        "type": "string"
+                    },
+                    "photo_url": {
+                        "description": "Plaka fotoğrafı; elle girilen fişlerde null",
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "FuelReceiptTicketResponse": {
+                "required": [
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/FuelReceiptTicket"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionFuelReceipt": {
+                "required": [
+                    "id",
+                    "ticket_no",
+                    "plate",
+                    "issued_on_label",
+                    "site_name",
+                    "shift",
+                    "station_name",
+                    "quantity",
+                    "amount"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "ticket_no": {
+                        "type": "string",
+                        "example": "Y-20261026-191530-42"
+                    },
+                    "plate": {
+                        "type": "string",
+                        "example": "34 AB 123",
+                        "nullable": true
+                    },
+                    "issued_on_label": {
+                        "type": "string",
+                        "example": "26/10/2026"
+                    },
+                    "site_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "shift": {
+                        "type": "string",
+                        "enum": [
+                            "day",
+                            "night"
+                        ]
+                    },
+                    "station_name": {
+                        "type": "string",
+                        "example": "MERKEZ PETROL",
+                        "nullable": true
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120.5
+                    },
+                    "amount": {
+                        "type": "string",
+                        "example": "5874.38"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionFuelReceiptsResponse": {
+                "required": [
+                    "session",
+                    "data"
+                ],
+                "properties": {
+                    "session": {
+                        "$ref": "#/components/schemas/FieldSession"
+                    },
+                    "data": {
+                        "description": "Bugünkü yakıt fişleri, en yeni önce, en fazla 100",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SessionFuelReceipt"
                         }
                     }
                 },
@@ -2635,6 +4141,10 @@
         {
             "name": "4. Makine fişi",
             "description": "Saatlik makine çalışma fişi: plakayı fotoğraftan okuma veya elle girip doğrulama, fiş kaydı, listeleme, düzenleme ve silme. Şantiye ve vardiya açık saha oturumundan alınır."
+        },
+        {
+            "name": "5. Yakıt fişi",
+            "description": "Yakıt fişi: plakayı fotoğraftan okuma veya elle girip doğrulama, oturumdaki şantiyenin yakıt yerleri, fiş kaydı, listeleme, düzenleme ve silme. Şantiye ve vardiya açık saha oturumundan alınır."
         },
         {
             "name": "Profil",

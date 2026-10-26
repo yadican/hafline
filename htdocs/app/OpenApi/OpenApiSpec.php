@@ -19,6 +19,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: '2. Saha oturumu', description: 'Şantiye, döküm yeri ve vardiya seçimi; oturumu açma, okuma ve kapatma')]
 #[OA\Tag(name: '3. Plaka ve fiş', description: 'Plaka fotoğrafı okuma, fiş kaydı ve fişi tekrar alma')]
 #[OA\Tag(name: '4. Makine fişi', description: 'Saatlik makine çalışma fişi: plakayı fotoğraftan okuma veya elle girip doğrulama, fiş kaydı, listeleme, düzenleme ve silme. Şantiye ve vardiya açık saha oturumundan alınır.')]
+#[OA\Tag(name: '5. Yakıt fişi', description: 'Yakıt fişi: plakayı fotoğraftan okuma veya elle girip doğrulama, oturumdaki şantiyenin yakıt yerleri, fiş kaydı, listeleme, düzenleme ve silme. Şantiye ve vardiya açık saha oturumundan alınır.')]
 #[OA\Tag(name: 'Profil', description: 'Giriş yapan kullanıcı ve özet')]
 #[OA\SecurityScheme(
     securityScheme: 'bearerAuth',

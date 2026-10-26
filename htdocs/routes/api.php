@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FieldHaulSessionController;
+use App\Http\Controllers\Api\FuelReceiptController;
 use App\Http\Controllers\Api\HaulController;
 use App\Http\Controllers\Api\MachineWorkController;
 use App\Http\Controllers\Api\ProfileController;
@@ -54,6 +55,20 @@ Route::prefix('v1')->group(function () {
             Route::get('machine-works/{machineWork}', [MachineWorkController::class, 'show'])->name('api.machine-works.show');
             Route::put('machine-works/{machineWork}', [MachineWorkController::class, 'update'])->name('api.machine-works.update');
             Route::delete('machine-works/{machineWork}', [MachineWorkController::class, 'destroy'])->name('api.machine-works.destroy');
+
+            Route::get('fuel-receipts/options', [FuelReceiptController::class, 'options'])->name('api.fuel-receipts.options');
+            Route::get('fuel-receipts/vehicles', [FuelReceiptController::class, 'vehicles'])->name('api.fuel-receipts.vehicles');
+            Route::get('fuel-receipts/check-plate', [FuelReceiptController::class, 'checkPlate'])->name('api.fuel-receipts.check-plate');
+            Route::get('fuel-receipts/session', [FuelReceiptController::class, 'session'])->name('api.fuel-receipts.session');
+            Route::post('fuel-receipts/scan', [FuelReceiptController::class, 'scan'])
+                ->middleware('throttle:20,1')
+                ->name('api.fuel-receipts.scan');
+            Route::post('fuel-receipts', [FuelReceiptController::class, 'store'])
+                ->middleware('throttle:30,1')
+                ->name('api.fuel-receipts.store');
+            Route::get('fuel-receipts/{fuelReceipt}', [FuelReceiptController::class, 'show'])->name('api.fuel-receipts.show');
+            Route::put('fuel-receipts/{fuelReceipt}', [FuelReceiptController::class, 'update'])->name('api.fuel-receipts.update');
+            Route::delete('fuel-receipts/{fuelReceipt}', [FuelReceiptController::class, 'destroy'])->name('api.fuel-receipts.destroy');
         });
     });
 });

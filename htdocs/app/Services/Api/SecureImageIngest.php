@@ -137,6 +137,7 @@ class SecureImageIngest
      * haul-scans/2026/10/22/23/{field_session_id}-{YmdHisv}.jpg
      * haul-photos/2026/10/22/23/{haul_id}.jpg
      * machine-photos/2026/10/22/23/{machine_work_id}.jpg
+     * fuel-photos/2026/10/22/23/{fuel_receipt_id}.jpg
      */
     private function datedPath(string $prefix, string $filename, ?Carbon $at = null): string
     {
