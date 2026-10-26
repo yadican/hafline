@@ -6,6 +6,10 @@ export type User = Schemas['User'];
 export type LoginRequest = Schemas['LoginRequest'];
 export type LoginResponse = Schemas['LoginResponse'];
 
+export type Dashboard = Schemas['DashboardResponse'];
+export type DashboardCounts = Schemas['DashboardCounts'];
+export type DashboardRecentItem = Schemas['DashboardRecentItem'];
+
 export type NamedOption = Schemas['NamedOption'];
 export type ShiftOption = Schemas['ShiftOption'];
 export type Shift = ShiftOption['value'];

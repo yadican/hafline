@@ -4,6 +4,8 @@ export type IconName = SymbolViewProps['name'];
 
 /** SF Symbols on iOS, Material Symbols on Android / web. */
 export const icons = {
+  dashboard: { ios: 'square.grid.2x2', android: 'dashboard', web: 'dashboard' },
+  home: { ios: 'house', android: 'home', web: 'home' },
   hauls: { ios: 'truck.box', android: 'local_shipping', web: 'local_shipping' },
   machineWorks: { ios: 'hammer', android: 'construction', web: 'construction' },
   fuelReceipts: { ios: 'fuelpump', android: 'local_gas_station', web: 'local_gas_station' },

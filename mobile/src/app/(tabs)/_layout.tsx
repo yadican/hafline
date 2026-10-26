@@ -3,6 +3,7 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, type ColorValue } from 'react-native';
 
 import { HeaderBackground } from '@/components/header-background';
+import { HomeButton } from '@/components/home-button';
 import { icons, type IconName } from '@/components/icons';
 import { colors, fontSize, fonts, spacing } from '@/theme';
 
@@ -12,9 +13,14 @@ function tabIcon(name: IconName) {
   };
 }
 
+const DashboardIcon = tabIcon(icons.dashboard);
 const HaulsIcon = tabIcon(icons.hauls);
 const MachineWorksIcon = tabIcon(icons.machineWorks);
 const FuelReceiptsIcon = tabIcon(icons.fuelReceipts);
+
+function HomeButtonLeft() {
+  return <HomeButton side="left" />;
+}
 
 function AccountButton() {
   return (
@@ -37,6 +43,7 @@ export default function TabLayout() {
         headerTitleAlign: 'center',
         headerBackground: HeaderBackground,
         headerTitleStyle: { fontFamily: fonts.bold, color: colors.primaryText },
+        headerLeft: HomeButtonLeft,
         headerRight: AccountButton,
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primaryDark,
@@ -45,6 +52,10 @@ export default function TabLayout() {
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
       }}
     >
+      <Tabs.Screen
+        name="dashboard"
+        options={{ title: 'Özet', tabBarLabel: 'Özet', tabBarIcon: DashboardIcon, headerLeft: () => null }}
+      />
       <Tabs.Screen
         name="hauls"
         options={{ title: 'Taşıma Fişleri', tabBarLabel: 'Taşıma', tabBarIcon: HaulsIcon }}

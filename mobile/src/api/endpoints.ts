@@ -2,6 +2,7 @@ import { File } from 'expo-file-system';
 
 import { unwrap, type ApiClient } from './client';
 import type {
+  Dashboard,
   FieldSession,
   FieldSessionRequest,
   FuelPlateCheck,
@@ -41,6 +42,10 @@ export function login(client: ApiClient, body: LoginRequest): Promise<LoginRespo
 
 export async function logout(client: ApiClient): Promise<void> {
   await unwrap(client.POST('/api/v1/auth/logout'));
+}
+
+export function fetchDashboard(client: ApiClient): Promise<Dashboard> {
+  return unwrap(client.GET('/api/v1/dashboard'));
 }
 
 export function fetchHaulOptions(client: ApiClient): Promise<HaulOptions> {

@@ -48,7 +48,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Kullanıcı ve özet sayılar */
+        /**
+         * Saha kullanıcısının kendi fiş özeti
+         * @description Giriş yapan kullanıcının kendi kestiği taşıma, makine ve yakıt fişlerinin bugün / dün / bu ay sayıları, bugün girdiği son 10 fiş ve açık saha oturumu. Kasa verisi içermez.
+         */
         get: operations["dashboardShow"];
         put?: never;
         post?: never;
@@ -1384,16 +1387,50 @@ export interface components {
         UserResourceResponse: {
             data: components["schemas"]["User"];
         };
+        /** @description Kullanıcının kendi kestiği fiş sayıları (fiş tarihine göre) */
+        DashboardCounts: {
+            /** @example 12 */
+            today: number;
+            /** @example 9 */
+            yesterday: number;
+            /**
+             * @description Ay başından bugüne
+             * @example 210
+             */
+            month: number;
+        };
+        DashboardRecentItem: {
+            /**
+             * @example haul
+             * @enum {string}
+             */
+            type: "haul" | "machine_work" | "fuel_receipt";
+            /**
+             * Format: uuid
+             * @description Tipine göre GET /hauls/{id}, /machine-works/{id} veya /fuel-receipts/{id}
+             */
+            id: string;
+            /**
+             * @description Fişin girildiği saat
+             * @example 14:32
+             */
+            time: string;
+            /** @example 34 ABC 123 */
+            plate: string | null;
+            /** @example ADALAR HEYBELİ → ERZURUM SAHA */
+            summary: string;
+        };
         DashboardResponse: {
             user: components["schemas"]["User"];
+            /** @description Açık oturum yoksa null */
+            field_session: components["schemas"]["FieldSession"] | null;
             counts: {
-                /** @example 0 */
-                sites: number;
-                /** @example 0 */
-                vehicles: number;
-                /** @example 0 */
-                hauls: number;
+                hauls: components["schemas"]["DashboardCounts"];
+                machine_works: components["schemas"]["DashboardCounts"];
+                fuel_receipts: components["schemas"]["DashboardCounts"];
             };
+            /** @description Bugün girilen son fişler, en yeni önce, en fazla 10 */
+            recent: components["schemas"]["DashboardRecentItem"][];
         };
     };
     responses: never;

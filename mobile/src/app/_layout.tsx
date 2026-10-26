@@ -7,13 +7,14 @@ import {
   useFonts,
 } from '@expo-google-fonts/manrope';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, type NativeStackHeaderItem } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/auth/auth-provider';
 import { HeaderBackground } from '@/components/header-background';
+import { goHome, HomeButton } from '@/components/home-button';
 import { LoadingState } from '@/components/screen-state';
 import { queryClient } from '@/query-client';
 import { colors, fonts } from '@/theme';
@@ -50,6 +51,15 @@ export default function RootLayout() {
   );
 }
 
+function HomeButtonRight() {
+  return <HomeButton side="right" />;
+}
+
+/** iOS draws this like the native back button; Android falls back to headerRight. */
+function homeHeaderItems(): NativeStackHeaderItem[] {
+  return [{ type: 'button', label: 'Ana sayfa', icon: { type: 'sfSymbol', name: 'house' }, onPress: goHome }];
+}
+
 function RootNavigator() {
   const { state } = useAuth();
 
@@ -67,6 +77,8 @@ function RootNavigator() {
         headerTintColor: colors.steelText,
         headerTitleStyle: { fontFamily: fonts.bold, color: colors.primaryText },
         headerBackButtonDisplayMode: 'minimal',
+        headerRight: HomeButtonRight,
+        unstable_headerRightItems: homeHeaderItems,
         contentStyle: { backgroundColor: colors.background },
       }}
     >

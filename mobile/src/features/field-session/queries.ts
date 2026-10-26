@@ -10,8 +10,8 @@ const keys = {
   dumpSites: (siteId: string) => ['field-session', 'dump-sites', siteId] as const,
 };
 
-/** Ticket lists and fuel stations depend on the session's site and shift. */
-const SESSION_SCOPED_ROOTS = ['haul', 'machine-work', 'fuel-receipt'] as const;
+/** Ticket lists, fuel stations and the dashboard depend on the session's site and shift. */
+const SESSION_SCOPED_ROOTS = ['haul', 'machine-work', 'fuel-receipt', 'dashboard'] as const;
 
 function invalidateSessionScoped(queryClient: QueryClient) {
   for (const root of SESSION_SCOPED_ROOTS) {
