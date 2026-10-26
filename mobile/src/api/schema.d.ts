@@ -99,6 +99,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fuel-receipts/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Yakıt yeri listesi
+         * @description Açık oturumdaki şantiyeye hizmet veren aktif yakıt yerleri (şantiye bağlanmamış istasyonlar her şantiyede görünür). `stations[].id` > `fuel_station_id`. `unit_price` istasyonun güncel fiyatıdır; forma ön değer olarak konur.
+         */
+        get: operations["fuelReceiptsOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fuel-receipts/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Araç plakası ara (elle giriş için)
+         * @description Aktif araçlar; plakada geçen en az 2 karakter. En fazla 10 sonuç.
+         */
+        get: operations["fuelReceiptsVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fuel-receipts/check-plate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Elle girilen plakayı doğrula
+         * @description Plaka kayıtlı bir araç mı ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler.
+         */
+        get: operations["fuelReceiptsCheckPlate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fuel-receipts/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Araç plakasını fotoğraftan oku (isteğe bağlı)
+         * @description Fotoğraf saklanır ve OCR'dan geçirilir; sonuç `check-plate` ile aynı kontrolleri içerir. Dönen `scan_id` 1 saat geçerlidir ve `POST /fuel-receipts` isteğine eklenirse fotoğraf fişe bağlanır. Dakikada en fazla 20 istek.
+         */
+        post: operations["fuelReceiptsScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fuel-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Yakıt fişini kaydet
+         * @description Şantiye ve vardiya oturumdan, tarih bugünden alınır; fiş numarası (`Y-` önekli), araç sahibi ve istasyonun firması sunucuda belirlenir. `unit_price` boşsa istasyonun güncel fiyatı kullanılır. Yakıt yeri oturumdaki şantiyeye bağlı olmalıdır. `scan_id` yoksa plaka elle girilmiş sayılır. Dakikada en fazla 30 istek.
+         */
+        post: operations["fuelReceiptsStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fuel-receipts/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Açık oturumun bugünkü yakıt fişleri
+         * @description Kullanıcının açık oturumundaki şantiye ve vardiyaya göre bugünkü yakıt fişleri; en yeni önce, en fazla 100.
+         */
+        get: operations["fuelReceiptsSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fuel-receipts/{fuelReceipt}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Yakıt fişini tekrar getir (yazdırma verisi)
+         * @description Fişi kesen kullanıcı, açık oturumunun şantiye ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.
+         */
+        get: operations["fuelReceiptsShow"];
+        /**
+         * Yakıt fişini düzenle
+         * @description Fiş numarası, tarih, şantiye ve vardiya değişmez. Plaka, yakıt yeri, litre ve fiyat kayıttaki kurallarla yeniden doğrulanır; cari kaydı güncellenir. Görme kuralı `GET /fuel-receipts/{fuelReceipt}` ile aynıdır.
+         */
+        put: operations["fuelReceiptsUpdate"];
+        post?: never;
+        /**
+         * Yakıt fişini sil
+         * @description Fiş ve cari kaydı geri alınır. Görme kuralı `GET /fuel-receipts/{fuelReceipt}` ile aynıdır.
+         */
+        delete: operations["fuelReceiptsDestroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hauls/options": {
         parameters: {
             query?: never;
@@ -139,6 +287,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hauls/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Taşıma aracı plakası ara (elle giriş için)
+         * @description Sefer başı ücretlenen aktif araçlar; saatlik çalışan makineler listelenmez. Plakada geçen en az 2 karakter. En fazla 10 sonuç.
+         */
+        get: operations["haulsVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hauls/check-plate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Elle girilen plakayı doğrula
+         * @description Plaka kayıtlı bir taşıma aracı mı (makine değil) ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler.
+         */
+        get: operations["haulsCheckPlate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hauls/scan": {
         parameters: {
             query?: never;
@@ -150,7 +338,7 @@ export interface paths {
         put?: never;
         /**
          * Adım 5 · Plaka fotoğrafını oku (scan_id üretir)
-         * @description Fotoğraf saklanır ve OCR'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir. `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.
+         * @description Fotoğraf saklanır ve OCR'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir ve `check-plate` ile aynı kontrollerden geçer (makine plakaları reddedilir). `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.
          */
         post: operations["haulsScan"];
         delete?: never;
@@ -211,9 +399,17 @@ export interface paths {
          * @description Fişi kesen kullanıcı, açık oturumunun şantiye, döküm yeri ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.
          */
         get: operations["haulsShow"];
-        put?: never;
+        /**
+         * Fişi düzenle
+         * @description Sadece plaka ve tonaj değişir; fiş numarası, tarih, şantiye, döküm yeri ve vardiya aynı kalır. Plaka değişirse fiyatlar yeniden hesaplanır ve cari kayıtları güncellenir. Görme kuralı `GET /hauls/{haul}` ile aynıdır.
+         */
+        put: operations["haulsUpdate"];
         post?: never;
-        delete?: never;
+        /**
+         * Fişi sil
+         * @description Fiş ve cari kayıtları geri alınır. Görme kuralı `GET /hauls/{haul}` ile aynıdır.
+         */
+        delete: operations["haulsDestroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -234,6 +430,154 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operatör listesi
+         * @description `operators[].id` > `operator_id`. `salaried` true ise operatör personeldir, `operator_rate` gönderilmez. Değilse `last_rate` operatörün son fişindeki ücrettir; forma ön değer olarak konur.
+         */
+        get: operations["machineWorksOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works/machines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Makine plakası ara (elle giriş için)
+         * @description Saatlik çalışan aktif makineler; plakada geçen en az 2 karakter. En fazla 10 sonuç.
+         */
+        get: operations["machineWorksMachines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works/check-plate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Elle girilen plakayı doğrula
+         * @description Plaka kayıtlı, saatlik çalışan bir makine mi ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler. `rate_required` true ise makinenin bugün geçerli saat ücreti yoktur; fişte `hourly_rate` girilmelidir.
+         */
+        get: operations["machineWorksCheckPlate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Makine plakasını fotoğraftan oku (isteğe bağlı)
+         * @description Fotoğraf saklanır ve OCR'dan geçirilir; sonuç `check-plate` ile aynı kontrolleri içerir. Dönen `scan_id` 1 saat geçerlidir ve `POST /machine-works` isteğine eklenirse fotoğraf fişe bağlanır. Dakikada en fazla 20 istek.
+         */
+        post: operations["machineWorksScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Makine çalışma fişini kaydet
+         * @description Şantiye ve vardiya oturumdan, tarih bugünden alınır; fiş numarası (`M-` önekli) ve makine sahibi sunucuda belirlenir. `hourly_rate` boşsa makinenin bugün geçerli saat ücreti kullanılır. Personel olmayan operatör seçildiyse `operator_rate` zorunludur. `scan_id` yoksa plaka elle girilmiş sayılır. Dakikada en fazla 30 istek.
+         */
+        post: operations["machineWorksStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Açık oturumun bugünkü makine fişleri
+         * @description Kullanıcının açık oturumundaki şantiye ve vardiyaya göre bugünkü makine fişleri; en yeni önce, en fazla 100.
+         */
+        get: operations["machineWorksSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine-works/{machineWork}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Makine fişini tekrar getir (yazdırma verisi)
+         * @description Fişi kesen kullanıcı, açık oturumunun şantiye ve vardiyası fişinkiyle aynıyken görebilir; `yonetici` rolü her fişi görür.
+         */
+        get: operations["machineWorksShow"];
+        /**
+         * Makine fişini düzenle
+         * @description Fiş numarası, tarih, şantiye ve vardiya değişmez. Plaka, saat, ücret ve operatör kayıttaki kurallarla yeniden doğrulanır; cari kayıtları güncellenir. Görme kuralı `GET /machine-works/{machineWork}` ile aynıdır.
+         */
+        put: operations["machineWorksUpdate"];
+        post?: never;
+        /**
+         * Makine fişini sil
+         * @description Fiş ve cari kayıtları geri alınır. Görme kuralı `GET /machine-works/{machineWork}` ile aynıdır.
+         */
+        delete: operations["machineWorksDestroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -340,7 +684,47 @@ export interface components {
             /** @description Açık oturum yoksa null */
             data: components["schemas"]["FieldSession"] | null;
         };
-        PlateScanResult: {
+        HaulVehicleSearchResponse: {
+            vehicles: {
+                /** @example 01 HCU 728 */
+                plate: string;
+                /** @example ABC Hafriyat */
+                owner_name: string | null;
+                /** @example Kamyon */
+                class_name: string | null;
+            }[];
+        };
+        HaulPlateCheck: {
+            vehicle: {
+                /** Format: uuid */
+                id: string | null;
+                /**
+                 * @description Sistemde kayıtlı yazım
+                 * @example 01 HCU 728
+                 */
+                plate: string | null;
+                /** @example true */
+                found: boolean;
+            };
+            /**
+             * @description Aracın bugün kayıtlı sahibi var mı
+             * @example true
+             */
+            owner_on_date: boolean;
+            /** @example ABC Hafriyat */
+            owner_name: string | null;
+            /**
+             * @description Bu plakayla taşıma fişi kesilebilir mi (makine plakalarında false)
+             * @example true
+             */
+            can_create: boolean;
+            /**
+             * @description can_create false ise sebebi
+             * @example null
+             */
+            message: string | null;
+        };
+        PlateScanResult: components["schemas"]["HaulPlateCheck"] & {
             /**
              * @description OCR plaka bulabildi mi
              * @example true
@@ -370,36 +754,10 @@ export interface components {
              * @example true
              */
             matched_regex: boolean;
-            vehicle: {
-                /** Format: uuid */
-                id: string | null;
-                /**
-                 * @description Sistemde kayıtlı yazım
-                 * @example 01 HCU 728
-                 */
-                plate: string | null;
-                /** @example true */
-                found: boolean;
-            };
-            /**
-             * @description Aracın bugün kayıtlı sahibi var mı
-             * @example true
-             */
-            owner_on_date: boolean;
-            /**
-             * @description Okunan plakayla doğrudan fiş kesilebilir mi
-             * @example true
-             */
-            can_create: boolean;
-            /**
-             * @description can_create false ise sebebi
-             * @example null
-             */
-            message: string | null;
         };
         HaulStoreRequest: {
             /**
-             * @description Kullanıcının onayladığı plaka. Kayıtlı bir araç olmalı.
+             * @description Kullanıcının onayladığı plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.
              * @example 01 HCU 728
              */
             plate: string;
@@ -419,13 +777,22 @@ export interface components {
              */
             tonnage: number;
         };
+        HaulUpdateRequest: {
+            /**
+             * @description Kayıtlı bir araç; fiş tarihinde sahibi olmalı
+             * @example 01 HCU 728
+             */
+            plate: string;
+            /** @example 22 */
+            tonnage: number;
+        };
         /** @description Fiş yazdırma verisi */
         HaulTicket: {
             /** Format: uuid */
             id: string;
             /** @example SEFER HAREKET FİŞİ */
             title: string;
-            /** @example 20261025-235232-63 */
+            /** @example T-20261025-235232-63 */
             ticket_no: string;
             /** Format: date-time */
             hauled_at: string;
@@ -463,7 +830,7 @@ export interface components {
         SessionHaul: {
             /** Format: uuid */
             id: string;
-            /** @example 20261025-235232-63 */
+            /** @example T-20261025-235232-63 */
             ticket_no: string;
             /** @example 72 DLH 681 */
             plate: string | null;
@@ -480,6 +847,470 @@ export interface components {
             session: components["schemas"]["FieldSession"];
             /** @description Bugünkü fişler, en yeni önce, en fazla 100 */
             data: components["schemas"]["SessionHaul"][];
+        };
+        FuelStationOption: {
+            /** Format: uuid */
+            id: string;
+            /** @example MERKEZ PETROL */
+            name: string;
+            /**
+             * @description İstasyonun cari firması
+             * @example Merkez Akaryakıt Ltd.
+             */
+            firm_name: string | null;
+            /**
+             * @description Güncel litre fiyatı (0 ise fişte unit_price girilmeli)
+             * @example 48.7500
+             */
+            unit_price: string;
+        };
+        FuelReceiptOptionsResponse: {
+            stations: components["schemas"]["FuelStationOption"][];
+        };
+        FuelVehicleSearchResponse: {
+            vehicles: {
+                /** @example 34 AB 123 */
+                plate: string;
+                /** @example ABC Hafriyat */
+                owner_name: string | null;
+                /** @example Kamyon */
+                class_name: string | null;
+            }[];
+        };
+        FuelPlateCheck: {
+            vehicle: {
+                /** Format: uuid */
+                id: string | null;
+                /**
+                 * @description Sistemde kayıtlı yazım
+                 * @example 34 AB 123
+                 */
+                plate: string | null;
+                /** @example true */
+                found: boolean;
+            };
+            /**
+             * @description Aracın bugün kayıtlı sahibi var mı
+             * @example true
+             */
+            owner_on_date: boolean;
+            /** @example ABC Hafriyat */
+            owner_name: string | null;
+            /**
+             * @description Bu plakayla fiş kesilebilir mi
+             * @example true
+             */
+            can_create: boolean;
+            /**
+             * @description can_create false ise sebebi
+             * @example null
+             */
+            message: string | null;
+        };
+        FuelPlateScanResult: components["schemas"]["FuelPlateCheck"] & {
+            /**
+             * @description OCR plaka bulabildi mi
+             * @example true
+             */
+            success: boolean;
+            /**
+             * Format: uuid
+             * @description POST /fuel-receipts için isteğe bağlı. 1 saat geçerli.
+             */
+            scan_id: string;
+            /** Format: uuid */
+            field_session_id: string;
+            /**
+             * @description OCR'ın okuduğu metin (boşluksuz olabilir)
+             * @example 34AB123
+             */
+            plate: string | null;
+            /**
+             * Format: float
+             * @example 0.93
+             */
+            confidence: number | null;
+            /** @example true */
+            matched_regex: boolean;
+        };
+        FuelReceiptUpdateRequest: {
+            /**
+             * @description Kayıtlı bir araç
+             * @example 34 AB 123
+             */
+            plate: string;
+            /**
+             * Format: uuid
+             * @description GET /fuel-receipts/options > stations[].id
+             */
+            fuel_station_id: string;
+            /**
+             * Format: float
+             * @description Litre; 0'dan büyük, en fazla 2 ondalık; "45,5" de kabul edilir
+             * @example 120
+             */
+            quantity: number;
+            /**
+             * Format: float
+             * @description Boşsa istasyonun güncel fiyatı kullanılır; en fazla 4 ondalık
+             * @example null
+             */
+            unit_price?: number | null;
+            /**
+             * @description Aracın kilometresi
+             * @example 152300
+             */
+            km?: number | null;
+            /**
+             * @description Yakıtı alan kişi
+             * @example Mehmet Yılmaz
+             */
+            received_by?: string | null;
+            /**
+             * @description Taşıma fiş adedi
+             * @example 4
+             */
+            haul_ticket_count?: number | null;
+        };
+        FuelReceiptStoreRequest: components["schemas"]["FuelReceiptUpdateRequest"] & {
+            /**
+             * Format: uuid
+             * @description POST /field-sessions > data.id
+             */
+            field_session_id: string;
+            /**
+             * Format: uuid
+             * @description POST /fuel-receipts/scan > scan_id. Elle girişte gönderilmez.
+             */
+            scan_id?: string | null;
+        };
+        /** @description Yakıt fişi yazdırma verisi */
+        FuelReceiptTicket: {
+            /** Format: uuid */
+            id: string;
+            /** @example YAKIT FİŞİ */
+            title: string;
+            /** @example Y-20261026-191530-42 */
+            ticket_no: string;
+            /**
+             * Format: date
+             * @example 2026-10-26
+             */
+            issued_on: string;
+            /** @example 26/10/2026 */
+            issued_on_label: string;
+            /** @example 34 AB 123 */
+            plate: string | null;
+            /** @example Kamyon */
+            class_name: string | null;
+            /** @example ABC Hafriyat */
+            owner_name: string | null;
+            /** @example ADALAR HEYBELİ */
+            site_name: string | null;
+            /**
+             * @example day
+             * @enum {string|null}
+             */
+            shift: "day" | "night" | null;
+            /** @example Gündüz */
+            shift_label: string | null;
+            station: {
+                /** Format: uuid */
+                id: string;
+                /** @example MERKEZ PETROL */
+                name: string;
+            } | null;
+            /** @example Merkez Akaryakıt Ltd. */
+            firm_name: string | null;
+            /**
+             * Format: float
+             * @example 120.5
+             */
+            quantity: number;
+            /** @example 120,5 */
+            quantity_label: string;
+            /** @example 48.7500 */
+            unit_price: string;
+            /** @example 5874.38 */
+            amount: string;
+            /** @example 152300 */
+            km: number | null;
+            /** @example Mehmet Yılmaz */
+            received_by: string | null;
+            /** @example 4 */
+            haul_ticket_count: number | null;
+            /** @description Fiş QR kodunun içeriği */
+            qr_payload: string;
+            /**
+             * Format: uri
+             * @description Plaka fotoğrafı; elle girilen fişlerde null
+             */
+            photo_url: string | null;
+        };
+        FuelReceiptTicketResponse: {
+            data: components["schemas"]["FuelReceiptTicket"];
+        };
+        SessionFuelReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @example Y-20261026-191530-42 */
+            ticket_no: string;
+            /** @example 34 AB 123 */
+            plate: string | null;
+            /** @example 26/10/2026 */
+            issued_on_label: string;
+            site_name: string | null;
+            /** @enum {string} */
+            shift: "day" | "night";
+            /** @example MERKEZ PETROL */
+            station_name: string | null;
+            /**
+             * Format: float
+             * @example 120.5
+             */
+            quantity: number;
+            /** @example 5874.38 */
+            amount: string;
+        };
+        SessionFuelReceiptsResponse: {
+            session: components["schemas"]["FieldSession"];
+            /** @description Bugünkü yakıt fişleri, en yeni önce, en fazla 100 */
+            data: components["schemas"]["SessionFuelReceipt"][];
+        };
+        MachineOperatorOption: {
+            /** Format: uuid */
+            id: string;
+            /** @example Kemal Usta */
+            name: string;
+            /**
+             * @description Personel ise true; fişte operatör ücreti yazılmaz
+             * @example false
+             */
+            salaried: boolean;
+            /**
+             * @description Son fişteki operatör saat ücreti
+             * @example 350.00
+             */
+            last_rate: string | null;
+        };
+        MachineWorkOptionsResponse: {
+            operators: components["schemas"]["MachineOperatorOption"][];
+        };
+        MachineSearchResponse: {
+            machines: {
+                /** @example 34 MK 100 */
+                plate: string;
+                /** @example ABC Hafriyat */
+                owner_name: string | null;
+                /** @example Ekskavatör */
+                class_name: string | null;
+                /**
+                 * @description Güncel saat ücreti
+                 * @example 1500.00
+                 */
+                hourly_rate: string | null;
+            }[];
+        };
+        MachinePlateCheck: {
+            vehicle: {
+                /** Format: uuid */
+                id: string | null;
+                /**
+                 * @description Sistemde kayıtlı yazım
+                 * @example 34 MK 100
+                 */
+                plate: string | null;
+                /** @example true */
+                found: boolean;
+            };
+            /**
+             * @description Araç tipi saatlik çalışıyor mu
+             * @example true
+             */
+            hourly: boolean;
+            /**
+             * @description Makinenin bugün kayıtlı sahibi var mı
+             * @example true
+             */
+            owner_on_date: boolean;
+            /** @example ABC Hafriyat */
+            owner_name: string | null;
+            /**
+             * @description Bugün geçerli saat ücreti
+             * @example 1500.00
+             */
+            hourly_rate: string | null;
+            /**
+             * @description Tanımlı ücret yok; fişte hourly_rate girilmeli
+             * @example false
+             */
+            rate_required: boolean;
+            /**
+             * @description Bu plakayla fiş kesilebilir mi
+             * @example true
+             */
+            can_create: boolean;
+            /**
+             * @description can_create false ise sebebi; rate_required true ise uyarı
+             * @example null
+             */
+            message: string | null;
+        };
+        MachinePlateScanResult: components["schemas"]["MachinePlateCheck"] & {
+            /**
+             * @description OCR plaka bulabildi mi
+             * @example true
+             */
+            success: boolean;
+            /**
+             * Format: uuid
+             * @description POST /machine-works için isteğe bağlı. 1 saat geçerli.
+             */
+            scan_id: string;
+            /** Format: uuid */
+            field_session_id: string;
+            /**
+             * @description OCR'ın okuduğu metin (boşluksuz olabilir)
+             * @example 34MK100
+             */
+            plate: string | null;
+            /**
+             * Format: float
+             * @example 0.93
+             */
+            confidence: number | null;
+            /** @example true */
+            matched_regex: boolean;
+        };
+        MachineWorkUpdateRequest: {
+            /**
+             * @description Kayıtlı, saatlik çalışan bir makine
+             * @example 34 MK 100
+             */
+            plate: string;
+            /**
+             * Format: float
+             * @description 0'dan büyük, en fazla 2 ondalık; "4,5" de kabul edilir
+             * @example 4.5
+             */
+            hours: number;
+            /**
+             * Format: float
+             * @description Boşsa makinenin o tarihte geçerli saat ücreti kullanılır
+             * @example null
+             */
+            hourly_rate?: number | null;
+            /**
+             * Format: uuid
+             * @description GET /machine-works/options > operators[].id
+             */
+            operator_id?: string | null;
+            /**
+             * Format: float
+             * @description Personel olmayan operatör için zorunlu
+             * @example 350
+             */
+            operator_rate?: number | null;
+        };
+        MachineWorkStoreRequest: components["schemas"]["MachineWorkUpdateRequest"] & {
+            /**
+             * Format: uuid
+             * @description POST /field-sessions > data.id
+             */
+            field_session_id: string;
+            /**
+             * Format: uuid
+             * @description POST /machine-works/scan > scan_id. Elle girişte gönderilmez.
+             */
+            scan_id?: string | null;
+        };
+        /** @description Makine fişi yazdırma verisi */
+        MachineWorkTicket: {
+            /** Format: uuid */
+            id: string;
+            /** @example MAKİNE ÇALIŞMA FİŞİ */
+            title: string;
+            /** @example M-20261026-183012-07 */
+            ticket_no: string;
+            /**
+             * Format: date
+             * @example 2026-10-26
+             */
+            worked_on: string;
+            /** @example 26/10/2026 */
+            worked_on_label: string;
+            /** @example 34 MK 100 */
+            plate: string | null;
+            /** @example Ekskavatör */
+            class_name: string | null;
+            /** @example ABC Hafriyat */
+            owner_name: string | null;
+            /** @example ADALAR HEYBELİ */
+            site_name: string | null;
+            /**
+             * @example day
+             * @enum {string}
+             */
+            shift: "day" | "night";
+            /** @example Gündüz */
+            shift_label: string;
+            /**
+             * Format: float
+             * @example 4.5
+             */
+            hours: number;
+            /** @example 4,5 */
+            hours_label: string;
+            /** @example 1500.00 */
+            hourly_rate: string;
+            /** @example 6750.00 */
+            amount: string;
+            operator: {
+                /** Format: uuid */
+                id: string;
+                /** @example Kemal Usta */
+                name: string;
+            } | null;
+            /** @example 350.00 */
+            operator_rate: string | null;
+            /** @example 1575.00 */
+            operator_amount: string | null;
+            /** @description Fiş QR kodunun içeriği */
+            qr_payload: string;
+            /**
+             * Format: uri
+             * @description Plaka fotoğrafı; elle girilen fişlerde null
+             */
+            photo_url: string | null;
+        };
+        MachineWorkTicketResponse: {
+            data: components["schemas"]["MachineWorkTicket"];
+        };
+        SessionMachineWork: {
+            /** Format: uuid */
+            id: string;
+            /** @example M-20261026-183012-07 */
+            ticket_no: string;
+            /** @example 34 MK 100 */
+            plate: string | null;
+            /** @example 26/10/2026 */
+            worked_on_label: string;
+            site_name: string | null;
+            /** @enum {string} */
+            shift: "day" | "night";
+            operator_name: string | null;
+            /**
+             * Format: float
+             * @example 4.5
+             */
+            hours: number;
+            /** @example 6750.00 */
+            amount: string;
+        };
+        SessionMachineWorksResponse: {
+            session: components["schemas"]["FieldSession"];
+            /** @description Bugünkü makine fişleri, en yeni önce, en fazla 100 */
+            data: components["schemas"]["SessionMachineWork"][];
         };
         User: {
             /**
@@ -788,6 +1619,490 @@ export interface operations {
             };
         };
     };
+    fuelReceiptsOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Yakıt yerleri */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelReceiptOptionsResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Açık oturum yok */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    fuelReceiptsVehicles: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eşleşen araçlar (boş olabilir) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelVehicleSearchResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fuelReceiptsCheckPlate: {
+        parameters: {
+            query: {
+                plate: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kontrol sonucu */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelPlateCheck"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description plate eksik */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    fuelReceiptsScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px
+                     */
+                    file: string;
+                    /**
+                     * Format: uuid
+                     * @description POST /field-sessions > data.id
+                     */
+                    field_session_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Okuma sonucu (plaka okunamasa da 200; success alanına bakın) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelPlateScanResult"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Geçersiz görsel veya açık olmayan oturum */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Dakikada 20 istek sınırı aşıldı */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description OCR servisine ulaşılamadı (tarama kaydı oluşmaz) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fuelReceiptsStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FuelReceiptStoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Fiş kaydedildi */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelReceiptTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Kayıtlı olmayan plaka, sahibi olmayan araç, şantiyeye bağlı olmayan yakıt yeri, eksik fiyat, süresi dolmuş scan_id veya kapalı oturum */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Dakikada 30 istek sınırı aşıldı */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fuelReceiptsSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Oturum ve fiş listesi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionFuelReceiptsResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Açık oturum yok */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    fuelReceiptsShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description POST /fuel-receipts > data.id */
+                fuelReceipt: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fiş yazdırma verisi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelReceiptTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fuelReceiptsUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fuelReceipt: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FuelReceiptUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Fiş güncellendi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelReceiptTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Geçersiz alan */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    fuelReceiptsDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fuelReceipt: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fiş silindi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     haulsOptions: {
         parameters: {
             query?: never;
@@ -866,6 +2181,95 @@ export interface operations {
                 };
             };
             /** @description site_id eksik veya UUID değil */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    haulsVehicles: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eşleşen araçlar (boş olabilir) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HaulVehicleSearchResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    haulsCheckPlate: {
+        parameters: {
+            query: {
+                plate: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kontrol sonucu */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HaulPlateCheck"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description plate eksik */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1113,6 +2517,117 @@ export interface operations {
             };
         };
     };
+    haulsUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haul: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HaulUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Fiş güncellendi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HaulTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Kayıtlı olmayan plaka, aracın fiş tarihinde sahibi yok veya geçersiz tonaj */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    haulsDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haul: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fiş silindi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     haulsPhoto: {
         parameters: {
             query: {
@@ -1149,6 +2664,481 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    machineWorksOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operatörler */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineWorkOptionsResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machineWorksMachines: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eşleşen makineler (boş olabilir) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineSearchResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machineWorksCheckPlate: {
+        parameters: {
+            query: {
+                plate: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kontrol sonucu */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachinePlateCheck"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description plate eksik */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    machineWorksScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG, WebP veya GIF; en fazla 15 MB ve 4096 px
+                     */
+                    file: string;
+                    /**
+                     * Format: uuid
+                     * @description POST /field-sessions > data.id
+                     */
+                    field_session_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Okuma sonucu (plaka okunamasa da 200; success alanına bakın) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachinePlateScanResult"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Geçersiz görsel veya açık olmayan oturum */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Dakikada 20 istek sınırı aşıldı */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description OCR servisine ulaşılamadı (tarama kaydı oluşmaz) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machineWorksStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MachineWorkStoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Fiş kaydedildi */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineWorkTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Kayıtlı/saatlik olmayan plaka, sahibi olmayan makine, eksik ücret, süresi dolmuş scan_id veya kapalı oturum */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Dakikada 30 istek sınırı aşıldı */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machineWorksSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Oturum ve fiş listesi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionMachineWorksResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Açık oturum yok */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    machineWorksShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description POST /machine-works > data.id */
+                machineWork: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fiş yazdırma verisi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineWorkTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machineWorksUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                machineWork: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MachineWorkUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Fiş güncellendi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineWorkTicketResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Geçersiz alan */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+        };
+    };
+    machineWorksDestroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                machineWork: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fiş silindi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Token yok veya süresi dolmuş */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedError"];
+                };
+            };
+            /** @description field-haul.operate yetkisi yok */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fiş yok veya bu kullanıcı/oturum için görünmüyor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };

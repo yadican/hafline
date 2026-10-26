@@ -51,6 +51,27 @@ export function toApiError(status: number, body: unknown): ApiError {
   return new ApiError(message, status, fieldErrors);
 }
 
+/**
+ * Message for a form-level banner, or null when every field error is already shown next to its input.
+ */
+export function formErrorMessage(error: unknown, shownFields: string[]): string | null {
+  if (!error) {
+    return null;
+  }
+
+  if (error instanceof ApiError) {
+    const unshown = Object.entries(error.fieldErrors).find(([field]) => !shownFields.includes(field));
+
+    if (unshown) {
+      return unshown[1][0] ?? error.message;
+    }
+
+    return Object.keys(error.fieldErrors).length > 0 ? null : error.message;
+  }
+
+  return UNEXPECTED_ERROR_MESSAGE;
+}
+
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;

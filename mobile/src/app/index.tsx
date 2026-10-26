@@ -53,7 +53,9 @@ export default function HomeScreen() {
       {session.data ? (
         <>
           <SessionCard session={session.data} />
-          <Button title="Plaka tara" onPress={() => router.push('/scan')} />
+          <Button title="Taşıma fişleri" onPress={() => router.push('/hauls')} />
+          <Button title="Makine fişleri" onPress={() => router.push('/machine-works')} />
+          <Button title="Yakıt fişleri" onPress={() => router.push('/fuel-receipts')} />
           <Button title="Oturumu değiştir" variant="secondary" onPress={() => router.push('/session')} />
           <Button title="Oturumu kapat" variant="danger" onPress={confirmClose} loading={closeSession.isPending} />
         </>

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import {
   closeSession,
@@ -15,6 +15,15 @@ const keys = {
   options: ['field-session', 'options'] as const,
   dumpSites: (siteId: string) => ['field-session', 'dump-sites', siteId] as const,
 };
+
+/** Ticket lists and fuel stations depend on the session's site and shift. */
+const SESSION_SCOPED_ROOTS = ['haul', 'machine-work', 'fuel-receipt'] as const;
+
+function invalidateSessionScoped(queryClient: QueryClient) {
+  for (const root of SESSION_SCOPED_ROOTS) {
+    void queryClient.invalidateQueries({ queryKey: [root] });
+  }
+}
 
 export function useCurrentSession() {
   const client = useApiClient();
@@ -52,7 +61,10 @@ export function useLockSession() {
 
   return useMutation({
     mutationFn: (body: { site_id: string; dump_site_id: string; shift: Shift }) => lockSession(client, body),
-    onSuccess: (session: FieldSession) => queryClient.setQueryData(keys.current, session),
+    onSuccess: (session: FieldSession) => {
+      queryClient.setQueryData(keys.current, session);
+      invalidateSessionScoped(queryClient);
+    },
   });
 }
 
@@ -62,6 +74,9 @@ export function useCloseSession() {
 
   return useMutation({
     mutationFn: () => closeSession(client),
-    onSuccess: () => queryClient.setQueryData(keys.current, null),
+    onSuccess: () => {
+      queryClient.setQueryData(keys.current, null);
+      invalidateSessionScoped(queryClient);
+    },
   });
 }

@@ -78,8 +78,18 @@ function RootNavigator() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ title: 'Hafline Saha', headerTitle: () => <BrandTitle /> }} />
         <Stack.Screen name="session" options={{ title: 'Oturum Seçimi' }} />
-        <Stack.Screen name="scan" options={{ title: 'Plaka Tara' }} />
-        <Stack.Screen name="ticket/[id]" options={{ title: 'Fiş' }} />
+        <Stack.Screen name="hauls/index" options={{ title: 'Taşıma Fişleri' }} />
+        <Stack.Screen name="hauls/new" options={{ title: 'Yeni Taşıma Fişi' }} />
+        <Stack.Screen name="hauls/[id]/index" options={{ title: 'Taşıma Fişi' }} />
+        <Stack.Screen name="hauls/[id]/edit" options={{ title: 'Taşıma Fişini Düzenle' }} />
+        <Stack.Screen name="machine-works/index" options={{ title: 'Makine Fişleri' }} />
+        <Stack.Screen name="machine-works/new" options={{ title: 'Yeni Makine Fişi' }} />
+        <Stack.Screen name="machine-works/[id]/index" options={{ title: 'Makine Fişi' }} />
+        <Stack.Screen name="machine-works/[id]/edit" options={{ title: 'Makine Fişini Düzenle' }} />
+        <Stack.Screen name="fuel-receipts/index" options={{ title: 'Yakıt Fişleri' }} />
+        <Stack.Screen name="fuel-receipts/new" options={{ title: 'Yeni Yakıt Fişi' }} />
+        <Stack.Screen name="fuel-receipts/[id]/index" options={{ title: 'Yakıt Fişi' }} />
+        <Stack.Screen name="fuel-receipts/[id]/edit" options={{ title: 'Yakıt Fişini Düzenle' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
