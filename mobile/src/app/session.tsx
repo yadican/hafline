@@ -8,7 +8,7 @@ import { Button } from '@/components/button';
 import { OptionList } from '@/components/option-list';
 import { ErrorBanner, ErrorState, LoadingState } from '@/components/screen-state';
 import { useCurrentSession, useDumpSites, useHaulOptions, useLockSession } from '@/features/field-session/queries';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, fonts, spacing } from '@/theme';
 
 export default function SessionScreen() {
   const current = useCurrentSession();
@@ -121,11 +121,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.body,
-    fontWeight: '700',
+    fontFamily: fonts.extrabold,
     color: colors.text,
   },
   hint: {
     fontSize: fontSize.small,
+    fontFamily: fonts.medium,
     color: colors.muted,
   },
 });

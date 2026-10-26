@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontSize, radius, spacing, touchHeight } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing, touchHeight } from '@/theme';
 
 import { TextField } from './text-field';
 
@@ -52,7 +52,9 @@ export function OptionList({ options, selected, onSelect, emptyText, searchThres
                 pressed && styles.rowPressed,
               ]}
             >
-              <View style={[styles.radio, isSelected && styles.radioSelected]} />
+              <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                {isSelected ? <View style={styles.radioDot} /> : null}
+              </View>
               <Text style={[styles.label, isSelected && styles.labelSelected]}>{option.label}</Text>
             </Pressable>
           );
@@ -89,30 +91,41 @@ const styles = StyleSheet.create({
     backgroundColor: colors.selected,
   },
   rowPressed: {
-    opacity: 0.7,
+    backgroundColor: colors.surfaceMuted,
   },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: colors.radioBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
   radioSelected: {
     borderColor: colors.primary,
-    borderWidth: 7,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
   },
   label: {
     flex: 1,
     fontSize: fontSize.body,
+    fontFamily: fonts.medium,
     color: colors.text,
   },
   labelSelected: {
-    fontWeight: '600',
+    fontFamily: fonts.bold,
+    color: colors.primaryDark,
   },
   empty: {
     padding: spacing.md,
     fontSize: fontSize.body,
+    fontFamily: fonts.medium,
     color: colors.muted,
   },
 });

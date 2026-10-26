@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/errors';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
 import { Button } from './button';
 
@@ -49,18 +49,22 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: fontSize.body,
+    fontFamily: fonts.semibold,
     color: colors.text,
     textAlign: 'center',
   },
   banner: {
     borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: 8,
+    borderLeftWidth: 6,
+    borderColor: colors.dangerBorder,
+    borderLeftColor: colors.danger,
+    borderRadius: radius,
     backgroundColor: colors.dangerSurface,
     padding: spacing.md,
   },
   bannerText: {
     fontSize: fontSize.body,
-    color: colors.danger,
+    fontFamily: fonts.semibold,
+    color: colors.dangerText,
   },
 });

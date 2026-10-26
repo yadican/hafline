@@ -1,8 +1,12 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, fontSize, radius, spacing, touchHeight } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing, touchHeight } from '@/theme';
 
-type Variant = 'primary' | 'secondary' | 'danger';
+/**
+ * Same colour language as the back office (.panel-btn-*):
+ * primary = brand ochre, create = new record, edit = update, danger = delete, secondary = neutral.
+ */
+type Variant = 'primary' | 'secondary' | 'create' | 'edit' | 'danger';
 
 type ButtonProps = {
   title: string;
@@ -24,8 +28,10 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        { backgroundColor: palette.background, borderColor: palette.border },
-        pressed && styles.pressed,
+        {
+          backgroundColor: pressed ? palette.pressed : palette.background,
+          borderColor: palette.border,
+        },
         inactive && styles.inactive,
       ]}
     >
@@ -38,10 +44,12 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
   );
 }
 
-const PALETTES: Record<Variant, { background: string; border: string; text: string }> = {
-  primary: { background: colors.primary, border: colors.primary, text: colors.primaryText },
-  secondary: { background: colors.surface, border: colors.border, text: colors.text },
-  danger: { background: colors.surface, border: colors.danger, text: colors.danger },
+const PALETTES: Record<Variant, { background: string; pressed: string; border: string; text: string }> = {
+  primary: { background: colors.primary, pressed: colors.primaryDark, border: colors.primaryDark, text: colors.primaryText },
+  secondary: { background: colors.surface, pressed: colors.surfaceMuted, border: colors.border, text: colors.text },
+  create: { background: colors.create, pressed: colors.createDark, border: colors.createDark, text: colors.primaryText },
+  edit: { background: colors.edit, pressed: colors.editDark, border: colors.editDark, text: colors.primaryText },
+  danger: { background: colors.danger, pressed: colors.dangerDark, border: colors.dangerDark, text: colors.primaryText },
 };
 
 const styles = StyleSheet.create({
@@ -53,14 +61,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
   },
-  pressed: {
-    opacity: 0.8,
-  },
   inactive: {
     opacity: 0.5,
   },
   title: {
     fontSize: fontSize.body,
-    fontWeight: '600',
+    fontFamily: fonts.bold,
   },
 });

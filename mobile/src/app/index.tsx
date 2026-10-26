@@ -8,7 +8,7 @@ import { Button } from '@/components/button';
 import { InfoRow } from '@/components/info-row';
 import { ErrorBanner, ErrorState, LoadingState } from '@/components/screen-state';
 import { useCloseSession, useCurrentSession } from '@/features/field-session/queries';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
 export default function HomeScreen() {
   const user = useSignedInUser();
@@ -99,8 +99,12 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   greeting: {
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
     fontSize: fontSize.title,
-    fontWeight: '700',
+    fontFamily: fonts.extrabold,
+    letterSpacing: -0.4,
     color: colors.text,
   },
   card: {
@@ -108,16 +112,21 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius,
     borderWidth: 1,
+    borderLeftWidth: 4,
     borderColor: colors.border,
+    borderLeftColor: colors.brandLine,
     backgroundColor: colors.surface,
   },
   cardTitle: {
-    fontSize: fontSize.body,
-    fontWeight: '700',
-    color: colors.text,
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.muted,
   },
   hint: {
     fontSize: fontSize.small,
+    fontFamily: fonts.medium,
     color: colors.muted,
   },
   footer: {
