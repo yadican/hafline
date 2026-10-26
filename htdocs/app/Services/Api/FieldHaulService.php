@@ -9,10 +9,12 @@ use App\Models\Haul;
 use App\Models\HaulScan;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Repositories\HaulLookupRepository;
 use App\Services\Api\Ocr\PlateScanClient;
 use App\Services\HaulService;
 use App\Services\Service;
 use App\Services\TicketNumbers;
+use Carbon\CarbonInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -25,6 +27,7 @@ class FieldHaulService extends Service
         private SecureImageIngest $images,
         private PlateScanClient $ocr,
         private TicketNumbers $ticketNumbers,
+        private HaulLookupRepository $lookups,
     ) {}
 
     /**
@@ -57,18 +60,81 @@ class FieldHaulService extends Service
     }
 
     /**
+     * Active trip-billed vehicles whose plate contains the term (at least two characters); machines are left out.
+     *
+     * @return list<array{plate: string, owner_name: ?string, class_name: ?string}>
+     */
+    public function vehicles(string $term): array
+    {
+        if (mb_strlen(Vehicle::normalizePlate($term)) < 2) {
+            return [];
+        }
+
+        return $this->lookups->haulVehicles($term)
+            ->map(fn (Vehicle $vehicle): array => [
+                'plate' => $vehicle->plate,
+                'owner_name' => $vehicle->currentOwnership?->party?->name,
+                'class_name' => $vehicle->vehicleClass?->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Whether a haul ticket can be written for this plate on the haul date (now for new tickets).
+     *
      * @return array{
-     *     success: bool,
-     *     scan_id: string,
-     *     field_session_id: string,
-     *     plate: ?string,
-     *     confidence: ?float,
-     *     matched_regex: bool,
      *     vehicle: array{id: ?string, plate: ?string, found: bool},
      *     owner_on_date: bool,
+     *     owner_name: ?string,
      *     can_create: bool,
      *     message: ?string
      * }
+     */
+    public function checkPlate(?string $plate, ?Haul $haul = null): array
+    {
+        $date = $this->haulDate($haul);
+        $vehicle = $plate ? Vehicle::findByPlate($plate) : null;
+        $owner = $vehicle?->ownershipOn($date)?->party;
+        $problem = $vehicle ? $this->plateProblem($vehicle, $date, $haul) : 'Kayıtlı araç bulunamadı.';
+
+        return [
+            'vehicle' => [
+                'id' => $vehicle?->id,
+                'plate' => $vehicle?->plate,
+                'found' => $vehicle !== null,
+            ],
+            'owner_on_date' => $owner !== null,
+            'owner_name' => $owner?->name,
+            'can_create' => $problem === null,
+            'message' => $problem,
+        ];
+    }
+
+    /**
+     * The reason a haul ticket cannot be written for this vehicle on this date. Machines work on
+     * machine tickets; a ticket that already belongs to the vehicle keeps it even if its class became hourly.
+     */
+    public function plateProblem(Vehicle $vehicle, CarbonInterface $date, ?Haul $haul = null): ?string
+    {
+        if ($vehicle->isHourly() && $vehicle->id !== $haul?->vehicle_id) {
+            return 'Bu plaka bir makineye ait; taşıma fişi kesilemez. Makine fişi ekranını kullanın.';
+        }
+
+        if (! $this->hauls->ownerOn($vehicle, $date)) {
+            return sprintf('Bu aracın %s tarihinde kayıtlı sahibi yok.', $date->format('d.m.Y'));
+        }
+
+        return null;
+    }
+
+    public function haulDate(?Haul $haul = null): CarbonInterface
+    {
+        return $haul ? $haul->hauled_at->copy() : now();
+    }
+
+    /**
+     * @return array<string, mixed>
      */
     public function scan(UploadedFile $file, string $fieldSessionId, User $user): array
     {
@@ -89,47 +155,29 @@ class FieldHaulService extends Service
         $ocr = $this->ocr->scan($file->getRealPath());
         $stored = $this->images->ingest($file, $session->id);
 
-        $plate = $ocr['plate'];
-        $vehicle = $plate ? Vehicle::findByPlate($plate) : null;
-        $ownerOnDate = $vehicle ? $this->hauls->ownerOn($vehicle, now()) !== null : false;
-        $canCreate = $ocr['success'] && $vehicle !== null && $ownerOnDate;
-
-        $message = null;
-
-        if (! $ocr['success']) {
-            $message = $ocr['message'] ?? 'Plaka okunamadı.';
-        } elseif ($vehicle === null) {
-            $message = 'Kayıtlı araç bulunamadı.';
-        } elseif (! $ownerOnDate) {
-            $message = 'Bu aracın bugün kayıtlı sahibi yok.';
-        }
-
         $scan = HaulScan::query()->create([
             'user_id' => $user->id,
             'field_haul_session_id' => $session->id,
             'path' => $stored['path'],
             'checksum' => $stored['checksum'],
             'status' => HaulScan::STATUS_PENDING,
-            'plate' => $plate,
+            'plate' => $ocr['plate'],
             'confidence' => $ocr['confidence'],
             'expires_at' => now()->addHour(),
         ]);
+
+        $check = $this->checkPlate($ocr['plate']);
 
         return [
             'success' => $ocr['success'],
             'scan_id' => $scan->id,
             'field_session_id' => $session->id,
-            'plate' => $plate,
+            'plate' => $ocr['plate'],
             'confidence' => $ocr['confidence'],
             'matched_regex' => $ocr['matched_regex'],
-            'vehicle' => [
-                'id' => $vehicle?->id,
-                'plate' => $vehicle?->plate,
-                'found' => $vehicle !== null,
-            ],
-            'owner_on_date' => $ownerOnDate,
-            'can_create' => $canCreate,
-            'message' => $message,
+            ...$check,
+            'can_create' => $ocr['success'] && $check['can_create'],
+            'message' => $ocr['success'] ? $check['message'] : ($ocr['message'] ?? 'Plaka okunamadı.'),
         ];
     }
 
@@ -242,6 +290,38 @@ class FieldHaulService extends Service
         ]);
 
         return $this->printPayload($haul);
+    }
+
+    /**
+     * Ticket number, time, site, dump site and shift stay as they were; plate and tonnage follow the admin rules.
+     *
+     * @param  array{plate: string, tonnage: int}  $data
+     * @return array<string, mixed>
+     */
+    public function update(User $user, Haul $haul, array $data): array
+    {
+        $this->assertCanView($user, $haul);
+
+        $updated = $this->hauls->update($haul, [
+            'ticket_no' => $haul->ticket_no,
+            'plate' => $data['plate'],
+            'hauled_at' => $haul->hauled_at->toIso8601String(),
+            'site_id' => $haul->site_id,
+            'dump_site_id' => $haul->dump_site_id,
+            'tonnage' => (int) $data['tonnage'],
+            'shift' => $haul->shift instanceof Shift ? $haul->shift->value : (string) $haul->shift,
+        ]);
+
+        $updated->load(['site', 'dumpSite', 'vehicle']);
+
+        return $this->printPayload($updated);
+    }
+
+    public function delete(User $user, Haul $haul): void
+    {
+        $this->assertCanView($user, $haul);
+
+        $this->hauls->delete($haul);
     }
 
     /**

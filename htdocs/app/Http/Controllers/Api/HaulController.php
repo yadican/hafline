@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Exceptions\OperationException;
-use App\Exceptions\OperationRejectedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\HaulScanRequest;
 use App\Http\Requests\Api\HaulStoreRequest;
+use App\Http\Requests\Api\HaulUpdateRequest;
 use App\Http\Resources\Api\HaulPrintResource;
 use App\Models\Haul;
 use App\Services\Api\FieldHaulService;
 use App\Services\Api\SecureImageIngest;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -71,11 +72,60 @@ class HaulController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/v1/hauls/vehicles',
+        operationId: 'haulsVehicles',
+        summary: 'Taşıma aracı plakası ara (elle giriş için)',
+        description: 'Sefer başı ücretlenen aktif araçlar; saatlik çalışan makineler listelenmez. Plakada geçen en az 2 karakter. En fazla 10 sonuç.',
+        security: [['bearerAuth' => []]],
+        tags: ['3. Plaka ve fiş'],
+        parameters: [
+            new OA\Parameter(name: 'q', in: 'query', required: true, schema: new OA\Schema(type: 'string', example: '34 AB')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Eşleşen araçlar (boş olabilir)', content: new OA\JsonContent(ref: '#/components/schemas/HaulVehicleSearchResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
+    public function vehicles(Request $request): JsonResponse
+    {
+        return response()->json([
+            'vehicles' => $this->fieldHauls->vehicles((string) $request->query('q', '')),
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/hauls/check-plate',
+        operationId: 'haulsCheckPlate',
+        summary: 'Elle girilen plakayı doğrula',
+        description: 'Plaka kayıtlı bir taşıma aracı mı (makine değil) ve bugün sahibi var mı kontrol eder. `can_create` false ise `message` sebebi söyler.',
+        security: [['bearerAuth' => []]],
+        tags: ['3. Plaka ve fiş'],
+        parameters: [
+            new OA\Parameter(name: 'plate', in: 'query', required: true, schema: new OA\Schema(type: 'string', maxLength: 20, example: '34 AB 123')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Kontrol sonucu', content: new OA\JsonContent(ref: '#/components/schemas/HaulPlateCheck')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'plate eksik', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+        ]
+    )]
+    public function checkPlate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'plate' => ['required', 'string', 'max:20'],
+        ]);
+
+        return response()->json($this->fieldHauls->checkPlate($validated['plate']));
+    }
+
     #[OA\Post(
         path: '/api/v1/hauls/scan',
         operationId: 'haulsScan',
         summary: 'Adım 5 · Plaka fotoğrafını oku (scan_id üretir)',
-        description: 'Fotoğraf saklanır ve OCR\'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir. `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.',
+        description: 'Fotoğraf saklanır ve OCR\'dan geçirilir. Okunan plaka kayıtlı araçlarla eşleştirilir ve `check-plate` ile aynı kontrollerden geçer (makine plakaları reddedilir). `can_create` true ise okunan plakayla doğrudan fiş kesilebilir; false ise kullanıcı plakayı düzeltip `POST /hauls` ile gönderir. Dönen `scan_id` 1 saat geçerlidir. Dakikada en fazla 20 istek.',
         security: [['bearerAuth' => []]],
         tags: ['3. Plaka ve fiş'],
         requestBody: new OA\RequestBody(
@@ -138,13 +188,7 @@ class HaulController extends Controller
     )]
     public function store(HaulStoreRequest $request): JsonResponse
     {
-        try {
-            $payload = $this->fieldHauls->store($request->validated(), $request->user());
-        } catch (OperationRejectedException $exception) {
-            throw ValidationException::withMessages(['plate' => $exception->getMessage()]);
-        } catch (OperationException $exception) {
-            throw ValidationException::withMessages(['plate' => $exception->getMessage()]);
-        }
+        $payload = $this->rejectingOnPlate(fn (): array => $this->fieldHauls->store($request->validated(), $request->user()));
 
         return (new HaulPrintResource($payload))
             ->response()
@@ -194,6 +238,59 @@ class HaulController extends Controller
         return new HaulPrintResource($this->fieldHauls->showFor($request->user(), $haul));
     }
 
+    #[OA\Put(
+        path: '/api/v1/hauls/{haul}',
+        operationId: 'haulsUpdate',
+        summary: 'Fişi düzenle',
+        description: 'Sadece plaka ve tonaj değişir; fiş numarası, tarih, şantiye, döküm yeri ve vardiya aynı kalır. Plaka değişirse fiyatlar yeniden hesaplanır ve cari kayıtları güncellenir. Görme kuralı `GET /hauls/{haul}` ile aynıdır.',
+        security: [['bearerAuth' => []]],
+        tags: ['3. Plaka ve fiş'],
+        parameters: [
+            new OA\Parameter(name: 'haul', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/HaulUpdateRequest')
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Fiş güncellendi', content: new OA\JsonContent(ref: '#/components/schemas/HaulTicketResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Fiş yok veya bu kullanıcı/oturum için görünmüyor', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Kayıtlı olmayan plaka, aracın fiş tarihinde sahibi yok veya geçersiz tonaj', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+        ]
+    )]
+    public function update(HaulUpdateRequest $request, Haul $haul): HaulPrintResource
+    {
+        $payload = $this->rejectingOnPlate(fn (): array => $this->fieldHauls->update($request->user(), $haul, $request->validated()));
+
+        return new HaulPrintResource($payload);
+    }
+
+    #[OA\Delete(
+        path: '/api/v1/hauls/{haul}',
+        operationId: 'haulsDestroy',
+        summary: 'Fişi sil',
+        description: 'Fiş ve cari kayıtları geri alınır. Görme kuralı `GET /hauls/{haul}` ile aynıdır.',
+        security: [['bearerAuth' => []]],
+        tags: ['3. Plaka ve fiş'],
+        parameters: [
+            new OA\Parameter(name: 'haul', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Fiş silindi', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Fiş yok veya bu kullanıcı/oturum için görünmüyor', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
+    public function destroy(Request $request, Haul $haul): JsonResponse
+    {
+        $this->fieldHauls->delete($request->user(), $haul);
+
+        return response()->json(['message' => 'Taşıma fişi silindi.']);
+    }
+
     #[OA\Get(
         path: '/api/v1/hauls/{haul}/photo',
         operationId: 'haulsPhoto',
@@ -220,5 +317,18 @@ class HaulController extends Controller
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    /**
+     * @param  Closure(): array<string, mixed>  $action
+     * @return array<string, mixed>
+     */
+    private function rejectingOnPlate(Closure $action): array
+    {
+        try {
+            return $action();
+        } catch (OperationException $exception) {
+            throw ValidationException::withMessages(['plate' => $exception->getMessage()]);
+        }
     }
 }

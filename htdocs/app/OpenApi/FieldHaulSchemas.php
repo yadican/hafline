@@ -86,16 +86,30 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
-    schema: 'PlateScanResult',
+    schema: 'HaulVehicleSearchResponse',
     type: 'object',
-    required: ['success', 'scan_id', 'field_session_id', 'plate', 'confidence', 'matched_regex', 'vehicle', 'owner_on_date', 'can_create', 'message'],
+    required: ['vehicles'],
     properties: [
-        new OA\Property(property: 'success', type: 'boolean', description: 'OCR plaka bulabildi mi', example: true),
-        new OA\Property(property: 'scan_id', type: 'string', format: 'uuid', description: 'POST /hauls için gerekli. 1 saat geçerli.', example: '01a17493-00d0-71e2-a9ac-55171280c960'),
-        new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'plate', type: 'string', nullable: true, description: 'OCR\'ın okuduğu metin (boşluksuz olabilir)', example: '01HCU728'),
-        new OA\Property(property: 'confidence', type: 'number', format: 'float', nullable: true, description: '0–1 arası. Yüksek olması doğruluk garantisi değildir.', example: 0.93),
-        new OA\Property(property: 'matched_regex', type: 'boolean', description: 'Okunan metin Türk plaka biçimine uyuyor mu', example: true),
+        new OA\Property(
+            property: 'vehicles',
+            type: 'array',
+            items: new OA\Items(
+                type: 'object',
+                required: ['plate', 'owner_name', 'class_name'],
+                properties: [
+                    new OA\Property(property: 'plate', type: 'string', example: '01 HCU 728'),
+                    new OA\Property(property: 'owner_name', type: 'string', nullable: true, example: 'ABC Hafriyat'),
+                    new OA\Property(property: 'class_name', type: 'string', nullable: true, example: 'Kamyon'),
+                ]
+            )
+        ),
+    ]
+)]
+#[OA\Schema(
+    schema: 'HaulPlateCheck',
+    type: 'object',
+    required: ['vehicle', 'owner_on_date', 'owner_name', 'can_create', 'message'],
+    properties: [
         new OA\Property(
             property: 'vehicle',
             type: 'object',
@@ -107,8 +121,27 @@ use OpenApi\Attributes as OA;
             ]
         ),
         new OA\Property(property: 'owner_on_date', type: 'boolean', description: 'Aracın bugün kayıtlı sahibi var mı', example: true),
-        new OA\Property(property: 'can_create', type: 'boolean', description: 'Okunan plakayla doğrudan fiş kesilebilir mi', example: true),
+        new OA\Property(property: 'owner_name', type: 'string', nullable: true, example: 'ABC Hafriyat'),
+        new OA\Property(property: 'can_create', type: 'boolean', description: 'Bu plakayla taşıma fişi kesilebilir mi (makine plakalarında false)', example: true),
         new OA\Property(property: 'message', type: 'string', nullable: true, description: 'can_create false ise sebebi', example: null),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PlateScanResult',
+    allOf: [
+        new OA\Schema(ref: '#/components/schemas/HaulPlateCheck'),
+        new OA\Schema(
+            type: 'object',
+            required: ['success', 'scan_id', 'field_session_id', 'plate', 'confidence', 'matched_regex'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', description: 'OCR plaka bulabildi mi', example: true),
+                new OA\Property(property: 'scan_id', type: 'string', format: 'uuid', description: 'POST /hauls için gerekli. 1 saat geçerli.', example: '01a17493-00d0-71e2-a9ac-55171280c960'),
+                new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'plate', type: 'string', nullable: true, description: 'OCR\'ın okuduğu metin (boşluksuz olabilir)', example: '01HCU728'),
+                new OA\Property(property: 'confidence', type: 'number', format: 'float', nullable: true, description: '0–1 arası. Yüksek olması doğruluk garantisi değildir.', example: 0.93),
+                new OA\Property(property: 'matched_regex', type: 'boolean', description: 'Okunan metin Türk plaka biçimine uyuyor mu', example: true),
+            ]
+        ),
     ]
 )]
 #[OA\Schema(
@@ -116,10 +149,19 @@ use OpenApi\Attributes as OA;
     type: 'object',
     required: ['plate', 'scan_id', 'field_session_id', 'tonnage'],
     properties: [
-        new OA\Property(property: 'plate', type: 'string', maxLength: 20, description: 'Kullanıcının onayladığı plaka. Kayıtlı bir araç olmalı.', example: '01 HCU 728'),
+        new OA\Property(property: 'plate', type: 'string', maxLength: 20, description: 'Kullanıcının onayladığı plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.', example: '01 HCU 728'),
         new OA\Property(property: 'scan_id', type: 'string', format: 'uuid', description: 'POST /hauls/scan > scan_id'),
         new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid', description: 'POST /field-sessions > data.id'),
         new OA\Property(property: 'tonnage', type: 'integer', minimum: 0, maximum: 1000, description: 'Kullanıcının girdiği tonaj', example: 22),
+    ]
+)]
+#[OA\Schema(
+    schema: 'HaulUpdateRequest',
+    type: 'object',
+    required: ['plate', 'tonnage'],
+    properties: [
+        new OA\Property(property: 'plate', type: 'string', maxLength: 20, description: 'Kayıtlı bir araç; fiş tarihinde sahibi olmalı', example: '01 HCU 728'),
+        new OA\Property(property: 'tonnage', type: 'integer', minimum: 0, maximum: 1000, example: 22),
     ]
 )]
 #[OA\Schema(

@@ -4,10 +4,12 @@ namespace App\Http\Requests\Api;
 
 use App\Models\FieldHaulSession;
 use App\Models\Vehicle;
+use App\Services\Api\FieldHaulService;
 use App\Support\ApiPermissions;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class HaulStoreRequest extends FormRequest
 {
@@ -50,6 +52,28 @@ class HaulStoreRequest extends FormRequest
                 }
             }],
             'tonnage' => ['required', 'integer', 'between:0,1000'],
+        ];
+    }
+
+    /**
+     * @return array<int, Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->has('plate')) {
+                    return;
+                }
+
+                $vehicle = Vehicle::findByPlate($this->string('plate')->value());
+                $fieldHauls = app(FieldHaulService::class);
+                $problem = $vehicle ? $fieldHauls->plateProblem($vehicle, $fieldHauls->haulDate()) : null;
+
+                if ($problem) {
+                    $validator->errors()->add('plate', $problem);
+                }
+            },
         ];
     }
 

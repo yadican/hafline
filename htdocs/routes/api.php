@@ -28,14 +28,18 @@ Route::prefix('v1')->group(function () {
 
             Route::get('hauls/options', [HaulController::class, 'options'])->name('api.hauls.options');
             Route::get('hauls/dump-sites', [HaulController::class, 'dumpSites'])->name('api.hauls.dump-sites');
+            Route::get('hauls/vehicles', [HaulController::class, 'vehicles'])->name('api.hauls.vehicles');
+            Route::get('hauls/check-plate', [HaulController::class, 'checkPlate'])->name('api.hauls.check-plate');
             Route::get('hauls/session', [HaulController::class, 'session'])->name('api.hauls.session');
-            Route::get('hauls/{haul}', [HaulController::class, 'show'])->name('api.hauls.show');
             Route::post('hauls/scan', [HaulController::class, 'scan'])
                 ->middleware('throttle:20,1')
                 ->name('api.hauls.scan');
             Route::post('hauls', [HaulController::class, 'store'])
                 ->middleware('throttle:30,1')
                 ->name('api.hauls.store');
+            Route::get('hauls/{haul}', [HaulController::class, 'show'])->name('api.hauls.show');
+            Route::put('hauls/{haul}', [HaulController::class, 'update'])->name('api.hauls.update');
+            Route::delete('hauls/{haul}', [HaulController::class, 'destroy'])->name('api.hauls.destroy');
 
             Route::get('machine-works/options', [MachineWorkController::class, 'options'])->name('api.machine-works.options');
             Route::get('machine-works/machines', [MachineWorkController::class, 'machines'])->name('api.machine-works.machines');

@@ -9,6 +9,7 @@ use App\Models\HaulScan;
 use App\Models\RouteClassPrice;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleClass;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -172,6 +173,78 @@ class FieldHaulApiTest extends TestCase
         );
     }
 
+    public function test_vehicle_search_leaves_out_machines(): void
+    {
+        $this->machine('34 ABC 900');
+
+        $this->api()
+            ->getJson('/api/v1/hauls/vehicles?q=34abc')
+            ->assertOk()
+            ->assertJsonCount(1, 'vehicles')
+            ->assertJsonPath('vehicles.0.plate', '34 ABC 123');
+    }
+
+    public function test_check_plate_rejects_machines(): void
+    {
+        $this->api()
+            ->getJson('/api/v1/hauls/check-plate?plate=34abc123')
+            ->assertOk()
+            ->assertJsonPath('vehicle.plate', '34 ABC 123')
+            ->assertJsonPath('can_create', true)
+            ->assertJsonPath('message', null);
+
+        $this->machine('34 MK 100');
+
+        $this->api()
+            ->getJson('/api/v1/hauls/check-plate?plate=34MK100')
+            ->assertOk()
+            ->assertJsonPath('vehicle.found', true)
+            ->assertJsonPath('can_create', false)
+            ->assertJsonPath('message', 'Bu plaka bir makineye ait; taşıma fişi kesilemez. Makine fişi ekranını kullanın.');
+
+        $this->api()
+            ->getJson('/api/v1/hauls/check-plate?plate=99ZZ999')
+            ->assertOk()
+            ->assertJsonPath('vehicle.found', false)
+            ->assertJsonPath('can_create', false);
+    }
+
+    public function test_scanned_machine_plate_cannot_be_saved_as_a_haul(): void
+    {
+        Http::fake([
+            config('services.ocr.scan_url') => Http::response([
+                'success' => true,
+                'plate' => '34MK100',
+                'confidence' => 0.9,
+                'matched_regex' => true,
+            ]),
+        ]);
+
+        $this->machine('34 MK 100');
+        $sessionId = $this->lockSession();
+
+        $scan = $this->api()
+            ->post('/api/v1/hauls/scan', [
+                'file' => $this->platePhoto(),
+                'field_session_id' => $sessionId,
+            ])
+            ->assertOk()
+            ->assertJsonPath('vehicle.found', true)
+            ->assertJsonPath('can_create', false);
+
+        $this->api()
+            ->postJson('/api/v1/hauls', [
+                'plate' => '34 MK 100',
+                'scan_id' => $scan->json('scan_id'),
+                'field_session_id' => $sessionId,
+                'tonnage' => 22,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('plate');
+
+        $this->assertSame(0, Haul::query()->count());
+    }
+
     public function test_scan_rejects_non_image_payload(): void
     {
         $sessionId = $this->lockSession();
@@ -295,6 +368,57 @@ class FieldHaulApiTest extends TestCase
         $this->assertSame(0, Haul::query()->count());
     }
 
+    public function test_ticket_can_be_edited_and_deleted_within_the_session(): void
+    {
+        $this->lockSession();
+        $haul = $this->sessionHaul($this->user);
+        $other = Vehicle::factory()->create([
+            'plate' => '34 XYZ 789',
+            'vehicle_class_id' => $this->vehicle->vehicle_class_id,
+        ]);
+
+        $this->api()
+            ->putJson('/api/v1/hauls/'.$haul->id, ['plate' => '34 xyz 789', 'tonnage' => 18])
+            ->assertOk()
+            ->assertJsonPath('data.ticket_no', $haul->ticket_no)
+            ->assertJsonPath('data.plate', '34 XYZ 789')
+            ->assertJsonPath('data.tonnage', 18);
+
+        $updated = $haul->fresh();
+        $this->assertSame($other->id, $updated->vehicle_id);
+        $this->assertSame(18, $updated->tonnage);
+        $this->assertSame('2500.00', $updated->price);
+        $this->assertSame($haul->hauled_at->toIso8601String(), $updated->hauled_at->toIso8601String());
+
+        $this->api()
+            ->putJson('/api/v1/hauls/'.$haul->id, ['plate' => '00 NO 000', 'tonnage' => 18])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('plate');
+
+        $this->machine('34 MK 100');
+
+        $this->api()
+            ->putJson('/api/v1/hauls/'.$haul->id, ['plate' => '34 MK 100', 'tonnage' => 18])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('plate');
+
+        $this->api()->deleteJson('/api/v1/hauls/'.$haul->id)->assertOk();
+
+        $this->assertSoftDeleted($haul);
+    }
+
+    public function test_other_operators_cannot_edit_or_delete_a_ticket(): void
+    {
+        $this->lockSession();
+        $haul = $this->sessionHaul(User::factory()->apiOperator()->create());
+
+        $this->api()->putJson('/api/v1/hauls/'.$haul->id, ['plate' => '34 ABC 123', 'tonnage' => 1])->assertNotFound();
+        $this->api()->deleteJson('/api/v1/hauls/'.$haul->id)->assertNotFound();
+
+        $this->assertNotSoftDeleted($haul);
+        $this->assertSame(22, $haul->fresh()->tonnage);
+    }
+
     public function test_ocr_outage_returns_bad_gateway(): void
     {
         Http::fake([
@@ -309,6 +433,23 @@ class FieldHaulApiTest extends TestCase
                 'field_session_id' => $sessionId,
             ])
             ->assertStatus(502);
+    }
+
+    private function sessionHaul(User $creator): Haul
+    {
+        return Haul::factory()->create([
+            'vehicle_id' => $this->vehicle->id,
+            'route_id' => $this->route->id,
+            'shift' => 'day',
+            'tonnage' => 22,
+            'hauled_at' => now(),
+            'created_by' => $creator->id,
+        ]);
+    }
+
+    private function machine(string $plate): Vehicle
+    {
+        return Vehicle::factory()->create(['plate' => $plate, 'vehicle_class_id' => VehicleClass::factory()->hourly()]);
     }
 
     private function platePhoto(): UploadedFile
