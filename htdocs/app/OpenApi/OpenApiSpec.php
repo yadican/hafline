@@ -7,30 +7,9 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     version: '1.0.0',
     title: 'Hafline API',
-    description: <<<'MD'
-Hafline saha uygulamasının HTTP API'si. Tüm istekler `Accept: application/json` ile gönderilir.
-
-### Saha akışı (sırayla)
-
-| # | İstek | Ne için |
-|---|---|---|
-| 1 | `POST /api/v1/auth/login` | `token` alınır. Sağ üstteki **Authorize** butonuna yapıştırılır. |
-| 2 | `GET /api/v1/hauls/options` | Şantiye ve vardiya listesi |
-| 3 | `GET /api/v1/hauls/dump-sites?site_id=…` | Seçilen şantiyenin döküm yerleri |
-| 4 | `POST /api/v1/field-sessions` | Şantiye + döküm yeri + vardiya kilitlenir. Dönen **`data.id` = `field_session_id`** |
-| 5 | `POST /api/v1/hauls/scan` | Plaka fotoğrafı yüklenir (multipart). Okunan plaka, araç eşleşmesi ve **`scan_id`** döner. |
-| 6 | `POST /api/v1/hauls` | `plate` + `scan_id` + `field_session_id` ile fiş kaydedilir (201). |
-| 7 | `GET /api/v1/hauls/{haul}` | Fişi tekrar yazdırmak için aynı fiş verisi |
-
-Uygulama açılışında açık oturum `GET /api/v1/field-sessions/current` ile kontrol edilir; varsa 2–4 atlanır.
-
-### Kurallar
-
-- **Token:** JWT, 60 dakika geçerli. Süresi dolunca 401 döner, yeniden giriş gerekir.
-- **Yetki:** Saha uçları `field-haul.operate` izni ister; yoksa 403 döner.
-- **Doğrulama hatası (422):** `{ "message": "...", "errors": { "alan": ["mesaj"] } }`
-- **Diğer hatalar:** `{ "message": "..." }`
-MD
+    description: 'Hafline saha uygulamasının HTTP API\'si. Tüm istekler `Accept: application/json` ile gönderilir.',
+    contact: new OA\Contact(name: 'Hafline', email: 'info@hafline.net'),
+    license: new OA\License(name: 'MIT', url: 'https://opensource.org/licenses/MIT'),
 )]
 #[OA\Server(
     url: L5_SWAGGER_CONST_HOST,

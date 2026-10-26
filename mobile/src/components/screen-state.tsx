@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/errors';
@@ -16,13 +17,15 @@ export function LoadingState() {
 type ErrorStateProps = {
   error: unknown;
   onRetry?: () => void;
+  children?: ReactNode;
 };
 
-export function ErrorState({ error, onRetry }: ErrorStateProps) {
+export function ErrorState({ error, onRetry, children }: ErrorStateProps) {
   return (
     <View style={styles.centered}>
       <Text style={styles.message}>{errorMessage(error)}</Text>
       {onRetry ? <Button title="Tekrar dene" variant="secondary" onPress={onRetry} /> : null}
+      {children}
     </View>
   );
 }

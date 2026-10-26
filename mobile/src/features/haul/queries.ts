@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createHaul, fetchHaul, scanPlate } from '@/api/endpoints';
-import type { HaulTicket } from '@/api/types';
+import type { HaulStoreRequest, HaulTicket } from '@/api/types';
 import { useApiClient } from '@/auth/auth-provider';
 
 const keys = {
@@ -22,7 +22,7 @@ export function useCreateHaul() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: { plate: string; scan_id: string; field_session_id: string }) => createHaul(client, body),
+    mutationFn: (body: HaulStoreRequest) => createHaul(client, body),
     onSuccess: (ticket: HaulTicket) => queryClient.setQueryData(keys.ticket(ticket.id), ticket),
   });
 }

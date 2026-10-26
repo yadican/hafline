@@ -182,7 +182,7 @@ class FieldHaulService extends Service
     }
 
     /**
-     * @param  array{plate: string, scan_id: string, field_session_id: string}  $data
+     * @param  array{plate: string, scan_id: string, field_session_id: string, tonnage: int}  $data
      * @return array<string, mixed>
      */
     public function store(array $data, User $user): array
@@ -222,7 +222,7 @@ class FieldHaulService extends Service
             'hauled_at' => now(),
             'site_id' => $session->site_id,
             'dump_site_id' => $session->dump_site_id,
-            'tonnage' => 0,
+            'tonnage' => (int) $data['tonnage'],
             'shift' => $shift,
         ], $user->id);
 

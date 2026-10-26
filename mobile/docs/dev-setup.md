@@ -176,13 +176,20 @@ Emülatör Android 37 kullanır. Sunmi V2 Pro Android 7.1'dir; eski sürüm davr
 & 'D:\PROJECT\Read-Plate\venv\Scripts\python.exe' 'D:\plaka-test\make_plates.py'
 ```
 
-Görseli emülatör galerisine atmak:
+Klasördeki tüm görselleri emülatör galerisine (`Pictures/plaka-test` albümü) atmak; aynı isimli dosyaların üzerine yazar:
 
 ```powershell
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
-& $adb push D:\plaka-test\ornek.jpg /sdcard/Pictures/ornek.jpg
-& $adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/ornek.jpg
+& $adb shell mkdir -p /sdcard/Pictures/plaka-test
+Get-ChildItem D:\plaka-test -File -Include *.jpg,*.jpeg,*.png -Recurse | ForEach-Object {
+  $t = "/sdcard/Pictures/plaka-test/$($_.Name)"
+  & $adb push $_.FullName $t | Out-Null
+  & $adb shell "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file://$($t -replace ' ','%20')'" | Out-Null
+}
 ```
+
+- [ ] Uygulamada galeri seçicisini kapatıp açınca görseller `plaka-test` albümünde görünüyor
+- Tek görsel için en hızlısı: dosyayı emülatör penceresine sürükle-bırak (İndirilenler klasörüne düşer)
 
 ### 4.2 Bugün sahibi olan kayıtlı plakalar
 
@@ -218,7 +225,7 @@ Swagger'da cevap şeması olmayan endpoint'lerin tipleri `src/api/types.ts` içi
 
 ## 6. Test APK'sı (EAS Build)
 
-APK, Expo Go ve bilgisayar olmadan çalışan bağımsız uygulamadır. Bulutta derlenir:
+APK, Expo Go ve bilgisayar olmadan çalışan bağımsız uygulamadır. Kod derleme anında içine gömülür; sonraki değişiklikler APK'da ancak yeni derlemeyle görünür. Geliştirirken ana ekrandaki **Hafline Saha** ikonunu değil, Expo Go'yu kullan (bölüm 2.4). Bulutta derlenir:
 
 ```bash
 cd /home/dev/PROJECT/hafline/mobile
@@ -253,6 +260,7 @@ npx eas-cli@latest build -p android --profile preview --non-interactive
 | `wsl --shutdown` sonrası Docker bozuldu | Docker Desktop açıkken WSL kapatıldı | Önce `docker desktop stop`, sonra `wsl --shutdown`, sonra `docker desktop start` |
 | OCR: torch `LoadLibraryExW` hatası | İlk yükleme yavaş / yarıda kesildi | Tekrar başlat. Sürerse hata mesajının **son satırına** bak. |
 | Tarama "Plaka okuma servisine ulaşılamadı" (502) | OCR servisi kapalı | 2.2'deki adımlarla başlat. Şu an bu durumda fiş kesilemiyor (tarama kaydı oluşmuyor); backend'de çözülecek. |
+| Kod değişikliği emülatörde görünmüyor | Açık olan uygulama Expo Go değil, kurulu APK (`com.hafline.saha`) | APK'yı kapat, Expo Go'dan aç (bölüm 2.4). Metro `CI=1` ile başlatıldıysa dosya izleme kapalıdır; `CI` olmadan yeniden başlat. |
 | APK açılınca siyah ekran | Emülatör ekranı uykuda | Ekrana tıkla / `adb shell input keyevent KEYCODE_WAKEUP` |
 | Token 1 saatte doluyor | API'de yenileme endpoint'i yok | Backend'de `auth/refresh` eklenecek; şimdilik tekrar giriş. |
 

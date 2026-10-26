@@ -49,6 +49,7 @@ class HaulStoreRequest extends FormRequest
                     $fail('Geçerli bir saha oturumu seçin veya yeniden sabitleyin.');
                 }
             }],
+            'tonnage' => ['required', 'integer', 'between:0,1000'],
         ];
     }
 
@@ -61,6 +62,7 @@ class HaulStoreRequest extends FormRequest
             'plate' => 'plaka',
             'scan_id' => 'tarama',
             'field_session_id' => 'oturum',
+            'tonnage' => 'tonaj',
         ];
     }
 }

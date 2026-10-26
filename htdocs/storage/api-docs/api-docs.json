@@ -2,7 +2,15 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Hafline API",
-        "description": "Hafline saha uygulamasının HTTP API'si. Tüm istekler `Accept: application/json` ile gönderilir.\n\n### Saha akışı (sırayla)\n\n| # | İstek | Ne için |\n|---|---|---|\n| 1 | `POST /api/v1/auth/login` | `token` alınır. Sağ üstteki **Authorize** butonuna yapıştırılır. |\n| 2 | `GET /api/v1/hauls/options` | Şantiye ve vardiya listesi |\n| 3 | `GET /api/v1/hauls/dump-sites?site_id=…` | Seçilen şantiyenin döküm yerleri |\n| 4 | `POST /api/v1/field-sessions` | Şantiye + döküm yeri + vardiya kilitlenir. Dönen **`data.id` = `field_session_id`** |\n| 5 | `POST /api/v1/hauls/scan` | Plaka fotoğrafı yüklenir (multipart). Okunan plaka, araç eşleşmesi ve **`scan_id`** döner. |\n| 6 | `POST /api/v1/hauls` | `plate` + `scan_id` + `field_session_id` ile fiş kaydedilir (201). |\n| 7 | `GET /api/v1/hauls/{haul}` | Fişi tekrar yazdırmak için aynı fiş verisi |\n\nUygulama açılışında açık oturum `GET /api/v1/field-sessions/current` ile kontrol edilir; varsa 2–4 atlanır.\n\n### Kurallar\n\n- **Token:** JWT, 60 dakika geçerli. Süresi dolunca 401 döner, yeniden giriş gerekir.\n- **Yetki:** Saha uçları `field-haul.operate` izni ister; yoksa 403 döner.\n- **Doğrulama hatası (422):** `{ \"message\": \"...\", \"errors\": { \"alan\": [\"mesaj\"] } }`\n- **Diğer hatalar:** `{ \"message\": \"...\" }`",
+        "description": "Hafline saha uygulamasının HTTP API'si. Tüm istekler `Accept: application/json` ile gönderilir.",
+        "contact": {
+            "name": "Hafline",
+            "email": "info@hafline.net"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
         "version": "1.0.0"
     },
     "servers": [
@@ -1085,7 +1093,8 @@
                 "required": [
                     "plate",
                     "scan_id",
-                    "field_session_id"
+                    "field_session_id",
+                    "tonnage"
                 ],
                 "properties": {
                     "plate": {
@@ -1103,6 +1112,13 @@
                         "description": "POST /field-sessions > data.id",
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "tonnage": {
+                        "description": "Kullanıcının girdiği tonaj",
+                        "type": "integer",
+                        "example": 22,
+                        "maximum": 1000,
+                        "minimum": 0
                     }
                 },
                 "type": "object"
@@ -1174,7 +1190,7 @@
                     },
                     "tonnage": {
                         "type": "integer",
-                        "example": 0
+                        "example": 22
                     },
                     "qr_payload": {
                         "description": "Fiş QR kodunun içeriği",

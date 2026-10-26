@@ -114,11 +114,12 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'HaulStoreRequest',
     type: 'object',
-    required: ['plate', 'scan_id', 'field_session_id'],
+    required: ['plate', 'scan_id', 'field_session_id', 'tonnage'],
     properties: [
         new OA\Property(property: 'plate', type: 'string', maxLength: 20, description: 'Kullanıcının onayladığı plaka. Kayıtlı bir araç olmalı.', example: '01 HCU 728'),
         new OA\Property(property: 'scan_id', type: 'string', format: 'uuid', description: 'POST /hauls/scan > scan_id'),
         new OA\Property(property: 'field_session_id', type: 'string', format: 'uuid', description: 'POST /field-sessions > data.id'),
+        new OA\Property(property: 'tonnage', type: 'integer', minimum: 0, maximum: 1000, description: 'Kullanıcının girdiği tonaj', example: 22),
     ]
 )]
 #[OA\Schema(
@@ -137,7 +138,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'dump_site_name', type: 'string', nullable: true, example: 'ERZURUM SAHA'),
         new OA\Property(property: 'shift', type: 'string', enum: ['day', 'night'], example: 'day'),
         new OA\Property(property: 'shift_label', type: 'string', example: 'Gündüz'),
-        new OA\Property(property: 'tonnage', type: 'integer', example: 0),
+        new OA\Property(property: 'tonnage', type: 'integer', example: 22),
         new OA\Property(property: 'qr_payload', type: 'string', description: 'Fiş QR kodunun içeriği', example: '01a1749f-863a-71fc-83b9-7fd9051a7681'),
         new OA\Property(property: 'photo_url', type: 'string', format: 'uri', nullable: true, description: 'Plaka fotoğrafı için imzalı, süreli adres'),
     ]

@@ -21,6 +21,7 @@ export default function ScanScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [scan, setScan] = useState<PlateScan | null>(null);
   const [plate, setPlate] = useState('');
+  const [tonnage, setTonnage] = useState('');
   const [pickError, setPickError] = useState<string | null>(null);
 
   if (session.isPending) {
@@ -41,6 +42,7 @@ export default function ScanScreen() {
     setPhotoUri(uri);
     setScan(null);
     setPlate('');
+    setTonnage('');
     createHaul.reset();
     scanPlate.mutate(
       { fieldSessionId, photoUri: uri },
@@ -73,14 +75,16 @@ export default function ScanScreen() {
     }
 
     createHaul.mutate(
-      { plate: plate.trim(), scan_id: scan.scan_id, field_session_id: fieldSessionId },
+      { plate: plate.trim(), scan_id: scan.scan_id, field_session_id: fieldSessionId, tonnage: Number(tonnage) },
       { onSuccess: (ticket) => router.replace({ pathname: '/ticket/[id]', params: { id: ticket.id } }) },
     );
   };
 
+  const tonnageError = createHaul.error instanceof ApiError ? createHaul.error.firstFieldError('tonnage') : undefined;
+
   const saveError =
     createHaul.error instanceof ApiError
-      ? (createHaul.error.firstFieldError('plate') ?? createHaul.error.message)
+      ? (createHaul.error.firstFieldError('plate') ?? (tonnageError ? null : createHaul.error.message))
       : createHaul.isError
         ? errorMessage(createHaul.error)
         : null;
@@ -126,12 +130,21 @@ export default function ScanScreen() {
             autoCorrect={false}
             maxLength={20}
           />
+          <TextField
+            label="Tonaj"
+            value={tonnage}
+            onChangeText={(text) => setTonnage(text.replace(/\D/g, ''))}
+            placeholder="22"
+            keyboardType="number-pad"
+            maxLength={4}
+            error={tonnageError}
+          />
           {saveError ? <ErrorBanner message={saveError} /> : null}
           <Button
             title="Fişi kaydet"
             onPress={save}
             loading={createHaul.isPending}
-            disabled={plate.trim() === ''}
+            disabled={plate.trim() === '' || tonnage === ''}
           />
         </>
       ) : null}

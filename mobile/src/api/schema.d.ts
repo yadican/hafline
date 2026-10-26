@@ -413,6 +413,11 @@ export interface components {
              * @description POST /field-sessions > data.id
              */
             field_session_id: string;
+            /**
+             * @description Kullanıcının girdiği tonaj
+             * @example 22
+             */
+            tonnage: number;
         };
         /** @description Fiş yazdırma verisi */
         HaulTicket: {
@@ -439,7 +444,7 @@ export interface components {
             shift: "day" | "night";
             /** @example Gündüz */
             shift_label: string;
-            /** @example 0 */
+            /** @example 22 */
             tonnage: number;
             /**
              * @description Fiş QR kodunun içeriği
@@ -500,7 +505,7 @@ export interface components {
             login: string;
             /**
              * Format: password
-             * @example password
+             * @example HafLine34!
              */
             password: string;
         };

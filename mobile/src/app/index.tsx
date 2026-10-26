@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { errorMessage } from '@/api/errors';
+import { ApiError, errorMessage } from '@/api/errors';
 import type { FieldSession } from '@/api/types';
 import { useAuth, useSignedInUser } from '@/auth/auth-provider';
 import { Button } from '@/components/button';
@@ -21,7 +21,20 @@ export default function HomeScreen() {
   }
 
   if (session.isError) {
-    return <ErrorState error={session.error} onRetry={() => void session.refetch()} />;
+    const forbidden = session.error instanceof ApiError && session.error.status === 403;
+
+    return (
+      <ErrorState
+        error={
+          forbidden
+            ? new ApiError('Bu hesabın saha fişi kesme yetkisi yok. Yöneticinize başvurun.', 403)
+            : session.error
+        }
+        onRetry={forbidden ? undefined : () => void session.refetch()}
+      >
+        <Button title="Çıkış yap" variant="danger" onPress={() => void signOut()} />
+      </ErrorState>
+    );
   }
 
   const confirmClose = () => {

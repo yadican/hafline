@@ -209,17 +209,19 @@ class FieldHaulApiTest extends TestCase
                 'plate' => '34 ABC 123',
                 'scan_id' => $scanId,
                 'field_session_id' => $sessionId,
+                'tonnage' => 22,
             ]);
 
         $response->assertCreated()
             ->assertJsonPath('data.title', 'SEFER HAREKET FİŞİ')
             ->assertJsonPath('data.plate', '34 ABC 123')
+            ->assertJsonPath('data.tonnage', 22)
             ->assertJsonStructure(['data' => ['ticket_no', 'photo_url', 'qr_payload']]);
 
         $haul = Haul::query()->firstOrFail();
         $this->assertSame($this->user->id, $haul->created_by);
         $this->assertSame($sessionId, $haul->field_haul_session_id);
-        $this->assertSame(0, $haul->tonnage);
+        $this->assertSame(22, $haul->tonnage);
 
         $scan = HaulScan::query()->findOrFail($scanId);
         $this->assertSame(HaulScan::STATUS_ATTACHED, $scan->status);
@@ -269,10 +271,27 @@ class FieldHaulApiTest extends TestCase
                 'plate' => '34 ABC 123',
                 'scan_id' => $scanId,
                 'field_session_id' => $sessionId,
+                'tonnage' => 22,
             ])
             ->json('data.id');
 
         $this->get('/api/v1/hauls/'.$haulId.'/photo')->assertForbidden();
+    }
+
+    public function test_store_requires_tonnage(): void
+    {
+        $sessionId = $this->lockSession();
+
+        $this->api()
+            ->postJson('/api/v1/hauls', [
+                'plate' => '34 ABC 123',
+                'scan_id' => fake()->uuid(),
+                'field_session_id' => $sessionId,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('tonnage');
+
+        $this->assertSame(0, Haul::query()->count());
     }
 
     public function test_ocr_outage_returns_bad_gateway(): void
