@@ -65,10 +65,6 @@ export async function lockSession(client: ApiClient, body: FieldSessionRequest):
   return result.data;
 }
 
-export async function closeSession(client: ApiClient): Promise<void> {
-  await unwrap(client.DELETE('/api/v1/field-sessions/current'));
-}
-
 function scanForm(fieldSessionId: string, photoUri: string): FormData {
   const form = new FormData();
   // Expo's fetch rejects React Native's { uri, name, type } descriptors; parts must be Blob-like.

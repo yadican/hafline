@@ -69,7 +69,7 @@ export interface paths {
         put?: never;
         /**
          * Adım 4 · Saha oturumunu aç (field_session_id üretir)
-         * @description Şantiye, döküm yeri ve vardiyayı kilitler. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, `POST /hauls/scan` ve `POST /hauls` isteklerinde `field_session_id` olarak gönderilir.
+         * @description Şantiye ve vardiyayı, verilirse döküm yerini de kilitler. Döküm yeri sadece taşıma fişi için zorunludur; makine ve yakıt fişi döküm yeri olmadan kesilebilir. Döküm yerini sonradan seçmek veya değiştirmek için aynı şantiye ve vardiyayla tekrar çağrılır. Kullanıcının açık oturumu varsa kapatılıp yenisi açılır. Dönen `data.id`, fiş isteklerinde `field_session_id` olarak gönderilir.
          */
         post: operations["fieldSessionsLock"];
         delete?: never;
@@ -358,7 +358,7 @@ export interface paths {
         put?: never;
         /**
          * Adım 6 · Fişi kaydet
-         * @description Şantiye, döküm yeri ve vardiya oturumdan alınır; fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.
+         * @description Plaka elle yazılabilir ya da `POST /hauls/scan` ile okunup onaylanabilir; tarama yapıldıysa `scan_id` gönderilir ve fotoğraf fişe bağlanır. Şantiye, döküm yeri ve vardiya oturumdan alınır; oturumda döküm yeri yoksa 422 (`dump_site_id`) döner. Fiş numarası, tarih, fiyatlar ve araç sahibi sunucuda hesaplanır. Cevap fiş yazdırma verisidir. Dakikada en fazla 30 istek.
          */
         post: operations["haulsStore"];
         delete?: never;
@@ -638,10 +638,10 @@ export interface components {
             site_id: string;
             /**
              * Format: uuid
-             * @description GET /hauls/dump-sites > dump_sites[].id
+             * @description GET /hauls/dump-sites > dump_sites[].id. Makine ve yakıt fişi için gerekmez; taşıma fişi için zorunludur.
              * @example 01a172ee-f9ae-70ac-a3f5-b7cb76efdf99
              */
-            dump_site_id: string;
+            dump_site_id?: string | null;
             /**
              * @description GET /hauls/options > shifts[].value
              * @example day
@@ -660,8 +660,11 @@ export interface components {
             site_id: string;
             /** @example ADALAR HEYBELİ */
             site_name: string | null;
-            /** Format: uuid */
-            dump_site_id: string;
+            /**
+             * Format: uuid
+             * @description Döküm yeri seçilmediyse null; bu durumda taşıma fişi kesilemez
+             */
+            dump_site_id: string | null;
             /** @example ERZURUM SAHA */
             dump_site_name: string | null;
             /**
@@ -757,15 +760,15 @@ export interface components {
         };
         HaulStoreRequest: {
             /**
-             * @description Kullanıcının onayladığı plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.
+             * @description Elle yazılan veya taramadan onaylanan plaka. Kayıtlı bir taşıma aracı olmalı; makine plakası kabul edilmez.
              * @example 01 HCU 728
              */
             plate: string;
             /**
              * Format: uuid
-             * @description POST /hauls/scan > scan_id
+             * @description POST /hauls/scan > scan_id. Fotoğraf çekildiyse gönderilir ve fişe bağlanır; plaka elle girildiyse boş bırakılır.
              */
-            scan_id: string;
+            scan_id?: string | null;
             /**
              * Format: uuid
              * @description POST /field-sessions > data.id
@@ -1532,7 +1535,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Eksik/geçersiz alan veya şantiye ile döküm yeri arasında aktif güzergah yok */
+            /** @description Eksik/geçersiz alan veya döküm yeri verildiyse şantiye ile arasında aktif güzergah yok */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2331,7 +2334,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Geçersiz görsel veya açık olmayan oturum */
+            /** @description Geçersiz görsel, açık olmayan oturum veya oturumda döküm yeri seçilmemiş (`dump_site_id`) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2400,7 +2403,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Kayıtlı olmayan plaka, aracın bugün sahibi yok, süresi dolmuş scan_id veya kapalı oturum */
+            /** @description Kayıtlı olmayan plaka, aracın bugün sahibi yok, gönderildiyse süresi dolmuş scan_id, kapalı oturum veya oturumda döküm yeri yok */
             422: {
                 headers: {
                     [name: string]: unknown;

@@ -1,13 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
-import { Button } from '@/components/button';
 import { InfoRow } from '@/components/info-row';
 import { ErrorState, LoadingState } from '@/components/screen-state';
-import { SavedBanner, TicketActions, TicketCard } from '@/components/ticket-card';
+import { SavedBanner, TicketCard } from '@/components/ticket-card';
 import { useDeleteFuelReceipt, useFuelReceiptTicket } from '@/features/fuel-receipt/queries';
-import { PrintActions } from '@/features/print/print-actions';
 import type { ReceiptLine } from '@/features/print/receipt';
+import { TicketActions } from '@/features/ticket/ticket-actions';
 import { spacing } from '@/theme';
 import { decimalForInput, formatMoney } from '@/utils/number';
 
@@ -54,11 +53,10 @@ export default function FuelReceiptTicketScreen() {
         ))}
       </TicketCard>
 
-      <PrintActions
-        receipt={{ title: receipt.title, ticketNo: receipt.ticket_no, lines, qrPayload: receipt.qr_payload }}
-      />
-      <Button title="Yeni yakıt fişi" variant="create" onPress={() => router.replace('/fuel-receipts/new')} />
       <TicketActions
+        receipt={{ title: receipt.title, ticketNo: receipt.ticket_no, lines, qrPayload: receipt.qr_payload }}
+        newTitle="Yeni yakıt fişi"
+        onNew={() => router.replace('/fuel-receipts/new')}
         onEdit={() => router.push({ pathname: '/fuel-receipts/[id]/edit', params: { id } })}
         onDelete={() => deleteReceipt.mutate(undefined, { onSuccess: () => router.back() })}
         deleting={deleteReceipt.isPending}

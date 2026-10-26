@@ -1,13 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
-import { Button } from '@/components/button';
 import { InfoRow } from '@/components/info-row';
 import { ErrorState, LoadingState } from '@/components/screen-state';
-import { SavedBanner, TicketActions, TicketCard } from '@/components/ticket-card';
+import { SavedBanner, TicketCard } from '@/components/ticket-card';
 import { useDeleteMachineWork, useMachineWorkTicket } from '@/features/machine-work/queries';
-import { PrintActions } from '@/features/print/print-actions';
 import type { ReceiptLine } from '@/features/print/receipt';
+import { TicketActions } from '@/features/ticket/ticket-actions';
 import { spacing } from '@/theme';
 import { formatMoney } from '@/utils/number';
 
@@ -50,9 +49,10 @@ export default function MachineWorkTicketScreen() {
         ))}
       </TicketCard>
 
-      <PrintActions receipt={{ title: work.title, ticketNo: work.ticket_no, lines, qrPayload: work.qr_payload }} />
-      <Button title="Yeni makine fişi" variant="create" onPress={() => router.replace('/machine-works/new')} />
       <TicketActions
+        receipt={{ title: work.title, ticketNo: work.ticket_no, lines, qrPayload: work.qr_payload }}
+        newTitle="Yeni makine fişi"
+        onNew={() => router.replace('/machine-works/new')}
         onEdit={() => router.push({ pathname: '/machine-works/[id]/edit', params: { id } })}
         onDelete={() => deleteWork.mutate(undefined, { onSuccess: () => router.back() })}
         deleting={deleteWork.isPending}

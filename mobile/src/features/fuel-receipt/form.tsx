@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 import { ApiError, errorMessage, formErrorMessage } from '@/api/errors';
 import type { FuelPlateScan, FuelReceiptTicket, FuelStationOption } from '@/api/types';
 import { Button } from '@/components/button';
+import { icons } from '@/components/icons';
 import { FormSection } from '@/components/form-section';
 import { PlateInput } from '@/components/plate-input';
 import { PlatePhoto } from '@/components/plate-photo';
@@ -199,7 +200,7 @@ export function FuelReceiptForm(props: FuelReceiptFormProps) {
         label="Litre"
         value={quantity}
         onChangeText={(text) => setQuantity(decimalInput(text))}
-        placeholder="120"
+        placeholder="Litreyi girin"
         keyboardType="decimal-pad"
         maxLength={8}
         error={fieldError('quantity')}
@@ -208,7 +209,7 @@ export function FuelReceiptForm(props: FuelReceiptFormProps) {
         label={priceRequired ? 'Birim fiyat (zorunlu)' : 'Birim fiyat'}
         value={unitPrice}
         onChangeText={(text) => setUnitPrice(decimalInput(text, UNIT_PRICE_DECIMALS))}
-        placeholder={station && hasPrice(station) ? `Boş bırakılırsa ${decimalForInput(station.unit_price)}` : '48,75'}
+        placeholder={station && hasPrice(station) ? `Boş bırakılırsa ${decimalForInput(station.unit_price)}` : 'Birim fiyatı girin'}
         keyboardType="decimal-pad"
         maxLength={9}
         error={fieldError('unit_price')}
@@ -217,7 +218,7 @@ export function FuelReceiptForm(props: FuelReceiptFormProps) {
         label="Kilometre"
         value={km}
         onChangeText={(text) => setKm(integerInput(text))}
-        placeholder="152300"
+        placeholder="Kilometreyi girin"
         keyboardType="number-pad"
         maxLength={7}
         error={fieldError('km')}
@@ -226,7 +227,7 @@ export function FuelReceiptForm(props: FuelReceiptFormProps) {
         label="Yakıtı alan kişi"
         value={receivedBy}
         onChangeText={setReceivedBy}
-        placeholder="Ad Soyad"
+        placeholder="Ad soyad girin"
         autoCapitalize="words"
         maxLength={80}
         error={fieldError('received_by')}
@@ -235,7 +236,7 @@ export function FuelReceiptForm(props: FuelReceiptFormProps) {
         label="Taşıma fiş adedi"
         value={haulTicketCount}
         onChangeText={(text) => setHaulTicketCount(integerInput(text))}
-        placeholder="4"
+        placeholder="Fiş adedini girin"
         keyboardType="number-pad"
         maxLength={3}
         error={fieldError('haul_ticket_count')}
@@ -244,7 +245,7 @@ export function FuelReceiptForm(props: FuelReceiptFormProps) {
       {saveError ? <ErrorBanner message={saveError} /> : null}
       <Button
         title={editing ? 'Değişiklikleri kaydet' : 'Fişi kaydet'}
-        variant={editing ? 'edit' : 'create'}
+        icon={icons.save}
         onPress={submit}
         loading={save.isPending}
         disabled={!canSave || scanPlate.isPending}

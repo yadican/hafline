@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 import { ApiError, errorMessage, formErrorMessage } from '@/api/errors';
 import type { MachinePlateScan, MachineWorkTicket } from '@/api/types';
 import { Button } from '@/components/button';
+import { icons } from '@/components/icons';
 import { FormSection } from '@/components/form-section';
 import { PlateInput } from '@/components/plate-input';
 import { PlatePhoto } from '@/components/plate-photo';
@@ -166,7 +167,7 @@ export function MachineWorkForm(props: MachineWorkFormProps) {
         label="Çalışılan saat"
         value={hours}
         onChangeText={(text) => setHours(decimalInput(text))}
-        placeholder="4,5"
+        placeholder="Çalışılan saati girin"
         keyboardType="decimal-pad"
         maxLength={5}
         error={fieldError('hours')}
@@ -175,7 +176,7 @@ export function MachineWorkForm(props: MachineWorkFormProps) {
         label={rateRequired ? 'Saat ücreti (zorunlu)' : 'Saat ücreti'}
         value={hourlyRate}
         onChangeText={(text) => setHourlyRate(decimalInput(text))}
-        placeholder={defaultRate ? `Boş bırakılırsa ${formatMoney(defaultRate)}` : 'Saat ücreti'}
+        placeholder={defaultRate ? `Boş bırakılırsa ${formatMoney(defaultRate)}` : 'Saat ücretini girin'}
         keyboardType="decimal-pad"
         maxLength={13}
         error={fieldError('hourly_rate')}
@@ -207,7 +208,7 @@ export function MachineWorkForm(props: MachineWorkFormProps) {
           label="Operatör saat ücreti"
           value={operatorRate}
           onChangeText={(text) => setOperatorRate(decimalInput(text))}
-          placeholder="350"
+          placeholder="Operatör saat ücretini girin"
           keyboardType="decimal-pad"
           maxLength={13}
           error={fieldError('operator_rate')}
@@ -217,7 +218,7 @@ export function MachineWorkForm(props: MachineWorkFormProps) {
       {saveError ? <ErrorBanner message={saveError} /> : null}
       <Button
         title={editing ? 'Değişiklikleri kaydet' : 'Fişi kaydet'}
-        variant={editing ? 'edit' : 'create'}
+        icon={icons.save}
         onPress={submit}
         loading={save.isPending}
         disabled={!canSave || scanPlate.isPending}

@@ -6,7 +6,9 @@ import { errorMessage } from '@/api/errors';
 import { PhotoPermissionError, pickPlatePhoto, type PhotoSource } from '@/features/plate/photo';
 import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
+import { ActionTile, ActionTileRow } from './action-tile';
 import { Button } from './button';
+import { icons } from './icons';
 import { ErrorBanner } from './screen-state';
 
 type PlatePhotoProps = {
@@ -60,19 +62,19 @@ export function PlatePhoto({ photoUri, hint, scanning, scanError, onPhoto, onRet
       {scanError && photoUri && !scanning ? (
         <>
           <ErrorBanner message={errorMessage(scanError)} />
-          <Button title="Tekrar dene" onPress={onRetry} />
+          <Button title="Tekrar dene" variant="secondary" icon={icons.retry} onPress={onRetry} />
         </>
       ) : null}
 
       {!scanning && !busy ? (
-        <View style={styles.sources}>
-          <Button
-            title={photoUri ? 'Yeni fotoğraf çek' : 'Fotoğraf çek'}
-            variant={photoUri ? 'secondary' : 'primary'}
+        <ActionTileRow>
+          <ActionTile
+            title={photoUri ? 'Yeni fotoğraf' : 'Fotoğraf çek'}
+            icon={icons.camera}
             onPress={() => void choosePhoto('camera')}
           />
-          <Button title="Galeriden seç" variant="secondary" onPress={() => void choosePhoto('library')} />
-        </View>
+          <ActionTile title="Galeriden seç" icon={icons.gallery} onPress={() => void choosePhoto('library')} />
+        </ActionTileRow>
       ) : null}
     </View>
   );
@@ -117,8 +119,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fonts.semibold,
     color: colors.text,
-  },
-  sources: {
-    gap: spacing.sm,
   },
 });

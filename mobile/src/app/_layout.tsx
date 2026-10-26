@@ -11,10 +11,9 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/auth/auth-provider';
-import { BrandTitle } from '@/components/brand-title';
+import { HeaderBackground } from '@/components/header-background';
 import { LoadingState } from '@/components/screen-state';
 import { queryClient } from '@/query-client';
 import { colors, fonts } from '@/theme';
@@ -51,10 +50,6 @@ export default function RootLayout() {
   );
 }
 
-function HeaderBackground() {
-  return <View style={styles.header} />;
-}
-
 function RootNavigator() {
   const { state } = useAuth();
 
@@ -76,17 +71,16 @@ function RootNavigator() {
       }}
     >
       <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="index" options={{ title: 'Hafline Saha', headerTitle: () => <BrandTitle /> }} />
-        <Stack.Screen name="session" options={{ title: 'Oturum Seçimi' }} />
-        <Stack.Screen name="hauls/index" options={{ title: 'Taşıma Fişleri' }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Fişler' }} />
+        <Stack.Screen name="session" options={{ title: 'Şantiye ve Vardiya' }} />
+        <Stack.Screen name="account" options={{ title: 'Hesap' }} />
         <Stack.Screen name="hauls/new" options={{ title: 'Yeni Taşıma Fişi' }} />
         <Stack.Screen name="hauls/[id]/index" options={{ title: 'Taşıma Fişi' }} />
         <Stack.Screen name="hauls/[id]/edit" options={{ title: 'Taşıma Fişini Düzenle' }} />
-        <Stack.Screen name="machine-works/index" options={{ title: 'Makine Fişleri' }} />
         <Stack.Screen name="machine-works/new" options={{ title: 'Yeni Makine Fişi' }} />
         <Stack.Screen name="machine-works/[id]/index" options={{ title: 'Makine Fişi' }} />
         <Stack.Screen name="machine-works/[id]/edit" options={{ title: 'Makine Fişini Düzenle' }} />
-        <Stack.Screen name="fuel-receipts/index" options={{ title: 'Yakıt Fişleri' }} />
         <Stack.Screen name="fuel-receipts/new" options={{ title: 'Yeni Yakıt Fişi' }} />
         <Stack.Screen name="fuel-receipts/[id]/index" options={{ title: 'Yakıt Fişi' }} />
         <Stack.Screen name="fuel-receipts/[id]/edit" options={{ title: 'Yakıt Fişini Düzenle' }} />
@@ -97,12 +91,3 @@ function RootNavigator() {
     </Stack>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flex: 1,
-    backgroundColor: colors.steel,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.brandLine,
-  },
-});

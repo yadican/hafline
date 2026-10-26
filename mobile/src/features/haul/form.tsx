@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 import { ApiError, formErrorMessage } from '@/api/errors';
 import type { HaulTicket, PlateScan } from '@/api/types';
 import { Button } from '@/components/button';
+import { icons } from '@/components/icons';
 import { PlateInput } from '@/components/plate-input';
 import { PlatePhoto } from '@/components/plate-photo';
 import { ErrorBanner } from '@/components/screen-state';
@@ -43,8 +44,6 @@ export function HaulForm(props: HaulFormProps) {
 
     setPhotoUri(uri);
     setScan(null);
-    setPlate('');
-    setTonnage('');
     createHaul.reset();
     scanPlate.mutate(
       { fieldSessionId: props.fieldSessionId, photoUri: uri },
@@ -66,12 +65,12 @@ export function HaulForm(props: HaulFormProps) {
       return;
     }
 
-    if (props.mode !== 'create' || !scan) {
+    if (props.mode !== 'create') {
       return;
     }
 
     createHaul.mutate(
-      { ...body, scan_id: scan.scan_id, field_session_id: props.fieldSessionId },
+      { ...body, scan_id: scan?.scan_id ?? null, field_session_id: props.fieldSessionId },
       {
         onSuccess: (ticket) => router.replace({ pathname: '/hauls/[id]', params: { id: ticket.id, saved: '1' } }),
       },
@@ -82,14 +81,13 @@ export function HaulForm(props: HaulFormProps) {
   const plateError = fieldError('plate');
   const tonnageError = fieldError('tonnage');
   const saveError = formErrorMessage(save.error, ['plate', 'tonnage']);
-  const showFields = editing !== null || scan !== null;
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {props.mode === 'create' ? (
         <PlatePhoto
           photoUri={photoUri}
-          hint="Plaka okunaklı ve kadrajın ortasında olacak şekilde fotoğraf çekin ya da galeriden seçin."
+          hint="İsterseniz aracın plakasının fotoğrafını çekin; plakayı aşağıya elle de yazabilirsiniz."
           scanning={scanPlate.isPending}
           scanError={scanPlate.error}
           onPhoto={startScan}
@@ -100,43 +98,39 @@ export function HaulForm(props: HaulFormProps) {
 
       {scan ? <Text style={styles.hint}>{scanReadLine(scan)}</Text> : null}
 
-      {showFields ? (
-        <>
-          <PlateInput
-            value={plate}
-            onChangeText={setPlate}
-            error={plateError}
-            suggestions={(search.data ?? []).map((vehicle) => ({
-              plate: vehicle.plate,
-              detail: [vehicle.class_name, vehicle.owner_name].filter(Boolean).join('  ·  ') || null,
-            }))}
-          />
-          <PlateCheckResult
-            active={typedPlate.length >= MIN_PLATE_QUERY}
-            loading={check.isFetching}
-            error={check.error}
-            check={check.data}
-            noun="araç"
-          />
-          <TextField
-            label="Tonaj"
-            value={tonnage}
-            onChangeText={(text) => setTonnage(integerInput(text))}
-            placeholder="22"
-            keyboardType="number-pad"
-            maxLength={4}
-            error={tonnageError}
-          />
-          {saveError ? <ErrorBanner message={saveError} /> : null}
-          <Button
-            title={editing ? 'Değişiklikleri kaydet' : 'Fişi kaydet'}
-            variant={editing ? 'edit' : 'create'}
-            onPress={submit}
-            loading={save.isPending}
-            disabled={plate.trim() === '' || tonnage === '' || check.data?.can_create === false}
-          />
-        </>
-      ) : null}
+      <PlateInput
+        value={plate}
+        onChangeText={setPlate}
+        error={plateError}
+        suggestions={(search.data ?? []).map((vehicle) => ({
+          plate: vehicle.plate,
+          detail: [vehicle.class_name, vehicle.owner_name].filter(Boolean).join('  ·  ') || null,
+        }))}
+      />
+      <PlateCheckResult
+        active={typedPlate.length >= MIN_PLATE_QUERY}
+        loading={check.isFetching}
+        error={check.error}
+        check={check.data}
+        noun="araç"
+      />
+      <TextField
+        label="Tonaj"
+        value={tonnage}
+        onChangeText={(text) => setTonnage(integerInput(text))}
+        placeholder="Tonajı girin"
+        keyboardType="number-pad"
+        maxLength={4}
+        error={tonnageError}
+      />
+      {saveError ? <ErrorBanner message={saveError} /> : null}
+      <Button
+        title={editing ? 'Değişiklikleri kaydet' : 'Fişi kaydet'}
+        icon={icons.save}
+        onPress={submit}
+        loading={save.isPending}
+        disabled={plate.trim() === '' || tonnage === '' || check.data?.can_create === false || scanPlate.isPending}
+      />
     </ScrollView>
   );
 }

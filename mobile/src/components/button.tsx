@@ -1,22 +1,27 @@
+import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors, fontSize, fonts, radius, spacing, touchHeight } from '@/theme';
 
+import type { IconName } from './icons';
+
 /**
- * Same colour language as the back office (.panel-btn-*):
- * primary = brand ochre, create = new record, edit = update, danger = delete, secondary = neutral.
+ * One filled button per screen: primary = the main action (brand ochre).
+ * secondary = neutral alternative, danger = soft destructive (sign out),
+ * dangerText = low-emphasis destructive (delete at the bottom of a screen).
  */
-type Variant = 'primary' | 'secondary' | 'create' | 'edit' | 'danger';
+type Variant = 'primary' | 'secondary' | 'danger' | 'dangerText';
 
 type ButtonProps = {
   title: string;
   onPress: () => void;
   variant?: Variant;
+  icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
 };
 
-export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', icon, loading = false, disabled = false }: ButtonProps) {
   const inactive = disabled || loading;
   const palette = PALETTES[variant];
 
@@ -38,18 +43,46 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
       {loading ? (
         <ActivityIndicator color={palette.text} />
       ) : (
-        <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
+        <>
+          {icon ? <SymbolView name={icon} tintColor={palette.icon} size={20} /> : null}
+          <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
+        </>
       )}
     </Pressable>
   );
 }
 
-const PALETTES: Record<Variant, { background: string; pressed: string; border: string; text: string }> = {
-  primary: { background: colors.primary, pressed: colors.primaryDark, border: colors.primaryDark, text: colors.primaryText },
-  secondary: { background: colors.surface, pressed: colors.surfaceMuted, border: colors.border, text: colors.text },
-  create: { background: colors.create, pressed: colors.createDark, border: colors.createDark, text: colors.primaryText },
-  edit: { background: colors.edit, pressed: colors.editDark, border: colors.editDark, text: colors.primaryText },
-  danger: { background: colors.danger, pressed: colors.dangerDark, border: colors.dangerDark, text: colors.primaryText },
+type Palette = { background: string; pressed: string; border: string; text: string; icon: string };
+
+const PALETTES: Record<Variant, Palette> = {
+  primary: {
+    background: colors.primary,
+    pressed: colors.primaryDark,
+    border: colors.primary,
+    text: colors.primaryText,
+    icon: colors.primaryText,
+  },
+  secondary: {
+    background: colors.surface,
+    pressed: colors.surfaceMuted,
+    border: colors.border,
+    text: colors.text,
+    icon: colors.primaryDark,
+  },
+  danger: {
+    background: colors.dangerSurface,
+    pressed: colors.dangerBorder,
+    border: colors.dangerBorder,
+    text: colors.danger,
+    icon: colors.danger,
+  },
+  dangerText: {
+    background: 'transparent',
+    pressed: colors.dangerSurface,
+    border: 'transparent',
+    text: colors.danger,
+    icon: colors.danger,
+  },
 };
 
 const styles = StyleSheet.create({
@@ -57,6 +90,8 @@ const styles = StyleSheet.create({
     minHeight: touchHeight,
     borderRadius: radius,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,

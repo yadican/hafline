@@ -1,13 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
-import { Button } from '@/components/button';
 import { InfoRow } from '@/components/info-row';
 import { ErrorState, LoadingState } from '@/components/screen-state';
-import { SavedBanner, TicketActions, TicketCard } from '@/components/ticket-card';
+import { SavedBanner, TicketCard } from '@/components/ticket-card';
 import { useDeleteHaul, useHaulTicket } from '@/features/haul/queries';
-import { PrintActions } from '@/features/print/print-actions';
 import type { ReceiptLine } from '@/features/print/receipt';
+import { TicketActions } from '@/features/ticket/ticket-actions';
 import { spacing } from '@/theme';
 
 export default function HaulTicketScreen() {
@@ -43,9 +42,10 @@ export default function HaulTicketScreen() {
         ))}
       </TicketCard>
 
-      <PrintActions receipt={{ title: haul.title, ticketNo: haul.ticket_no, lines, qrPayload: haul.qr_payload }} />
-      <Button title="Yeni taşıma fişi" variant="create" onPress={() => router.replace('/hauls/new')} />
       <TicketActions
+        receipt={{ title: haul.title, ticketNo: haul.ticket_no, lines, qrPayload: haul.qr_payload }}
+        newTitle="Yeni taşıma fişi"
+        onNew={() => router.replace('/hauls/new')}
         onEdit={() => router.push({ pathname: '/hauls/[id]/edit', params: { id } })}
         onDelete={() => deleteHaul.mutate(undefined, { onSuccess: () => router.back() })}
         deleting={deleteHaul.isPending}

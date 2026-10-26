@@ -1,6 +1,8 @@
-import { RequireSession } from '@/features/field-session/require-session';
+import { SessionGate } from '@/features/field-session/session-gate';
 import { HaulForm } from '@/features/haul/form';
 
 export default function NewHaulScreen() {
-  return <RequireSession>{(session) => <HaulForm mode="create" fieldSessionId={session.id} />}</RequireSession>;
+  return (
+    <SessionGate requireDumpSite>{(session) => <HaulForm mode="create" fieldSessionId={session.id} />}</SessionGate>
+  );
 }

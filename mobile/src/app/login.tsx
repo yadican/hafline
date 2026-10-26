@@ -6,6 +6,7 @@ import { ApiError, errorMessage } from '@/api/errors';
 import { useAuth } from '@/auth/auth-provider';
 import { BrandTitle } from '@/components/brand-title';
 import { Button } from '@/components/button';
+import { icons } from '@/components/icons';
 import { ErrorBanner } from '@/components/screen-state';
 import { TextField } from '@/components/text-field';
 import { colors, fontSize, fonts, spacing } from '@/theme';
@@ -87,7 +88,7 @@ export default function LoginScreen() {
             onSubmitEditing={() => canSubmit && void submit()}
           />
 
-          <Button title="Giriş yap" onPress={() => void submit()} loading={submitting} disabled={!canSubmit} />
+          <Button title="Giriş yap" icon={icons.signIn} onPress={() => void submit()} loading={submitting} disabled={!canSubmit} />
 
           <Text style={styles.footer}>HafLine · Hafriyat Yönetim</Text>
         </ScrollView>

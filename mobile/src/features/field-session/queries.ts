@@ -1,13 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
-import {
-  closeSession,
-  fetchCurrentSession,
-  fetchDumpSites,
-  fetchHaulOptions,
-  lockSession,
-} from '@/api/endpoints';
-import type { FieldSession, Shift } from '@/api/types';
+import { fetchCurrentSession, fetchDumpSites, fetchHaulOptions, lockSession } from '@/api/endpoints';
+import type { FieldSession, FieldSessionRequest } from '@/api/types';
 import { useApiClient } from '@/auth/auth-provider';
 
 const keys = {
@@ -60,22 +54,9 @@ export function useLockSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: { site_id: string; dump_site_id: string; shift: Shift }) => lockSession(client, body),
+    mutationFn: (body: FieldSessionRequest) => lockSession(client, body),
     onSuccess: (session: FieldSession) => {
       queryClient.setQueryData(keys.current, session);
-      invalidateSessionScoped(queryClient);
-    },
-  });
-}
-
-export function useCloseSession() {
-  const client = useApiClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => closeSession(client),
-    onSuccess: () => {
-      queryClient.setQueryData(keys.current, null);
       invalidateSessionScoped(queryClient);
     },
   });

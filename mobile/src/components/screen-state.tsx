@@ -5,6 +5,7 @@ import { errorMessage } from '@/api/errors';
 import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
 import { Button } from './button';
+import { icons } from './icons';
 
 export function LoadingState() {
   return (
@@ -24,7 +25,7 @@ export function ErrorState({ error, onRetry, children }: ErrorStateProps) {
   return (
     <View style={styles.centered}>
       <Text style={styles.message}>{errorMessage(error)}</Text>
-      {onRetry ? <Button title="Tekrar dene" variant="secondary" onPress={onRetry} /> : null}
+      {onRetry ? <Button title="Tekrar dene" variant="secondary" icon={icons.retry} onPress={onRetry} /> : null}
       {children}
     </View>
   );

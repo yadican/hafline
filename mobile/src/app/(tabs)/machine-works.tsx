@@ -1,17 +1,22 @@
 import { router } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
+import type { FieldSession } from '@/api/types';
 import { Button } from '@/components/button';
+import { icons } from '@/components/icons';
 import { ErrorState, LoadingState } from '@/components/screen-state';
 import { TicketList } from '@/components/ticket-list';
-import { RequireSession } from '@/features/field-session/require-session';
+import { SessionBar } from '@/features/field-session/session-bar';
+import { SessionGate } from '@/features/field-session/session-gate';
 import { useMachineWorkSession } from '@/features/machine-work/queries';
+import { spacing } from '@/theme';
 import { formatMoney, formatNumber } from '@/utils/number';
 
 export default function MachineWorkListScreen() {
-  return <RequireSession>{() => <MachineWorkList />}</RequireSession>;
+  return <SessionGate>{(session) => <MachineWorkList session={session} />}</SessionGate>;
 }
 
-function MachineWorkList() {
+function MachineWorkList({ session }: { session: FieldSession }) {
   const works = useMachineWorkSession();
 
   if (works.isPending) {
@@ -32,10 +37,22 @@ function MachineWorkList() {
         valueDetail: formatMoney(work.amount),
       }))}
       onPress={(id) => router.push({ pathname: '/machine-works/[id]', params: { id } })}
-      emptyText="Bu oturumda bugün kesilmiş makine fişi yok."
+      emptyText="Bu şantiye ve vardiyada bugün kesilmiş makine fişi yok."
       refreshing={works.isRefetching}
       onRefresh={() => void works.refetch()}
-      header={<Button title="Yeni makine fişi" variant="create" onPress={() => router.push('/machine-works/new')} />}
+      header={
+        <View style={styles.header}>
+          <SessionBar session={session} />
+          <Button title="Yeni makine fişi" icon={icons.add} onPress={() => router.push('/machine-works/new')} />
+        </View>
+      }
     />
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+});

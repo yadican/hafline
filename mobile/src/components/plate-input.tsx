@@ -28,7 +28,7 @@ export function PlateInput({ value, onChangeText, error, suggestions = [] }: Pla
         label="Plaka"
         value={value}
         onChangeText={(text) => onChangeText(normalizePlateInput(text))}
-        placeholder="34 ABC 123"
+        placeholder="Plakayı girin"
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={PLATE_MAX_LENGTH}
