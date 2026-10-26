@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g fill="var(--icon, #000000)">
+    <path d="M3 13 H41 L38 33 H6 Z"/>
+    <path fill-rule="evenodd" d="M43 19 H51 Q53 19 54.2 20.6 L60 28 V33 H43 Z M46 22 H51 L55 28 H46 Z"/>
+    <path d="M3 35 H61 V39 H3 Z"/>
+    <path fill-rule="evenodd" d="M13 40 A6 6 0 1 0 13 52 A6 6 0 1 0 13 40 Z M13 43.5 A2.5 2.5 0 1 0 13 48.5 A2.5 2.5 0 1 0 13 43.5 Z"/>
+    <path fill-rule="evenodd" d="M27 40 A6 6 0 1 0 27 52 A6 6 0 1 0 27 40 Z M27 43.5 A2.5 2.5 0 1 0 27 48.5 A2.5 2.5 0 1 0 27 43.5 Z"/>
+    <path fill-rule="evenodd" d="M51 40 A6 6 0 1 0 51 52 A6 6 0 1 0 51 40 Z M51 43.5 A2.5 2.5 0 1 0 51 48.5 A2.5 2.5 0 1 0 51 43.5 Z"/>
+  </g>
+</svg>

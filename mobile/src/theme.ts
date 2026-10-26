@@ -38,6 +38,15 @@ export const colors = {
   warningSurface: '#fbf3e0',
 } as const;
 
+/** One light background + matching icon colour per ticket type, so types read at a glance without labels. */
+export const ticketTones = {
+  haul: { background: '#fdf0de', icon: '#b86a12' },
+  machine_work: { background: '#e4eefa', icon: '#2f6aa3' },
+  fuel_receipt: { background: '#e3f3e8', icon: '#3a7d50' },
+} as const;
+
+export type TicketType = keyof typeof ticketTones;
+
 /** Manrope, loaded per weight so Android 7 (Sunmi V2 Pro) gets real faces instead of synthesized bold. */
 export const fonts = {
   regular: 'Manrope_400Regular',

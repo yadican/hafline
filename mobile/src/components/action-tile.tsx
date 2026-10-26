@@ -1,38 +1,46 @@
-import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, radius, spacing } from '@/theme';
 
-import type { IconName } from './icons';
+import { AppIcon } from './app-icon';
+import type { AppIconName } from './icons';
 
 type ActionTileProps = {
   title: string;
-  icon: IconName;
+  icon: AppIconName;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  tone?: { background: string; icon: string };
+  /** Defaults to the title; set when the icon carries meaning the title does not. */
+  accessibilityLabel?: string;
 };
 
 /** Icon-over-label secondary action, laid out in rows of equal-width tiles. */
-export function ActionTile({ title, icon, onPress, loading = false, disabled = false }: ActionTileProps) {
+export function ActionTile({
+  title,
+  icon,
+  onPress,
+  loading = false,
+  disabled = false,
+  tone,
+  accessibilityLabel,
+}: ActionTileProps) {
+  const iconColor = tone?.icon ?? colors.primaryDark;
   const inactive = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={onPress}
       style={({ pressed }) => [styles.tile, pressed && styles.pressed, inactive && styles.inactive]}
     >
-      <View style={styles.iconWrap}>
-        {loading ? (
-          <ActivityIndicator color={colors.primaryDark} />
-        ) : (
-          <SymbolView name={icon} tintColor={colors.primaryDark} size={22} />
-        )}
+      <View style={[styles.iconWrap, tone && { backgroundColor: tone.background }]}>
+        {loading ? <ActivityIndicator color={iconColor} /> : <AppIcon name={icon} color={iconColor} size={26} />}
       </View>
       <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
         {title}

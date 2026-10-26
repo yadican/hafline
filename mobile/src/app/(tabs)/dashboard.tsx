@@ -5,19 +5,19 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { DashboardRecentItem } from '@/api/types';
 import { ActionTile, ActionTileRow } from '@/components/action-tile';
 import { Button } from '@/components/button';
-import { icons } from '@/components/icons';
+import { icons, type AppIconName } from '@/components/icons';
 import { ErrorState, LoadingState } from '@/components/screen-state';
 import { TicketList } from '@/components/ticket-list';
 import { useDashboard } from '@/features/dashboard/queries';
 import { StatCard } from '@/features/dashboard/stat-card';
 import { SessionBar } from '@/features/field-session/session-bar';
 import { isSessionCurrent } from '@/features/field-session/shift';
-import { colors, fontSize, fonts, radius, spacing } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing, ticketTones, type TicketType } from '@/theme';
 
-const TYPE_LABELS: Record<DashboardRecentItem['type'], string> = {
-  haul: 'Taşıma',
-  machine_work: 'Makine',
-  fuel_receipt: 'Yakıt',
+const TYPE_ICONS: Record<TicketType, AppIconName> = {
+  haul: icons.hauls,
+  machine_work: icons.machineWorks,
+  fuel_receipt: icons.fuelReceipts,
 };
 
 function openTicket(item: DashboardRecentItem) {
@@ -70,8 +70,13 @@ export default function DashboardScreen() {
       items={recent.map((item) => ({
         id: item.id,
         title: item.plate ?? '-',
-        subtitle: `${item.time}  ·  ${item.summary}`,
-        value: TYPE_LABELS[item.type],
+        subtitle: item.summary,
+        value: item.time,
+        icon: {
+          name: TYPE_ICONS[item.type],
+          color: ticketTones[item.type].icon,
+          background: ticketTones[item.type].background,
+        },
       }))}
       onPress={(id) => {
         const item = recent.find((candidate) => candidate.id === id);
@@ -95,28 +100,49 @@ export default function DashboardScreen() {
           )}
 
           <StatCard
-            title="Taşıma fişleri"
-            icon={icons.hauls}
+            label="Taşıma fişleri"
+            icon={TYPE_ICONS.haul}
+            tone={ticketTones.haul}
             counts={counts.hauls}
             onPress={() => router.push('/hauls')}
           />
           <StatCard
-            title="Makine fişleri"
-            icon={icons.machineWorks}
+            label="Makine fişleri"
+            icon={TYPE_ICONS.machine_work}
+            tone={ticketTones.machine_work}
             counts={counts.machine_works}
             onPress={() => router.push('/machine-works')}
           />
           <StatCard
-            title="Yakıt fişleri"
-            icon={icons.fuelReceipts}
+            label="Yakıt fişleri"
+            icon={TYPE_ICONS.fuel_receipt}
+            tone={ticketTones.fuel_receipt}
             counts={counts.fuel_receipts}
             onPress={() => router.push('/fuel-receipts')}
           />
 
           <ActionTileRow>
-            <ActionTile title="Yeni taşıma" icon={icons.add} onPress={() => router.push('/hauls/new')} />
-            <ActionTile title="Yeni makine" icon={icons.add} onPress={() => router.push('/machine-works/new')} />
-            <ActionTile title="Yeni yakıt" icon={icons.add} onPress={() => router.push('/fuel-receipts/new')} />
+            <ActionTile
+              title="Yeni fiş"
+              icon={TYPE_ICONS.haul}
+              tone={ticketTones.haul}
+              accessibilityLabel="Yeni taşıma fişi"
+              onPress={() => router.push('/hauls/new')}
+            />
+            <ActionTile
+              title="Yeni fiş"
+              icon={TYPE_ICONS.machine_work}
+              tone={ticketTones.machine_work}
+              accessibilityLabel="Yeni makine fişi"
+              onPress={() => router.push('/machine-works/new')}
+            />
+            <ActionTile
+              title="Yeni fiş"
+              icon={TYPE_ICONS.fuel_receipt}
+              tone={ticketTones.fuel_receipt}
+              accessibilityLabel="Yeni yakıt fişi"
+              onPress={() => router.push('/fuel-receipts/new')}
+            />
           </ActionTileRow>
 
           <Text style={styles.sectionTitle}>Bugün kestiğim son fişler</Text>

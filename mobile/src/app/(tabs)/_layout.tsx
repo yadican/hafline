@@ -4,12 +4,13 @@ import { Pressable, StyleSheet, type ColorValue } from 'react-native';
 
 import { HeaderBackground } from '@/components/header-background';
 import { HomeButton } from '@/components/home-button';
-import { icons, type IconName } from '@/components/icons';
+import { AppIcon } from '@/components/app-icon';
+import { icons, type AppIconName } from '@/components/icons';
 import { colors, fontSize, fonts, spacing } from '@/theme';
 
-function tabIcon(name: IconName) {
+function tabIcon(name: AppIconName) {
   return function TabIcon({ color, size }: { color: ColorValue; size: number }) {
-    return <SymbolView name={name} tintColor={color} size={size} />;
+    return <AppIcon name={name} color={color} size={size} />;
   };
 }
 

@@ -3,12 +3,16 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'rea
 
 import { colors, fontSize, fonts, radius, spacing, touchHeight } from '@/theme';
 
+import { AppIcon } from './app-icon';
+import type { AppIconName } from './icons';
+
 export type TicketListItem = {
   id: string;
   title: string;
   subtitle: string;
   value?: string;
   valueDetail?: string;
+  icon?: { name: AppIconName; color: string; background: string };
 };
 
 type TicketListProps = {
@@ -33,15 +37,26 @@ export function TicketList({ items, onPress, emptyText, refreshing, onRefresh, h
         <Pressable
           accessibilityRole="button"
           onPress={() => onPress(item.id)}
-          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          style={({ pressed }) => [
+            styles.row,
+            item.icon && { borderLeftColor: item.icon.color },
+            pressed && styles.rowPressed,
+          ]}
         >
+          {item.icon ? (
+            <View style={[styles.iconWrap, { backgroundColor: item.icon.background }]}>
+              <AppIcon name={item.icon.name} color={item.icon.color} size={32} />
+            </View>
+          ) : null}
           <View style={styles.main}>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.subtitle}>{item.subtitle}</Text>
           </View>
           {item.value || item.valueDetail ? (
             <View style={styles.side}>
-              {item.value ? <Text style={styles.value}>{item.value}</Text> : null}
+              {item.value ? (
+                <Text style={[styles.value, item.icon && { color: item.icon.color }]}>{item.value}</Text>
+              ) : null}
               {item.valueDetail ? <Text style={styles.amount}>{item.valueDetail}</Text> : null}
             </View>
           ) : null}
@@ -71,6 +86,13 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     backgroundColor: colors.selected,
+  },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   main: {
     flex: 1,
