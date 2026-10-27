@@ -1,7 +1,9 @@
 <?php
 
 return [
+    'after_or_equal' => ':attribute :date veya sonrası bir tarih olmalıdır.',
     'array' => ':attribute bir liste olmalıdır.',
+    'before_or_equal' => ':attribute :date veya öncesi bir tarih olmalıdır.',
     'between' => [
         'array' => ':attribute :min ile :max arasında öğe içermelidir.',
         'file' => ':attribute :min ile :max kilobayt arasında olmalıdır.',
@@ -9,13 +11,44 @@ return [
         'string' => ':attribute :min ile :max karakter arasında olmalıdır.',
     ],
     'boolean' => ':attribute alanı geçersiz.',
+    'confirmed' => ':attribute tekrarı eşleşmiyor.',
     'date' => ':attribute geçerli bir tarih olmalıdır.',
     'date_format' => ':attribute :format biçiminde olmalıdır.',
+    'decimal' => ':attribute en fazla :decimal ondalık basamak içermelidir.',
+    'digits' => ':attribute :digits haneli olmalıdır.',
+    'digits_between' => ':attribute :min ile :max hane arasında olmalıdır.',
+    'distinct' => ':attribute alanında tekrar eden değer var.',
     'email' => ':attribute geçerli bir e-posta olmalıdır.',
     'enum' => 'Seçilen :attribute geçersiz.',
+    'exists' => 'Seçilen :attribute bulunamadı. Sayfayı yenileyip tekrar seçin.',
     'file' => ':attribute bir dosya olmalıdır.',
+    'gt' => [
+        'array' => ':attribute :value öğeden fazla içermelidir.',
+        'file' => ':attribute :value kilobayttan büyük olmalıdır.',
+        'numeric' => ':attribute :value değerinden büyük olmalıdır.',
+        'string' => ':attribute :value karakterden uzun olmalıdır.',
+    ],
+    'gte' => [
+        'array' => ':attribute en az :value öğe içermelidir.',
+        'file' => ':attribute en az :value kilobayt olmalıdır.',
+        'numeric' => ':attribute :value veya daha büyük olmalıdır.',
+        'string' => ':attribute en az :value karakter olmalıdır.',
+    ],
     'in' => 'Seçilen :attribute geçersiz.',
     'integer' => ':attribute bir tam sayı olmalıdır.',
+    'ip' => ':attribute geçerli bir IP adresi olmalıdır.',
+    'lt' => [
+        'array' => ':attribute :value öğeden az içermelidir.',
+        'file' => ':attribute :value kilobayttan küçük olmalıdır.',
+        'numeric' => ':attribute :value değerinden küçük olmalıdır.',
+        'string' => ':attribute :value karakterden kısa olmalıdır.',
+    ],
+    'lte' => [
+        'array' => ':attribute en fazla :value öğe içerebilir.',
+        'file' => ':attribute en fazla :value kilobayt olabilir.',
+        'numeric' => ':attribute :value veya daha küçük olmalıdır.',
+        'string' => ':attribute en fazla :value karakter olabilir.',
+    ],
     'max' => [
         'array' => ':attribute en fazla :max öğe içerebilir.',
         'file' => ':attribute en fazla :max kilobayt olabilir.',
@@ -29,7 +62,17 @@ return [
         'string' => ':attribute en az :min karakter olmalıdır.',
     ],
     'numeric' => ':attribute bir sayı olmalıdır.',
+    'password' => [
+        'letters' => ':attribute en az bir harf içermelidir.',
+        'mixed' => ':attribute en az bir büyük ve bir küçük harf içermelidir.',
+        'numbers' => ':attribute en az bir rakam içermelidir.',
+        'symbols' => ':attribute en az bir sembol içermelidir.',
+        'uncompromised' => 'Bu :attribute bir veri sızıntısında görülmüş. Lütfen farklı bir :attribute seçin.',
+    ],
+    'prohibited' => ':attribute alanı gönderilmemelidir.',
     'required' => ':attribute zorunludur.',
     'string' => ':attribute metin olmalıdır.',
+    'unique' => 'Bu :attribute zaten kullanılıyor.',
     'url' => ':attribute geçerli bir adres olmalıdır.',
+    'uuid' => ':attribute geçersiz.',
 ];
