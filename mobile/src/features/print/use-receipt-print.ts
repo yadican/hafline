@@ -48,6 +48,10 @@ export function useReceiptPrint(receipt: Receipt) {
     try {
       await task();
     } catch (cause) {
+      if (__DEV__) {
+        console.warn(`Receipt ${action} failed`, cause);
+      }
+
       if (errorCode(cause) !== PRINT_CANCELLED_CODE) {
         setError(failure(cause));
       }
@@ -96,11 +100,20 @@ export function useReceiptPrint(receipt: Receipt) {
   return { printThermal, print, share, pending, error };
 }
 
-/** Renames the cached PDF after the ticket number so it is recognisable once shared (WhatsApp, mail, ...). */
+/**
+ * Writes the PDF under the ticket number so it is recognisable once shared (WhatsApp, mail, ...).
+ * The bytes are copied instead of moving expo-print's file: on Android in Expo Go that file sits outside the
+ * directories expo-file-system may read, so moving it is rejected.
+ */
 async function receiptPdf(receipt: Receipt): Promise<File> {
-  const { uri } = await Print.printToFileAsync({ html: receiptHtml(receipt), ...receiptPageSize(receipt) });
-  const pdf = new File(uri);
-  await pdf.move(new File(Paths.cache, `${receipt.ticketNo.replace(/[^\w-]/g, '-')}.pdf`), { overwrite: true });
+  const { base64 } = await Print.printToFileAsync({ html: receiptHtml(receipt), ...receiptPageSize(receipt), base64: true });
+
+  if (!base64) {
+    throw new Error('expo-print returned no PDF data');
+  }
+
+  const pdf = new File(Paths.cache, `${receipt.ticketNo.replace(/[^\w-]/g, '-')}.pdf`);
+  await pdf.write(base64, { encoding: 'base64' });
 
   return pdf;
 }

@@ -127,9 +127,17 @@ cp mobile/.env.example mobile/.env.local
 ### 3.3 Expo hesabı ve anahtarı
 
 - Hesap: `yagotak`. Proje: `@yagotak/hafline-saha` (`app.json` > `extra.eas.projectId`).
-- WSL'de `npx expo login` tarayıcıyı açamıyor (Windows `cmd` URL'deki `&` karakterini bölüyor). Bunun yerine erişim anahtarı:
-  1. https://expo.dev/settings/access-tokens > **Create token**
-  2. `echo 'ANAHTAR' > ~/.expo-token && chmod 600 ~/.expo-token`
+- WSL'de `npx expo login` tarayıcıyla giriş yapamıyor (Windows `cmd` URL'deki `&` karakterini bölüyor; tarayıcı eksik adresle açılır, komut hata verip kapanır). İki yol var:
+  - Kullanıcı adı + şifre ile (bir kez yeterli, oturum `~/.expo/state.json`'a kaydedilir):
+    ```bash
+    cd /home/dev/PROJECT/hafline/mobile
+    npx expo login --no-browser   # kullanıcı: yagotak
+    npx expo whoami               # yagotak yazmalı
+    ```
+  - Erişim anahtarı (`EXPO_TOKEN`, bölüm 2.3 ve 6'daki komutlar bunu okur):
+    1. https://expo.dev/settings/access-tokens > **Create token**
+    2. `echo 'ANAHTAR' > ~/.expo-token && chmod 600 ~/.expo-token`
+- Komutlar Docker container'ında değil, WSL (Ubuntu) terminalinde çalıştırılır.
 - Anahtarı hiçbir yere (sohbet, commit, ekran görüntüsü) yazma.
 
 ### 3.4 Telefonların bilgisayara ulaşması (ağ)
@@ -263,6 +271,8 @@ npx eas-cli@latest build -p android --profile preview --non-interactive
 |---|---|---|
 | Uygulamada "Sunucuya ulaşılamadı" | Telefon API'ye erişemiyor | Telefonun tarayıcısında `http://192.168.1.200:8010/up` aç. Açılmıyorsa Wi-Fi, güvenlik duvarı kuralı, ağın "Özel" olması. Açılıyorsa sorun uygulamada; Metro kayıtlarına bak (`WARN API request failed`). |
 | iPhone Expo Go: "You need to be signed in" | Telefon veya Metro Expo'ya giriş yapmamış | Telefonda `yagotak` ile giriş. Metro'yu `EXPO_TOKEN` ile başlat. |
+| iPhone Expo Go: "There was a problem running the requested project. You're signed in to Expo Go as "yagotak", but not signed in to Expo CLI" | Metro'yu çalıştıran Expo CLI'da oturum yok (`npx expo whoami` > "Not logged in") ve `EXPO_TOKEN` verilmemiş | WSL'de `npx expo login --no-browser` (bölüm 3.3). Sonra Metro'yu durdurup (Ctrl + C) bölüm 2.3'teki gibi yeniden başlat, telefonda **Try again**. |
+| Expo Go: "Could not connect to development server" | Metro kapanmış (terminal kapatıldı / süreç öldü) | Windows'tan `curl.exe http://192.168.1.200:8081/status` cevap vermiyorsa Metro'yu bölüm 2.3'teki gibi yeniden başlat, telefonda **Reload**. |
 | Telefon Metro'ya bağlanamıyor | Port yönlendirme yok / yanlış | `netsh interface portproxy show all` > `192.168.1.200:8081 -> ::1:8081` olmalı |
 | IP değişti (`192.168.1.200` değil) | Modem yeni adres verdi | Port yönlendirmeyi yeni adresle yeniden ekle, `.env.local` ve `eas.json` içindeki adresi güncelle. Kalıcı çözüm: modemde bu bilgisayara IP rezervasyonu. |
 | `/up` 404 "File not found" | Docker, WSL entegrasyonu hazır olmadan container başlattı; proje klasörü boş bağlandı | `docker compose restart app scheduler` (gerekirse `web db_backup` de) |

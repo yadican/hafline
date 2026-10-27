@@ -83,6 +83,8 @@ export default function LoginScreen() {
             placeholder="••••••••"
             error={fieldError('password')}
             secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="password"
             returnKeyType="go"
             onSubmitEditing={() => canSubmit && void submit()}
