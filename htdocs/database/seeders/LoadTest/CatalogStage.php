@@ -26,9 +26,12 @@ use Illuminate\Support\Str;
  */
 final class CatalogStage
 {
-    public const SITE_COUNT = 90;
+    public const SITE_COUNT = 40;
 
-    public const DUMP_COUNT = 45;
+    public const DUMP_COUNT = 15;
+
+    /** Site groups that share nearby dump sites. */
+    private const DUMP_REGIONS = 5;
 
     public const HAUL_VEHICLE_COUNT = 200;
 
@@ -48,6 +51,9 @@ final class CatalogStage
 
     /** @var Collection<int, FuelStation> */
     private Collection $stations;
+
+    /** @var Collection<int, FuelStation> */
+    private Collection $offSiteStations;
 
     /** @var Collection<int, Vehicle> */
     private Collection $haulVehicles;
@@ -73,12 +79,24 @@ final class CatalogStage
     /** @var array<string, array<string, string>> routeId => vehicleId => price */
     private array $routeVehiclePrices = [];
 
+    /** @var array<string, string> vehicleId => routeId with a negotiated price */
+    private array $preferredRoutes = [];
+
+    /** @var array<string, int> routeId => round-trip minutes (load, haul, dump, return) */
+    private array $routeCycles = [];
+
+    /** @var array<string, string> siteId => customer partyId */
+    private array $siteCustomers = [];
+
+    /** @var array<string, list<FuelStation>> siteId => on-site stations */
+    private array $siteStations = [];
+
     /** @var array<string, true> */
     private array $usedPlates = [];
 
     public function __construct(private Progress $progress) {}
 
-    public function run(Carbon $fleetSince): self
+    public function run(Carbon $fleetSince, Carbon $from, Carbon $to): self
     {
         $this->classes = VehicleClass::query()->get()->keyBy('name');
         $this->seedBanks();
@@ -87,9 +105,40 @@ final class CatalogStage
         $this->seedDumpSites();
         $this->seedRoutes();
         $this->seedFuelStations();
-        $this->seedVehicles($fleetSince);
+        $this->seedVehicles($fleetSince, $from, $to);
 
         return $this;
+    }
+
+    public function cycleMinutes(string $routeId): int
+    {
+        return $this->routeCycles[$routeId] ?? 80;
+    }
+
+    public function preferredRouteId(string $vehicleId): ?string
+    {
+        return $this->preferredRoutes[$vehicleId] ?? null;
+    }
+
+    public function customerOf(string $siteId): ?string
+    {
+        return $this->siteCustomers[$siteId] ?? null;
+    }
+
+    /**
+     * Station a vehicle fuels at while working on a site; off-site regulars keep their own pump.
+     */
+    public function stationFor(string $siteId, int $vehicleIndex, bool $offSiteRegular): FuelStation
+    {
+        if ($offSiteRegular && $this->offSiteStations->isNotEmpty()) {
+            return $this->offSiteStations[$vehicleIndex % $this->offSiteStations->count()];
+        }
+
+        $onSite = $this->siteStations[$siteId] ?? [];
+
+        return $onSite !== []
+            ? $onSite[$vehicleIndex % count($onSite)]
+            : $this->stations[$vehicleIndex % $this->stations->count()];
     }
 
     /** @return Collection<int, Party> */
@@ -208,12 +257,13 @@ final class CatalogStage
             PartyRole::MachineOperator->value => 50,
         ];
 
+        // Sized to 40 sites / 15 dumps so every firm has real activity.
         $companyTargets = [
-            PartyRole::Customer->value => 70,
-            PartyRole::Supplier->value => 55,
-            PartyRole::DumpOperator->value => 40,
-            PartyRole::Fuel->value => 35,
-            PartyRole::Market->value => 40,
+            PartyRole::Customer->value => 28,
+            PartyRole::Supplier->value => 30,
+            PartyRole::DumpOperator->value => 10,
+            PartyRole::Fuel->value => 14,
+            PartyRole::Market->value => 20,
             PartyRole::VehicleOwner->value => 65,
         ];
 
@@ -336,17 +386,18 @@ final class CatalogStage
         $names = collect(TurkishData::siteNames())->shuffle()->take(self::SITE_COUNT)->values();
         $this->sites = collect();
 
-        $customers = $this->partiesFor(PartyRole::Customer);
+        $customers = $this->partiesFor(PartyRole::Customer)->values();
         $suppliers = $this->partiesFor(PartyRole::Supplier);
-        $fuels = $this->partiesFor(PartyRole::Fuel);
         $markets = $this->partiesFor(PartyRole::Market);
 
         foreach ($names as $index => $name) {
             $site = Site::query()->create(['name' => $name]);
 
-            $site->parties()->attach($customers->random()->id, ['role' => PartyRole::Customer->value]);
+            // Round-robin so every customer owns at least one site; fuel firms follow their stations.
+            $customerId = $customers[$index % $customers->count()]->id;
+            $site->parties()->attach($customerId, ['role' => PartyRole::Customer->value]);
             $site->parties()->attach($suppliers->random()->id, ['role' => PartyRole::Supplier->value]);
-            $site->parties()->attach($fuels->random()->id, ['role' => PartyRole::Fuel->value]);
+            $this->siteCustomers[$site->id] = $customerId;
 
             if (fake()->boolean(70)) {
                 $site->parties()->attach($markets->random()->id, ['role' => PartyRole::Market->value]);
@@ -404,34 +455,28 @@ final class CatalogStage
 
         $this->routes = collect();
         $haulClasses = $this->classes->where('hourly', false);
-        $dumpChunks = $this->dumpSites->chunk((int) ceil($this->dumpSites->count() / 6))->values();
+        $regions = $this->dumpSites->chunk((int) ceil($this->dumpSites->count() / self::DUMP_REGIONS))->values();
+        $links = $this->sites->values()->map(function (Site $site, int $siteIndex) use ($regions): Collection {
+            $region = $regions[$siteIndex % $regions->count()];
+
+            return $region->random(min(fake()->numberBetween(2, 3), $region->count()));
+        });
+        $target = $links->sum(fn (Collection $linked) => $linked->count());
         $total = 0;
-        $target = 0;
 
-        foreach ($this->sites as $siteIndex => $site) {
-            $region = $dumpChunks[$siteIndex % $dumpChunks->count()];
-            $linked = $region->random(min(fake()->numberBetween(2, 4), $region->count()));
-            $target += $linked->count();
-        }
-
-        foreach ($this->sites as $siteIndex => $site) {
-            $region = $dumpChunks[$siteIndex % $dumpChunks->count()];
-            $linked = $region->random(min(fake()->numberBetween(2, 4), $region->count()));
-
-            foreach ($linked as $dump) {
+        foreach ($this->sites->values() as $siteIndex => $site) {
+            foreach ($links[$siteIndex] as $dump) {
                 $route = HaulRoute::query()->create([
                     'site_id' => $site->id,
                     'dump_site_id' => $dump->id,
                     'bonus' => fake()->boolean(15) ? fake()->numberBetween(50, 200) : 0,
                 ]);
 
+                $cycle = fake()->numberBetween(50, 110);
+                $this->routeCycles[$route->id] = $cycle;
+
                 foreach ($haulClasses as $class) {
-                    $price = match ($class->name) {
-                        'TIR' => fake()->numberBetween(3200, 5200),
-                        'KIRKAYAK' => fake()->numberBetween(2600, 4000),
-                        'ON TEKER' => fake()->numberBetween(2100, 3400),
-                        default => fake()->numberBetween(1200, 2200),
-                    };
+                    $price = $this->routePrice($class->name, $cycle);
 
                     RouteClassPrice::query()->create([
                         'route_id' => $route->id,
@@ -450,7 +495,22 @@ final class CatalogStage
             }
         }
 
-        $this->progress->done($this->routes->count().' güzergah (her şantiye 2–4 döküm)');
+        $this->progress->done($this->routes->count().' güzergah (her şantiye 2–3 döküm, tur 50–110 dk)');
+    }
+
+    /**
+     * Longer round trips pay more; heavier classes pay more per minute.
+     */
+    private function routePrice(string $className, int $cycleMinutes): int
+    {
+        [$base, $perMinute] = match ($className) {
+            'TIR' => [2200, 26],
+            'KIRKAYAK' => [1800, 20],
+            'ON TEKER' => [1400, 17],
+            default => [800, 11],
+        };
+
+        return (int) round(($base + $cycleMinutes * $perMinute) * fake()->randomFloat(2, 0.95, 1.05), -1);
     }
 
     private function seedFuelStations(): void
@@ -461,16 +521,17 @@ final class CatalogStage
         $fuelFirms = $this->partiesFor(PartyRole::Fuel);
         $created = 0;
 
-        foreach ($fuelFirms as $index => $firm) {
+        foreach ($fuelFirms->values() as $index => $firm) {
             $stationCount = match (true) {
-                $index < 6 => fake()->numberBetween(3, 5),
-                $index < 14 => fake()->numberBetween(2, 3),
+                $index < 4 => fake()->numberBetween(2, 3),
+                $index < 9 => fake()->numberBetween(1, 2),
                 default => 1,
             };
 
             for ($n = 1; $n <= $stationCount; $n++) {
                 $brand = fake()->randomElement(TurkishData::fuelBrandNames());
-                $onSite = fake()->boolean(55);
+                // Every firm keeps at least one on-site pump so it shows up on site reports.
+                $onSite = $n === 1 || fake()->boolean(45);
                 $station = FuelStation::query()->create([
                     'name' => sprintf('%s %s %s', $brand, $onSite ? 'ŞANTİYE' : 'DIŞ', $n === 1 ? 'MERKEZ' : chr(64 + $n)),
                     'party_id' => $firm->id,
@@ -478,9 +539,9 @@ final class CatalogStage
                 ]);
 
                 if ($onSite) {
-                    $linkedSites = $this->sites->random(min(fake()->numberBetween(1, 4), $this->sites->count()));
+                    $linkedSites = $this->sites->random(min(fake()->numberBetween(1, 2), $this->sites->count()))->values();
                     $station->sites()->attach($linkedSites->pluck('id'));
-                    $station->setRelation('sites', $linkedSites->values());
+                    $station->setRelation('sites', $linkedSites);
                 } else {
                     $station->setRelation('sites', collect());
                 }
@@ -490,14 +551,39 @@ final class CatalogStage
             }
         }
 
-        $this->progress->done($created.' istasyon (şantiye içi + dışı)');
+        $onSiteStations = $this->stations->filter(fn (FuelStation $station) => $station->sites->isNotEmpty())->values();
+
+        foreach ($this->sites as $site) {
+            $serving = $onSiteStations->filter(fn (FuelStation $station) => $station->sites->contains('id', $site->id));
+
+            if ($serving->isEmpty()) {
+                $station = $onSiteStations->random();
+                $station->sites()->attach($site->id);
+                $station->setRelation('sites', $station->sites->push($site));
+                $serving = collect([$station]);
+            }
+
+            $this->siteStations[$site->id] = $serving->values()->all();
+
+            foreach ($serving->pluck('party_id')->unique() as $fuelPartyId) {
+                $site->parties()->attach($fuelPartyId, ['role' => PartyRole::Fuel->value]);
+            }
+        }
+
+        $this->offSiteStations = $this->stations->filter(fn (FuelStation $station) => $station->sites->isEmpty())->values();
+
+        $this->progress->done(sprintf('%d istasyon (%d şantiye içi + %d dış)', $created, $onSiteStations->count(), $this->offSiteStations->count()));
     }
 
-    private function seedVehicles(Carbon $fleetSince): void
+    private function seedVehicles(Carbon $fleetSince, Carbon $from, Carbon $to): void
     {
         $this->progress->stage('Araçlar ve sahiplik geçmişi');
 
         $owners = $this->partiesFor(PartyRole::VehicleOwner)->values();
+        $window = max(1, (int) $from->diffInDays($to));
+        $dayInWindow = fn (float $min, float $max): Carbon => $from->copy()->addDays(
+            fake()->numberBetween((int) ($window * $min), (int) ($window * $max)),
+        );
         $haulClasses = $this->classes->whereIn('name', ['TIR', 'ON TEKER', 'KIRKAYAK', 'TAKSİ'])->values();
         $machineClass = $this->classes->get('MAKİNE');
 
@@ -530,28 +616,30 @@ final class CatalogStage
                 'ended_on' => null,
             ]];
 
-            if (fake()->boolean(28)) {
-                $this->transfer($vehicle, $owners->random(), $fleetSince->copy()->addDays(fake()->numberBetween(40, 120)));
+            if (fake()->boolean(20)) {
+                $this->transfer($vehicle, $owners, $dayInWindow(0.15, 0.6));
             }
 
-            if (fake()->boolean(8)) {
-                $this->transfer($vehicle, $owners->random(), $fleetSince->copy()->addDays(fake()->numberBetween(130, 160)));
+            if (fake()->boolean(5)) {
+                $this->transfer($vehicle, $owners, $dayInWindow(0.7, 0.9));
             }
 
             $this->haulVehicles->push($vehicle);
             $this->progress->batch($i + 1, self::HAUL_VEHICLE_COUNT + self::MACHINE_COUNT, 'araç');
         }
 
-        // Birkaç araca özel güzergah fiyatı
+        // Birkaç araca özel güzergah fiyatı; bu araçlar o güzergahta çalışır.
         foreach ($this->haulVehicles->random(min(24, $this->haulVehicles->count())) as $vehicle) {
             $route = $this->routes->random();
-            $price = fake()->numberBetween(2500, 4800);
+            $classPrice = (float) ($this->routeClassPrices[$route->id][$vehicle->vehicle_class_id] ?? 3000);
+            $price = (int) round($classPrice * fake()->randomFloat(2, 1.03, 1.12), -1);
             RouteVehiclePrice::query()->create([
                 'route_id' => $route->id,
                 'vehicle_id' => $vehicle->id,
                 'price' => $price,
             ]);
             $this->routeVehiclePrices[$route->id][$vehicle->id] = (string) $price;
+            $this->preferredRoutes[$vehicle->id] = $route->id;
         }
 
         $this->machines = collect();
@@ -569,7 +657,7 @@ final class CatalogStage
             ]);
             $machine->setRelation('vehicleClass', $machineClass);
 
-            $mid = $fleetSince->copy()->addMonths(3)->subDays(fake()->numberBetween(0, 10));
+            $mid = $dayInWindow(0.35, 0.6);
             $newRate = $oldRate + fake()->randomElement([150, 200, 250, 300]);
             $machine->rates()->create([
                 'hourly_rate' => $oldRate,
@@ -600,8 +688,8 @@ final class CatalogStage
                 ],
             ];
 
-            if (fake()->boolean(20)) {
-                $this->transfer($machine, $owners->random(), $fleetSince->copy()->addDays(fake()->numberBetween(60, 140)));
+            if (fake()->boolean(15)) {
+                $this->transfer($machine, $owners, $dayInWindow(0.25, 0.8));
             }
 
             $this->machines->push($machine);
@@ -673,7 +761,10 @@ final class CatalogStage
         return false;
     }
 
-    private function transfer(Vehicle $vehicle, Party $to, Carbon $on): void
+    /**
+     * @param  Collection<int, Party>  $owners
+     */
+    private function transfer(Vehicle $vehicle, Collection $owners, Carbon $on): void
     {
         $current = $this->ownershipIndex[$vehicle->id] ?? [];
         if ($current === []) {
@@ -681,6 +772,7 @@ final class CatalogStage
         }
 
         $last = count($current) - 1;
+        $to = $owners->reject(fn (Party $owner) => $owner->id === $current[$last]['party_id'])->random();
         $ended = $on->copy()->subDay()->toDateString();
 
         if ($current[$last]['started_on'] > $ended) {

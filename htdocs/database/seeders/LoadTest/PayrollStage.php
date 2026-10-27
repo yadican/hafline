@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * 1 yıllık personel maaş / hakediş / ödeme / prim verisi.
+ * Seed dönemi boyunca personel maaş / hakediş / ödeme / prim verisi.
  */
 final class PayrollStage
 {
@@ -20,7 +20,7 @@ final class PayrollStage
 
     public function run(CatalogStage $catalog, Carbon $from, Carbon $to): void
     {
-        $this->progress->stage('Personel bordro (1 yıl)');
+        $this->progress->stage('Personel bordro');
 
         $staff = $catalog->partiesFor(PartyRole::Employee)->unique('id')->values();
 
@@ -98,9 +98,10 @@ final class PayrollStage
                     'deleted_at' => null,
                 ];
 
-                // Most months get a payment; occasionally partial (avans + kalan).
-                if (fake()->boolean(88)) {
-                    $payDate = Carbon::parse($period)->day(min(28, fake()->numberBetween(3, 10)));
+                // Paid early next month; occasionally partial (avans + kalan).
+                $payDate = Carbon::parse($period)->addMonth()->day(fake()->numberBetween(3, 10));
+
+                if ($payDate->lte($to) && fake()->boolean(92)) {
                     $amount = fake()->boolean(15)
                         ? round($earned * fake()->randomFloat(2, 0.4, 0.7), 2)
                         : $earned;
@@ -123,7 +124,9 @@ final class PayrollStage
                         'deleted_at' => null,
                     ];
 
-                    if ($amount < $earned && fake()->boolean(60)) {
+                    $restDate = $payDate->copy()->addDays(fake()->numberBetween(5, 12));
+
+                    if ($amount < $earned && $restDate->lte($to) && fake()->boolean(60)) {
                         $rest = round($earned - $amount, 2);
                         $payments[] = [
                             'id' => (string) Str::uuid7(),
@@ -131,7 +134,7 @@ final class PayrollStage
                             'payment_method' => PaymentMethod::Cash->value,
                             'amount' => max(100, $rest),
                             'period' => $period,
-                            'occurred_on' => $payDate->copy()->addDays(fake()->numberBetween(5, 12))->toDateString(),
+                            'occurred_on' => $restDate->toDateString(),
                             'description' => 'Kalan ödeme',
                             'created_by' => $userId,
                             'created_at' => $now,

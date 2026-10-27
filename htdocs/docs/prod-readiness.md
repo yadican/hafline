@@ -71,7 +71,7 @@ Deploy adımları (container içinde):
 - [ ] `composer install --no-dev --optimize-autoloader --no-interaction` (debugbar, boost, pail vb. dev paketleri prod’da olmamalı)
 - [ ] `php artisan optimize` (config/route/view/event cache)
 - [ ] `php artisan migrate --force`
-- [ ] **`db:seed` çalıştırma.** `DatabaseSeeder` → `LoadTestSeeder` (~390k sahte kayıt) çağırıyor; factory varsayılan şifresi sabit. Prod’da sadece gerekli seeder’lar tek tek: `RolePermissionSeeder`, `LocationSeeder`, `VehicleClassSeeder`, `CashCategorySeeder`; admin kullanıcısı güçlü şifreyle elle
+- [ ] **`db:seed` çalıştırma.** `DatabaseSeeder` → `LoadTestSeeder` (3 ay, ~117k sahte fiş/cari kaydı + ~220k ledger satırı) çağırıyor; factory varsayılan şifresi sabit. Prod’da sadece gerekli seeder’lar tek tek: `RolePermissionSeeder`, `LocationSeeder`, `VehicleClassSeeder`, `CashCategorySeeder`; admin kullanıcısı güçlü şifreyle elle
 
 Kontrol: `htdocs/.env.example`, kök `.env`, `config/l5-swagger.php`, `database/seeders/DatabaseSeeder.php`.
 

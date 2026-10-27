@@ -3,22 +3,26 @@
 namespace Database\Seeders;
 
 use App\Enums\PartyRole;
+use App\Repositories\VehicleAccountRepository;
 use App\Services\CariEntryService;
 use App\Services\Ledger\FuelReceiptLedger;
 use App\Services\Ledger\HaulLedger;
 use App\Services\Ledger\MachineWorkLedger;
+use App\Services\VehicleOwnershipService;
 use Database\Seeders\LoadTest\CariStage;
 use Database\Seeders\LoadTest\CatalogStage;
 use Database\Seeders\LoadTest\OperationsStage;
 use Database\Seeders\LoadTest\PayrollStage;
 use Database\Seeders\LoadTest\Support\Progress;
+use Database\Seeders\LoadTest\TransferStage;
 use Illuminate\Database\Seeder;
 
 /**
- * 1 yıllık, kapasite bazlı yük / rapor test verisi.
+ * 3 aylık, kapasite bazlı yük / rapor test verisi.
  *
- * Filo: 200 kamyon + 50 makine. Sefer, yakıt ve makine saati günlük
- * kapasiteden türetilir; cari mahsup fiş ledger bakiyesine göre yazılır.
+ * Filo: 200 kamyon + 50 makine, 40 şantiye, 15 döküm yeri. Kamyon bir gün
+ * boyunca tek güzergahta çalışır; sefer sayısı güzergahın tur süresinden,
+ * yakıt yapılan işten, cari hareketler o tarihteki açık bakiyeden türetilir.
  *
  * Çalıştırma: php artisan migrate:fresh --seed
  * veya: php artisan db:seed --class=LoadTestSeeder
@@ -30,20 +34,23 @@ class LoadTestSeeder extends Seeder
         MachineWorkLedger $machineLedger,
         FuelReceiptLedger $fuelLedger,
         CariEntryService $cari,
+        VehicleOwnershipService $ownerships,
+        VehicleAccountRepository $accounts,
     ): void {
         $progress = new Progress($this->command);
         $to = today();
         $from = $to->copy()->subMonths(OperationsStage::MONTHS - 1)->startOfMonth();
         $fleetSince = $from->copy()->subMonth();
 
-        $progress->banner('Hafline Load Test Seeder (1 yıl)', $from, $to);
+        $progress->banner(sprintf('Hafline Load Test Seeder (%d ay)', OperationsStage::MONTHS), $from, $to);
         $progress->note(sprintf(
-            'Filo: %d kamyon + %d makine · %d ay · kapasite bazlı fiş + cari mahsup',
+            'Filo: %d kamyon + %d makine · %d şantiye · %d döküm · %d ay',
             CatalogStage::HAUL_VEHICLE_COUNT,
             CatalogStage::MACHINE_COUNT,
+            CatalogStage::SITE_COUNT,
+            CatalogStage::DUMP_COUNT,
             OperationsStage::MONTHS,
         ));
-        $progress->note('Beklenen: ~390k taşıma · ~65k yakıt · ~14k makine · cari fiş+mahsup');
 
         $this->callSilent([
             LocationSeeder::class,
@@ -51,12 +58,14 @@ class LoadTestSeeder extends Seeder
             CashCategorySeeder::class,
         ]);
 
-        $catalog = (new CatalogStage($progress))->run($fleetSince);
+        $catalog = (new CatalogStage($progress))->run($fleetSince, $from, $to);
 
         (new OperationsStage($progress, $haulLedger, $machineLedger, $fuelLedger))
             ->run($catalog, $from, $to);
 
         (new CariStage($progress, $cari))->run($catalog, $from, $to);
+
+        (new TransferStage($progress, $ownerships, $cari, $accounts))->run($to);
 
         (new PayrollStage($progress))->run($catalog, $from, $to);
 
@@ -68,6 +77,6 @@ class LoadTestSeeder extends Seeder
         $progress->note('Araç: '.$catalog->allVehicles()->count()
             .' ('.$catalog->haulVehicles()->count().' kamyon + '.$catalog->machines()->count().' makine)');
         $progress->note('Personel (Employee rolü): '.$catalog->partiesFor(PartyRole::Employee)->count());
-        $progress->done('1 yıllık load test verisi hazır');
+        $progress->done(OperationsStage::MONTHS.' aylık load test verisi hazır');
     }
 }
