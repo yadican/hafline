@@ -19,7 +19,7 @@ class VehicleRepository extends Repository
     /**
      * @param  array{q?: string, owner?: string, class?: string, active?: string}  $filters
      */
-    public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
             ->with(['currentOwnership.party', 'vehicleClass'])

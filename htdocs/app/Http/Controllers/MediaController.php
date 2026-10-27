@@ -15,7 +15,7 @@ class MediaController extends Controller
         $path = str_replace('\\', '/', $path);
 
         abort_if(str_contains($path, '..'), 404);
-        abort_unless(preg_match('#^(haul-photos|haul-scans)/#', $path) === 1, 404);
+        abort_unless(preg_match('#^(haul-photos|haul-scans|machine-photos|fuel-photos)/#', $path) === 1, 404);
         abort_unless(Storage::disk(SecureImageIngest::DISK)->exists($path), 404);
 
         $absolute = Storage::disk(SecureImageIngest::DISK)->path($path);

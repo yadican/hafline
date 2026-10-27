@@ -31,7 +31,7 @@ class FuelReceiptService extends Service
     /**
      * @param  array<string, string>  $filters
      */
-    public function paginate(array $filters, ?Sort $sort = null, int $perPage = 30): LengthAwarePaginator
+    public function paginate(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         return $this->receipts->search($filters, $sort, $perPage);
     }

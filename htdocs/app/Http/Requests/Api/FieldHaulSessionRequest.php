@@ -22,13 +22,15 @@ class FieldHaulSessionRequest extends FormRequest
     }
 
     /**
+     * The dump site is only needed for haul tickets, so machine and fuel work can start without one.
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'site_id' => ['required', 'uuid'],
-            'dump_site_id' => ['required', 'uuid'],
+            'dump_site_id' => ['nullable', 'uuid'],
             'shift' => ['required', Rule::enum(Shift::class)],
         ];
     }
@@ -40,7 +42,7 @@ class FieldHaulSessionRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                if ($validator->errors()->hasAny(['site_id', 'dump_site_id'])) {
+                if ($validator->errors()->hasAny(['site_id', 'dump_site_id']) || ! $this->filled('dump_site_id')) {
                     return;
                 }
 

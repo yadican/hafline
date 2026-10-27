@@ -4,10 +4,12 @@ namespace App\Http\Requests\Api;
 
 use App\Models\FieldHaulSession;
 use App\Models\Vehicle;
+use App\Services\Api\FieldHaulService;
 use App\Support\ApiPermissions;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class HaulStoreRequest extends FormRequest
 {
@@ -27,6 +29,8 @@ class HaulStoreRequest extends FormRequest
     }
 
     /**
+     * The plate may be typed by hand or confirmed from a scan, as on machine tickets.
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -37,7 +41,7 @@ class HaulStoreRequest extends FormRequest
                     $fail('Kayıtlı bir plaka girin.');
                 }
             }],
-            'scan_id' => ['required', 'uuid'],
+            'scan_id' => ['nullable', 'uuid'],
             'field_session_id' => ['required', 'uuid', function (string $attribute, mixed $value, Closure $fail): void {
                 $session = FieldHaulSession::query()
                     ->whereKey($value)
@@ -49,6 +53,29 @@ class HaulStoreRequest extends FormRequest
                     $fail('Geçerli bir saha oturumu seçin veya yeniden sabitleyin.');
                 }
             }],
+            'tonnage' => ['required', 'integer', 'between:0,1000'],
+        ];
+    }
+
+    /**
+     * @return array<int, Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->has('plate')) {
+                    return;
+                }
+
+                $vehicle = Vehicle::findByPlate($this->string('plate')->value());
+                $fieldHauls = app(FieldHaulService::class);
+                $problem = $vehicle ? $fieldHauls->plateProblem($vehicle, $fieldHauls->haulDate()) : null;
+
+                if ($problem) {
+                    $validator->errors()->add('plate', $problem);
+                }
+            },
         ];
     }
 
@@ -61,6 +88,7 @@ class HaulStoreRequest extends FormRequest
             'plate' => 'plaka',
             'scan_id' => 'tarama',
             'field_session_id' => 'oturum',
+            'tonnage' => 'tonaj',
         ];
     }
 }

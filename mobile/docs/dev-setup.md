@@ -1,0 +1,301 @@
+# Hafline Saha: geliştirme ortamı kurulumu
+
+Bu dosya, mobil uygulamayı geliştirip test etmek için gereken servisleri ayağa kaldırmayı ve tek seferlik kurulumları anlatır. Hedef makine: **Windows 11 + WSL2 (Ubuntu 24.04) + Docker Desktop**. Mac farkları en sondadır.
+
+Günlük çalıştırma ve saha demosu için kısa yol: [run.md](run.md).
+
+---
+
+## 1. Parçalar ve portlar
+
+| Parça | Nerede çalışır | Adres | Görevi |
+|---|---|---|---|
+| Laravel + Postgres + Redis | Docker Desktop (`compose.yaml`) | `http://192.168.1.200:8010` | API ve admin paneli |
+| Plaka OCR (Python) | Windows, `D:\PROJECT\Read-Plate` | `http://localhost:8000` | Fotoğraftan plaka okur. Laravel `host.docker.internal:8000` üzerinden çağırır. |
+| Metro (Expo geliştirme sunucusu) | WSL, `mobile/` | `exp://192.168.1.200:8081` | Uygulama kodunu Expo Go'ya canlı yükler |
+| Android emülatörü | Windows, Android Studio | `emulator-5554` | Telefon taşımadan test |
+
+`192.168.1.200` örnek adrestir. Gerçek adres `npm run dev` başlarken bulunur ve terminale yazılır (`mobile/.env.local` > `DEV_HOST_IP=auto`). Bu dosyadaki komutlarda kendi adresinle değiştir.
+
+---
+
+## 2. Her gün: servisleri başlatma sırası
+
+### 2.1 Docker (Laravel)
+
+1. Docker Desktop'ı aç ve motorun hazır olmasını bekle.
+2. WSL terminalinde:
+
+```bash
+cd /home/dev/PROJECT/hafline
+docker compose up -d
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8010/up   # 200 olmalı
+```
+
+- [ ] `/up` 200 dönüyor
+- [ ] `/up` 404 ("File not found") dönüyorsa: `docker compose restart app scheduler` (bkz. bölüm 7)
+
+### 2.2 Plaka OCR servisi
+
+Windows PowerShell'de:
+
+```powershell
+cd D:\PROJECT\Read-Plate
+.\venv\Scripts\Activate.ps1
+python main.py
+```
+
+- [ ] Konsolda `Sistem hazır!` ve `YOLO: cuda  EasyOCR: cuda` yazıyor
+- [ ] http://localhost:8000/docs açılıyor
+
+İlk kurulum ve `.env` (`PLATFORM=win`) için `D:\PROJECT\Read-Plate\README.md`.
+
+### 2.3 Metro (mobil geliştirme sunucusu)
+
+WSL terminalinde:
+
+```bash
+cd /home/dev/PROJECT/hafline/mobile
+npm run dev
+```
+
+Terminale telefonda açılacak `Expo Go` adresini ve girişte kullanılacak `Server (app)` adresini yazar. Ayarlar, ağ değişimi ve demo senaryoları: [run.md](run.md).
+
+`npm run dev` (`scripts/dev-start.sh`) şunları yapar:
+
+- `.env.local`'ı okur. `DEV_HOST_IP=auto` ise bilgisayarın o anki ağ adresini bulur.
+- `REACT_NATIVE_PACKAGER_HOSTNAME`: Metro WSL içinde çalıştığı için kendi adresini yanlış (WSL iç adresi) bulur; telefona bilgisayarın ağ adresini vermesi için bu adresle başlatılır.
+- `EXPO_PUBLIC_API_URL`: giriş ekranındaki sunucu adresi, `http://DEV_HOST_IP:API_PORT` (veya `API_URL`).
+- `EXPO_TOKEN`: `~/.expo-token` varsa yükler. iPhone'daki Expo Go imzalı proje ister; anahtar olmadan "You need to be signed in" hatası çıkar. Android için şart değil.
+- Windows ağ ayarı bu ağ için hazır değilse `scripts/dev-network.ps1`'i çalıştırır (bölüm 3.4). **Windows yönetici onayı ister**; yeni bir ağda bir kez gerekir.
+
+Kontrol (Windows'tan):
+
+```powershell
+curl.exe http://192.168.1.200:8081/status   # packager-status:running
+```
+
+### 2.4 Uygulamayı açma
+
+| Cihaz | Nasıl |
+|---|---|
+| Android emülatörü | Android Studio > More Actions > Virtual Device Manager > **Medium_Phone_API_37.0** ▶. Expo Go'yu aç, "Recently opened" listesinden **Hafline Saha**. |
+| Android telefon / tablet | Aynı Wi-Fi'ye bağlan. Expo Go > "Enter URL manually" > `exp://192.168.1.200:8081` |
+| iPhone | Expo Go'da `yagotak` hesabıyla giriş yap. Safari'ye `exp://192.168.1.200:8081` yaz veya QR okut. Yerel ağ iznini ver. |
+
+Kod değişince uygulama kendiliğinden yenilenir. Takılırsa geliştirici menüsü (emülatörde **Ctrl + M**, telefonda cihazı salla) > **Reload**.
+
+Emülatöre komutla da açılabilir:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" -avd Medium_Phone_API_37.0
+& $adb shell am start -a android.intent.action.VIEW -d "exp://192.168.1.200:8081"
+```
+
+Metro `--localhost` ile başlatıldıysa (sadece emülatörle çalışırken) `192.168.1.200:8081` cevap vermez. Emülatörü Metro'ya `adb reverse` ile bağla ve `localhost` adresini aç:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb reverse tcp:8081 tcp:8081
+& $adb shell am start -a android.intent.action.VIEW -d "exp://localhost:8081" host.exp.exponent
+```
+
+`adb reverse` emülatör her kapanıp açıldığında sıfırlanır; yeniden çalıştır. Bu modda telefonlar Metro'ya ulaşamaz.
+
+Test kullanıcısı: `hafline.api` (saha fişi yetkisi var).
+
+---
+
+## 3. Tek seferlik kurulum (Windows makine)
+
+Bu adımlar bu makinede yapıldı; yeni bir Windows makinede tekrar gerekir.
+
+### 3.1 WSL içinde Node
+
+Windows'taki `npm`'i WSL dosyalarıyla kullanma (yavaş ve hatalı). WSL'e kullanıcı bazlı Node kur:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+cd /home/dev/PROJECT/hafline/mobile && npm install
+```
+
+### 3.2 Ortam dosyası
+
+```bash
+cp mobile/.env.example mobile/.env.local
+```
+
+`.env.local` git'e girmez. Alanların açıklaması: [run.md](run.md) bölüm 1. Varsayılanlarla (`DEV_HOST_IP=auto`) değiştirmeden çalışır.
+
+### 3.3 Expo hesabı ve anahtarı
+
+- Hesap: `yagotak`. Proje: `@yagotak/hafline-saha` (`app.json` > `extra.eas.projectId`).
+- WSL'de `npx expo login` tarayıcıyla giriş yapamıyor (Windows `cmd` URL'deki `&` karakterini bölüyor; tarayıcı eksik adresle açılır, komut hata verip kapanır). İki yol var:
+  - Kullanıcı adı + şifre ile (bir kez yeterli, oturum `~/.expo/state.json`'a kaydedilir):
+    ```bash
+    cd /home/dev/PROJECT/hafline/mobile
+    npx expo login --no-browser   # kullanıcı: yagotak
+    npx expo whoami               # yagotak yazmalı
+    ```
+  - Erişim anahtarı (`EXPO_TOKEN`, bölüm 2.3 ve 6'daki komutlar bunu okur):
+    1. https://expo.dev/settings/access-tokens > **Create token**
+    2. `echo 'ANAHTAR' > ~/.expo-token && chmod 600 ~/.expo-token`
+- Komutlar Docker container'ında değil, WSL (Ubuntu) terminalinde çalıştırılır.
+- Anahtarı hiçbir yere (sohbet, commit, ekran görüntüsü) yazma.
+
+### 3.4 Telefonların bilgisayara ulaşması (ağ)
+
+WSL varsayılan (NAT) ağ modunda çalışır; telefon WSL'deki Metro'ya doğrudan ulaşamaz. Çözüm Windows port yönlendirmesi. Bunu `scripts/dev-network.ps1` yapar. Adresi `.env.local`'dan okur (`auto` ise internete çıkan bağlantının adresi), yönetici onayını kendisi ister:
+
+- Adresin bağlı olduğu ağı "Özel" yapar.
+- `Hafline-API-8010` ve `Hafline-Metro-8081` güvenlik duvarı kurallarını açar (sadece yerel alt ağ, `LocalSubnet`; ağ değişince kural güncellemek gerekmez).
+- `DEV_HOST_IP:METRO_PORT -> ::1:METRO_PORT` port yönlendirmesini ekler. Eski ağların yönlendirmeleri kalır, o ağa dönünce tekrar onay gerekmez.
+
+`npm run dev` gerektiğinde bunu kendisi çağırır. Elle çalıştırmak için (Windows PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu-24.04\home\dev\PROJECT\hafline\mobile\scripts\dev-network.ps1
+```
+
+- `DEV_HOST_IP` bu bilgisayarın adreslerinden biri değilse betik değişiklik yapmadan durur ve mevcut adresleri listeler.
+- **v4tov6 ve `::1`**: WSL'in Windows'a açtığı köprü (`wslrelay`) Metro'yu IPv6 `::1` üzerinde dinler. `127.0.0.1`'e yönlendirme bağlantıyı koparır.
+- Kontrol: `netsh interface portproxy show all`
+- **WSL `networkingMode=mirrored` KULLANMA.** Docker Desktop ile uyumsuz; WSL entegrasyonu kopar, bind mount'lar boş gelir.
+
+### 3.5 Android Studio ve emülatör
+
+```powershell
+winget install --id Google.AndroidStudio -e
+```
+
+İlk açılışta sihirbaz: **Standard** kurulum, tüm lisansları **Accept**. SDK `%LOCALAPPDATA%\Android\Sdk` altına iner ve **Medium_Phone_API_37.0** sanal cihazı hazır gelir.
+
+Emülatöre Expo Go (SDK 58) kurulumu:
+
+```powershell
+$v = Invoke-RestMethod https://api.expo.dev/v2/versions/latest
+$url = $v.data.sdkVersions.'58.0.0'.androidClientUrl
+Invoke-WebRequest $url -OutFile "$env:TEMP\expo-go.apk"
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r "$env:TEMP\expo-go.apk"
+```
+
+Emülatör Android 37 kullanır. Sunmi V2 Pro Android 7.1'dir; eski sürüm davranışı ve yazıcı gerçek cihazda test edilir.
+
+---
+
+## 4. Test verisi
+
+### 4.1 Plaka görselleri
+
+- `D:\plaka-test\` klasöründe test görselleri var.
+- `D:\plaka-test\make_plates.py` sistemdeki plakalardan yapay plaka görseli üretir (OCR venv'i ile):
+
+```powershell
+& 'D:\PROJECT\Read-Plate\venv\Scripts\python.exe' 'D:\plaka-test\make_plates.py'
+```
+
+Klasördeki tüm görselleri emülatör galerisine (`Pictures/plaka-test` albümü) atmak; aynı isimli dosyaların üzerine yazar:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb shell mkdir -p /sdcard/Pictures/plaka-test
+Get-ChildItem D:\plaka-test -File -Include *.jpg,*.jpeg,*.png -Recurse | ForEach-Object {
+  $t = "/sdcard/Pictures/plaka-test/$($_.Name)"
+  & $adb push $_.FullName $t | Out-Null
+  & $adb shell "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file://$($t -replace ' ','%20')'" | Out-Null
+}
+```
+
+- [ ] Uygulamada galeri seçicisini kapatıp açınca görseller `plaka-test` albümünde görünüyor
+- Tek görsel için en hızlısı: dosyayı emülatör penceresine sürükle-bırak (İndirilenler klasörüne düşer)
+
+### 4.2 Bugün sahibi olan kayıtlı plakalar
+
+Fiş kesilebilmesi için plaka kayıtlı ve o gün bir sahibi olmalı:
+
+```bash
+docker exec hafline-postgres psql -U hafline -d hafline -At -c "
+  select v.plate from vehicles v
+  join vehicle_ownerships o on o.vehicle_id = v.id
+  where v.deleted_at is null and o.started_on <= current_date
+    and (o.ended_on is null or o.ended_on >= current_date)
+  order by v.plate limit 10"
+```
+
+Mobilden kesilen fişler geliştirme veritabanına gerçek kayıt olarak yazılır; admin panelinde **Taşıma fişleri** altında görünür.
+
+---
+
+## 5. API tipleri
+
+Swagger değişince mobil tipleri yeniden üret:
+
+```bash
+cd /home/dev/PROJECT/hafline/mobile
+npm run gen:api        # htdocs/storage/api-docs/api-docs.json -> src/api/schema.d.ts
+npm run typecheck
+npx expo lint
+```
+
+Swagger'da cevap şeması olmayan endpoint'lerin tipleri `src/api/types.ts` içinde elle tutulur.
+
+---
+
+## 6. Test APK'sı (EAS Build)
+
+APK, Expo Go ve bilgisayar olmadan çalışan bağımsız uygulamadır. Kod derleme anında içine gömülür; sonraki değişiklikler APK'da ancak yeni derlemeyle görünür. Geliştirirken ana ekrandaki **Hafline Saha** ikonunu değil, Expo Go'yu kullan (bölüm 2.4). Bulutta derlenir:
+
+```bash
+cd /home/dev/PROJECT/hafline/mobile
+export EXPO_TOKEN="$(tr -d '[:space:]' < ~/.expo-token)"
+npx eas-cli@latest build -p android --profile preview --non-interactive
+```
+
+- Derleme 10–25 dakika sürer. Takip: https://expo.dev/accounts/yagotak/projects/hafline-saha/builds
+- Bitince sayfadaki **Install** / QR ile telefona kurulur ya da APK indirilip `adb install -r dosya.apk`.
+- Telefonda "bilinmeyen kaynak" izni ve Play Protect uyarısı ("Yine de yükle") normaldir.
+
+Önemli ayarlar:
+
+- **Kökteki `.easignore`**: EAS git deposunun tamamını yükler. Bu dosya sadece `mobile/` klasörünün gitmesini sağlar. `!/mobile` satırı sonunda `/` olmadan yazılmalı; `!/mobile/` yazılırsa boş paket gider ve derleme saniyeler içinde hata verir.
+- **`eas.json` > `preview`**: `EXPO_PUBLIC_API_URL` derlemeye gömülür (`.env.local` yüklenmez).
+- **`usesCleartextTraffic: true`** (`app.json`): `http://` bağlantısı için. Müşteri ortamında HTTPS'e geçilince kaldırılmalı.
+- **İmza anahtarı (keystore)** Expo sunucusunda. Müşteri dağıtımından önce yedeği indirilmeli: `npx eas-cli@latest credentials -p android`. Kaybolursa mevcut kurulumlar güncellenemez.
+- `versionCode` her derlemede otomatik artar (`appVersionSource: remote`).
+
+---
+
+## 7. Sorun giderme
+
+| Belirti | Sebep | Çözüm |
+|---|---|---|
+| Uygulamada "Sunucuya ulaşılamadı" | Telefon API'ye erişemiyor | Telefonun tarayıcısında `http://192.168.1.200:8010/up` aç. Açılmıyorsa Wi-Fi, güvenlik duvarı kuralı, ağın "Özel" olması. Açılıyorsa sorun uygulamada; Metro kayıtlarına bak (`WARN API request failed`). |
+| iPhone Expo Go: "You need to be signed in" | Telefon veya Metro Expo'ya giriş yapmamış | Telefonda `yagotak` ile giriş. Metro'yu `EXPO_TOKEN` ile başlat. |
+| iPhone Expo Go: "There was a problem running the requested project. You're signed in to Expo Go as "yagotak", but not signed in to Expo CLI" | Metro'yu çalıştıran Expo CLI'da oturum yok (`npx expo whoami` > "Not logged in") ve `EXPO_TOKEN` verilmemiş | WSL'de `npx expo login --no-browser` (bölüm 3.3). Sonra Metro'yu durdurup (Ctrl + C) bölüm 2.3'teki gibi yeniden başlat, telefonda **Try again**. |
+| Expo Go: "Could not connect to development server" | Metro kapanmış (terminal kapatıldı / süreç öldü) | Windows'tan `curl.exe http://192.168.1.200:8081/status` cevap vermiyorsa Metro'yu bölüm 2.3'teki gibi yeniden başlat, telefonda **Reload**. |
+| Telefon Metro'ya bağlanamıyor | Port yönlendirme yok / yanlış | `netsh interface portproxy show all` > `192.168.1.200:8081 -> ::1:8081` olmalı |
+| IP değişti / ağ değişti | Modem yeni adres verdi veya başka Wi-Fi'ye bağlanıldı | Metro'yu durdurup (`Ctrl + C`) `npm run dev`; yeni adresi bulur ve Windows ağ ayarını gerekirse yapar. Expo Go'da uygulamayı yeniden aç; geliştirme modunda kayıtlı sunucu adresi yerine `npm run dev`'in verdiği adres kullanılır (`src/auth/auth-provider.tsx`). APK'da çıkış yapıp yeni adresle gir. APK derlenecekse `eas.json` içindeki adresi de güncelle. |
+| iPhone hotspot'una bağlıyken aynı iPhone'daki Expo Go bağlanamıyor | iOS, hotspot paylaşan telefondan ona bağlı bilgisayara bağlantıya bazen izin vermiyor | Telefonun Safari'sinde `http://DEV_HOST_IP:8081/status` dene. Açılmıyorsa bilgisayarı ve telefonu aynı normal Wi-Fi'ye bağla veya Expo Go'yu hotspot'a bağlanan ikinci bir cihazda aç. Ayrıca iPhone > Ayarlar > Gizlilik > Yerel Ağ > Expo Go açık olmalı. |
+| `/up` 404 "File not found" | Docker, WSL entegrasyonu hazır olmadan container başlattı; proje klasörü boş bağlandı | `docker compose restart app scheduler` (gerekirse `web db_backup` de) |
+| WSL'de `docker` bulunamıyor, `/var/run/docker.sock` yok | Docker Desktop'ta Ubuntu entegrasyonu kapandı | Docker Desktop > Settings > Resources > WSL Integration > Ubuntu-24.04 aç, Apply. Ayar dosyasını (`%APPDATA%\Docker\settings-store.json`) PowerShell `Set-Content` ile **düzenleme**: BOM ekler, Docker tüm ayarları sıfırlar (veri klasörü `D:\Docker-Containers\DockerDesktopWSL` dahil). |
+| `wsl --shutdown` sonrası Docker bozuldu | Docker Desktop açıkken WSL kapatıldı | Önce `docker desktop stop`, sonra `wsl --shutdown`, sonra `docker desktop start` |
+| OCR: torch `LoadLibraryExW` hatası | İlk yükleme yavaş / yarıda kesildi | Tekrar başlat. Sürerse hata mesajının **son satırına** bak. |
+| Tarama "Plaka okuma servisine ulaşılamadı" (502) | OCR servisi kapalı | 2.2'deki adımlarla başlat. Şu an bu durumda fiş kesilemiyor (tarama kaydı oluşmuyor); backend'de çözülecek. |
+| Kod değişikliği emülatörde görünmüyor | Açık olan uygulama Expo Go değil, kurulu APK (`com.hafline.saha`) | APK'yı kapat, Expo Go'dan aç (bölüm 2.4). Metro `CI=1` ile başlatıldıysa dosya izleme kapalıdır; `CI` olmadan yeniden başlat. |
+| Expo Go açık ama kod değişikliği görünmüyor, eski ekran duruyor | Metro `--localhost` ile çalışıyor; Expo Go `192.168.1.200:8081`'e ulaşamayıp önbellekteki eski paketi gösteriyor. Kontrol: `curl.exe http://192.168.1.200:8081/status` cevap vermiyor, `curl.exe http://localhost:8081/status` veriyor. | Emülatör için bölüm 2.4'teki `adb reverse` + `exp://localhost:8081`. Telefon da kullanılacaksa Metro'yu bölüm 2.3'teki gibi `--lan` ve `REACT_NATIVE_PACKAGER_HOSTNAME` ile yeniden başlat. |
+| APK açılınca siyah ekran | Emülatör ekranı uykuda | Ekrana tıkla / `adb shell input keyevent KEYCODE_WAKEUP` |
+| Token 1 saatte doluyor | API'de yenileme endpoint'i yok | Backend'de `auth/refresh` eklenecek; şimdilik tekrar giriş. |
+
+---
+
+## 8. Mac'te çalışırken
+
+- Port yönlendirme, güvenlik duvarı kuralları ve `REACT_NATIVE_PACKAGER_HOSTNAME` gerekmez; `npx expo start` ağ adresini kendisi bulur ve terminalde QR gösterir.
+- `npx expo login` tarayıcıyla sorunsuz çalışır; `~/.expo-token` gerekmez.
+- Metro'yu Windows'takiyle aynı şekilde başlat: `cd mobile && npm run dev`. `DEV_HOST_IP=auto` Mac'in adresini kendisi bulur; port yönlendirme kısmı Mac'te atlanır.
+- iOS Simülatörü: Xcode kuruluysa Metro terminalinde `i`. Android emülatörü: `a`.
+- Kafka/RabbitMQ compose'tan çıkarıldı; ilk açılışta `docker compose up -d --remove-orphans` ve `data/kafka`, `data/rabbitmq` klasörlerini sil.
+- OCR için `D:\PROJECT\Read-Plate\README.md` > macOS bölümü (`PLATFORM=mac`).

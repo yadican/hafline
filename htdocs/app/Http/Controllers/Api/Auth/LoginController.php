@@ -16,8 +16,9 @@ class LoginController extends Controller
     #[OA\Post(
         path: '/api/v1/auth/login',
         operationId: 'authLogin',
-        summary: 'Login and receive a JWT',
-        tags: ['Auth'],
+        summary: 'Adım 1 · Giriş yap, token al',
+        description: 'Dönen token diğer tüm isteklerde `Authorization: Bearer <token>` olarak gönderilir.',
+        tags: ['1. Giriş'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(ref: '#/components/schemas/LoginRequest')
@@ -30,7 +31,7 @@ class LoginController extends Controller
             ),
             new OA\Response(
                 response: 422,
-                description: 'Validation failed',
+                description: 'Eksik alan veya hatalı kullanıcı adı / şifre (errors.login)',
                 content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')
             ),
         ]
@@ -60,9 +61,9 @@ class LoginController extends Controller
     #[OA\Post(
         path: '/api/v1/auth/logout',
         operationId: 'authLogout',
-        summary: 'Invalidate the current JWT',
+        summary: 'Çıkış yap (token geçersiz olur)',
         security: [['bearerAuth' => []]],
-        tags: ['Auth'],
+        tags: ['1. Giriş'],
         responses: [
             new OA\Response(
                 response: 200,

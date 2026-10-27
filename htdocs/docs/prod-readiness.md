@@ -47,9 +47,9 @@ Kontrol: `docker/php/Dockerfile`, `docker/php/xdebug.ini`, `compose.yaml`.
 
 - [ ] `compose.prod.yaml` (override) oluştur; prod’da `docker compose -f compose.yaml -f compose.prod.yaml up -d`
 - [ ] Prod imajı: `INSTALL_XDEBUG=false`
-- [ ] **Port yayını:** `postgres` (5433), `redis` (6380), `rabbitmq` (5673 / 15673), `kafka` (9093) şu an `0.0.0.0`’a açık. Prod’da ya hiç publish etme ya da `127.0.0.1:` ile sınırla. Dışarı açık tek port `web` olmalı
-- [ ] **Şifreler:** `compose.yaml` içinde `hafline/hafline` sabit (postgres, db_backup, rabbitmq). Prod’da kök `.env` / secret’tan oku (`${POSTGRES_PASSWORD}` vb.); `htdocs/.env` ile aynı değerler
-- [ ] **İmaj sürümleri sabitle:** `postgres:latest`, `redis:latest`, `apache/kafka:latest` yerine major/minor sabit tag. Özellikle Postgres `latest` major atlarsa `./data/postgres` açılmaz
+- [ ] **Port yayını:** `postgres` (5433), `redis` (6380) şu an `0.0.0.0`’a açık. Prod’da ya hiç publish etme ya da `127.0.0.1:` ile sınırla. Dışarı açık tek port `web` olmalı
+- [ ] **Şifreler:** `compose.yaml` içinde `hafline/hafline` sabit (postgres, db_backup). Prod’da kök `.env` / secret’tan oku (`${POSTGRES_PASSWORD}` vb.); `htdocs/.env` ile aynı değerler
+- [ ] **İmaj sürümleri sabitle:** `postgres:latest`, `redis:latest` yerine major/minor sabit tag. Özellikle Postgres `latest` major atlarsa `./data/postgres` açılmaz
 - [ ] `restart: unless-stopped` tüm servislerde kalsın; `app` ve `web` için healthcheck ekle
 - [ ] Log rotasyonu: Docker `logging.options.max-size` / `max-file`
 
@@ -111,7 +111,6 @@ Durum: PHP imajında Node yok; dev’de `node:lts` container ile `npm ci && npm 
 
 - [ ] `htdocs/storage`, `htdocs/bootstrap/cache` → `www-data` (uid 33) yazabilmeli; yoksa web 500 döner
 - [ ] `data/haul-scans`, `data/haul-photos` → `www-data` yazabilmeli
-- [ ] `data/kafka` → uid 1000 (Kafka imajı `appuser`); yoksa Kafka `AccessDeniedException` ile döngüye girer
 - [ ] Bunları elle değil, entrypoint / kurulum scripti ile otomatik yap (her saha makinesinde tekrarlanabilir olsun)
 
 Kontrol: `docker/php/Dockerfile`, `scripts/`.
@@ -176,10 +175,9 @@ Kontrol: `config/jwt.php`, `config/cache.php`, `config/database.php` (redis), `c
 
 ## 12. Kullanılmayan servisler (orta)
 
-Durum: `rabbitmq` ve `kafka` compose’ta çalışıyor ama uygulama kodunda hiç kullanılmıyor (sadece `.env.example`’da değişken var). Mail de gönderilmiyor (`MAIL_MAILER=log` yeterli).
+Durum: `rabbitmq` ve `kafka` kodda kullanılmadığı için compose’tan ve `.env` dosyalarından çıkarıldı; ihtiyaç olursa o gün eklenir. Mail de gönderilmiyor (`MAIL_MAILER=log` yeterli).
 
-- [ ] Prod / saha compose’undan `rabbitmq` ve `kafka`’yı çıkar (veya `profiles:` ile opsiyonel yap): RAM (Kafka JVM), disk, açık port ve bakım yükü
-- [ ] İleride kullanılacaksa o gün eklenir; şimdilik `.env`’deki `RABBITMQ_*` / `KAFKA_*` değişkenleri bilgi amaçlı kalabilir
+- [x] `rabbitmq` ve `kafka` compose’tan çıkarıldı
 - [ ] Şifre sıfırlama / bildirim maili eklenirse gerçek mailer (SMTP) ayarı
 
 ---
@@ -226,7 +224,7 @@ Kontrol: `htdocs/docs/wsl-docker-field-setup.md` ile birlikte uygula.
 ## 16. Agent iş planı (özet görev listesi)
 
 1. [ ] Dockerfile’a `INSTALL_XDEBUG` build arg; dev compose `true`, `xdebug.mode=debug`
-2. [ ] `compose.prod.yaml`: Xdebug’sız imaj, port kısıtları, şifreler env’den, sabit imaj tag’leri, log rotasyonu, `rabbitmq` / `kafka` yok
+2. [ ] `compose.prod.yaml`: Xdebug’sız imaj, port kısıtları, şifreler env’den, sabit imaj tag’leri, log rotasyonu
 3. [ ] Prod `php.ini` (production baz) + OPcache ini + multi-stage frontend build
 4. [ ] İzinleri otomatik ayarlayan entrypoint / kurulum scripti
 5. [ ] `.gitattributes` + renormalize

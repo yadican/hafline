@@ -19,7 +19,7 @@ class FuelStationRepository extends Repository
     /**
      * @param  array{q?: string, site?: string, party?: string, active?: string}  $filters
      */
-    public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->whereTerm($this->query()->with(['sites', 'party']), $filters['q'] ?? null, ['name'])
             ->when($filters['site'] ?? null, fn (Builder $query, string $site) => $query->whereHas('sites', fn (Builder $query) => $query->whereKey($site)))

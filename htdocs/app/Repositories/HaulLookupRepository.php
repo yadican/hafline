@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Enums\PartyRole;
 use App\Models\User;
 use App\Models\Vehicle;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class HaulLookupRepository
@@ -66,6 +67,25 @@ class HaulLookupRepository
         return Vehicle::query()
             ->with(['currentOwnership.party', 'vehicleClass'])
             ->where('active', true)
+            ->whereLike('plate_key', $like)
+            ->orderBy('plate')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Active vehicles billed by trip (not of an hourly class) whose plate contains the term.
+     *
+     * @return Collection<int, Vehicle>
+     */
+    public function haulVehicles(string $term, int $limit = 10): Collection
+    {
+        $like = '%'.addcslashes(Vehicle::normalizePlate($term), '%_\\').'%';
+
+        return Vehicle::query()
+            ->with(['currentOwnership.party', 'vehicleClass'])
+            ->where('active', true)
+            ->whereDoesntHave('vehicleClass', fn (Builder $class) => $class->where('hourly', true))
             ->whereLike('plate_key', $like)
             ->orderBy('plate')
             ->limit($limit)

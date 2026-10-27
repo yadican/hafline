@@ -316,7 +316,7 @@ return [
                  * 'full' (expands the tags and operations),
                  * 'none' (expands nothing).
                  */
-                'doc_expansion' => env('L5_SWAGGER_UI_DOC_EXPANSION', 'none'),
+                'doc_expansion' => env('L5_SWAGGER_UI_DOC_EXPANSION', 'list'),
 
                 /**
                  * If set, enables filtering. The top bar will show an edit box that
@@ -333,7 +333,7 @@ return [
                 /*
                  * If set to true, it persists authorization data, and it would not be lost on browser close/refresh
                  */
-                'persist_authorization' => env('L5_SWAGGER_UI_PERSIST_AUTHORIZATION', false),
+                'persist_authorization' => env('L5_SWAGGER_UI_PERSIST_AUTHORIZATION', true),
 
                 'oauth2' => [
                     /*

@@ -192,7 +192,7 @@ Agent’a verilecek sırayla görevler:
 
 ## 7. İlgili mevcut dosyalar
 
-- `compose.yaml` — app, web, postgres, redis, rabbitmq, kafka, backup
+- `compose.yaml` — app, scheduler, web, postgres, redis, backup
 - `htdocs/.env.example` — `OCR_SCAN_URL`, `OCR_TIMEOUT`
 - `htdocs/config/services.php` — `services.ocr`
 - `htdocs/app/Services/Api/Ocr/PlateScanClient.php`

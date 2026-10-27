@@ -4,18 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\UserResource;
+use App\Services\Api\FieldDashboardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 class DashboardController extends Controller
 {
+    public function __construct(private FieldDashboardService $dashboard) {}
+
     #[OA\Get(
         path: '/api/v1/dashboard',
         operationId: 'dashboardShow',
-        summary: 'Get dashboard summary for the authenticated user',
+        summary: 'Saha kullanıcısının kendi fiş özeti',
+        description: 'Giriş yapan kullanıcının kendi kestiği taşıma, makine ve yakıt fişlerinin bugün / dün / bu ay sayıları, bugün girdiği son 10 fiş ve açık saha oturumu. Kasa verisi içermez.',
         security: [['bearerAuth' => []]],
-        tags: ['Dashboard'],
+        tags: ['Profil'],
         responses: [
             new OA\Response(
                 response: 200,
@@ -33,11 +37,7 @@ class DashboardController extends Controller
     {
         return response()->json([
             'user' => (new UserResource($request->user()))->resolve(),
-            'counts' => [
-                'sites' => 0,
-                'vehicles' => 0,
-                'hauls' => 0,
-            ],
+            ...$this->dashboard->summary($request->user()),
         ]);
     }
 }

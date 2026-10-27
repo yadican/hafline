@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Android 11+ hides other packages unless declared; the built-in printer is a service in this package. -->
+  <queries>
+    <package android:name="woyou.aidlservice.jiuiv5" />
+  </queries>
+</manifest>

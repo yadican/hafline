@@ -24,7 +24,7 @@ class PartyRepository extends Repository
      *
      * @param  array{q?: string, type?: string, role?: string, active?: string}  $filters
      */
-    public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
             ->with(['roleAssignments', 'person', 'company'])
