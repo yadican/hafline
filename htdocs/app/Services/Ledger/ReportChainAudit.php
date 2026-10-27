@@ -8,8 +8,10 @@ use App\Services\Reports\CashMovementReportService;
 use App\Services\Reports\CompanyLedgerReportService;
 use App\Services\Reports\DumpSitePaymentReportService;
 use App\Services\Reports\EmployeeAnnualReportService;
+use App\Services\Reports\OwnerBalanceReportService;
 use App\Services\Reports\OwnerMonthlyReportService;
 use App\Services\Reports\SiteExpenseReportService;
+use App\Services\Reports\VehicleBalanceReportService;
 use App\Services\Reports\VehicleMonthlyReportService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,8 @@ class ReportChainAudit
         private CashMovementReportService $cash,
         private EmployeeMonthlyReportRepository $employeeMonthly,
         private EmployeeAnnualReportService $employeeAnnual,
+        private VehicleBalanceReportService $vehicleBalance,
+        private OwnerBalanceReportService $ownerBalance,
     ) {}
 
     /**
@@ -46,6 +50,8 @@ class ReportChainAudit
             $this->dumpSitePayments($months),
             $this->companyLedger($months),
             $this->companyBalance($months),
+            $this->balanceReport('Plaka Bakiye: devir + dönem = bakiye', $this->vehicleBalance, 'plate', $months),
+            $this->balanceReport('Plaka Sahibi Bakiye: devir + dönem = bakiye', $this->ownerBalance, 'party_id', $months),
             $this->siteExpense($months),
             $this->cashMovements($months),
             $this->employeeMonthly($months),
@@ -201,6 +207,39 @@ class ReportChainAudit
         }
 
         return $checks->result('Firma Bakiye: önceki bakiye + borç − alacak = bakiye');
+    }
+
+    /**
+     * Unfiltered, so every movement counts; a row with a balance must still be listed next month.
+     *
+     * @param  list<Carbon>  $months
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function balanceReport(string $check, VehicleBalanceReportService|OwnerBalanceReportService $service, string $key, array $months): array
+    {
+        $checks = new ChainChecks;
+        $previous = [];
+
+        foreach ($months as $month) {
+            $report = $service->report(['period' => 'month', 'year' => $month->year, 'month' => $month->month, 'site' => '', 'fuel_station' => '']);
+            $rows = collect($report['rows'])->keyBy($key);
+
+            foreach ($rows as $name => $row) {
+                $label = ($row['name'] ?? $row['plate']).' '.$month->format('m.Y');
+                $checks->closing($label.' devir', $previous[$name] ?? 0.0, $row['opening']);
+                $checks->closing($label, $row['opening'] + $row['debit'] - $row['credit'] - $row['cash'], $row['balance']);
+            }
+
+            foreach ($previous as $name => $balance) {
+                if (! $rows->has($name)) {
+                    $checks->closing("{$name} {$month->format('m.Y')} (listeden düştü)", $balance, 0.0);
+                }
+            }
+
+            $previous = $rows->map(fn (array $row) => $row['balance'])->all();
+        }
+
+        return $checks->result($check);
     }
 
     /**

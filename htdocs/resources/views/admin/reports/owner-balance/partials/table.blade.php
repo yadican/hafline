@@ -20,6 +20,7 @@
         <thead>
             <tr class="report-col-head">
                 <th>Plaka Sahibi</th>
+                <th class="is-end">Devir</th>
                 <th class="is-end">Alacak</th>
                 <th class="is-end">Elden</th>
                 <th class="is-end">Borç</th>
@@ -30,6 +31,7 @@
             @forelse ($report['rows'] as $row)
                 <tr>
                     <td>{{ $row['name'] }}</td>
+                    <td class="is-end"><x-ui.balance :value="$row['opening']" /></td>
                     <td class="panel-tutar is-end">{{ number_format($row['credit'], 2, ',', '.') }}</td>
                     <td class="panel-tutar is-end">{{ number_format($row['cash'], 2, ',', '.') }}</td>
                     <td class="panel-tutar is-end">{{ number_format($row['debit'], 2, ',', '.') }}</td>
@@ -37,9 +39,9 @@
                 </tr>
             @empty
                 <x-table.empty
-                    colspan="5"
+                    colspan="6"
                     icon="fa-solid fa-users"
-                    title="Bu dönemde hareket yok."
+                    title="Bu dönemde hareket veya devreden bakiye yok."
                     text="Seçilen dönem ve filtreler için plaka sahibi bakiyesi bulunamadı."
                 />
             @endforelse
@@ -48,6 +50,7 @@
             <tfoot>
                 <tr class="report-footer">
                     <th>Toplam</th>
+                    <th class="is-end"><x-ui.balance :value="$report['total_opening']" /></th>
                     <th class="panel-tutar is-end">{{ number_format($report['total_credit'], 2, ',', '.') }}</th>
                     <th class="panel-tutar is-end">{{ number_format($report['total_cash'], 2, ',', '.') }}</th>
                     <th class="panel-tutar is-end">{{ number_format($report['total_debit'], 2, ',', '.') }}</th>

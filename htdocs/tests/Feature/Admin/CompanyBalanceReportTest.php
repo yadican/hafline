@@ -88,12 +88,40 @@ class CompanyBalanceReportTest extends TestCase
         $report = $response->viewData('report');
         $byName = collect($report['rows'])->keyBy('name');
 
+        $this->assertSame(-1000.0, $byName['ALPHA TEDARİK']['opening']);
         $this->assertSame(500.0, $byName['ALPHA TEDARİK']['credit']);
         $this->assertSame(200.0, $byName['ALPHA TEDARİK']['debit']);
         $this->assertSame(-1300.0, $byName['ALPHA TEDARİK']['balance']);
+        $this->assertSame(0.0, $byName['BETA TEDARİK']['opening']);
         $this->assertSame(300.0, $byName['BETA TEDARİK']['credit']);
         $this->assertSame(0.0, $byName['BETA TEDARİK']['debit']);
         $this->assertSame(-300.0, $byName['BETA TEDARİK']['balance']);
+        $this->assertSame(-1000.0, $report['total_opening']);
+    }
+
+    public function test_each_month_opens_with_the_previous_months_balance(): void
+    {
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-08-20', debit: 0, credit: 1000);
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-09-05', debit: 0, credit: 500);
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-09-10', debit: 200, credit: 0);
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-10-01', debit: 0, credit: 999);
+
+        $months = collect([8, 9, 10])->map(fn (int $month) => collect($this->actingAs($this->admin)
+            ->get(route('admin.reports.company-balance', [...$this->filters(), 'month' => $month]))
+            ->assertOk()
+            ->viewData('report')['rows'])->firstWhere('name', 'ALPHA TEDARİK'));
+
+        foreach ($months as $index => $row) {
+            $this->assertSame($row['balance'], round($row['opening'] + $row['debit'] - $row['credit'], 2));
+
+            if ($index > 0) {
+                $this->assertSame($months[$index - 1]['balance'], $row['opening']);
+            }
+        }
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.reports.company-balance', $this->filters()))
+            ->assertSeeInOrder(['Devir', 'Alacak', 'Borç', 'Bakiye']);
     }
 
     public function test_soft_deleted_transactions_are_excluded(): void
@@ -149,7 +177,7 @@ class CompanyBalanceReportTest extends TestCase
             ->assertOk()
             ->streamedContent();
 
-        $this->assertStringContainsString('Firma;Alacak;Borç;Bakiye', $csv);
+        $this->assertStringContainsString('Firma;Devir;Alacak;Borç;Bakiye', $csv);
         $this->assertStringContainsString('ALPHA TEDARİK', $csv);
         $this->assertStringContainsString('250,00', $csv);
     }

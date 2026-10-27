@@ -150,7 +150,7 @@ class OwnerBalanceReportTest extends TestCase
             ->assertSee('Plaka Sahibi Bakiye Raporu', false)
             ->assertSee('Ahmet Yılmaz', false)
             ->assertSee('Mehmet Demir', false)
-            ->assertSee('Filtreli net', false);
+            ->assertSee('Filtreli bakiye', false);
 
         $report = $response->viewData('report');
         $this->assertCount(2, $report['rows']);
@@ -231,13 +231,42 @@ class OwnerBalanceReportTest extends TestCase
             ->streamedContent();
 
         $this->assertStringContainsString('Ahmet Yılmaz', $csv);
-        $this->assertStringContainsString('Filtreli net', $csv);
+        $this->assertStringContainsString('Filtreli bakiye', $csv);
     }
 
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
+    public function test_balance_carries_the_previous_periods_balance_and_keeps_rows_with_only_a_carryover(): void
+    {
+        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-08-20 08:00:00', 2000);
+        $this->makeReceipt($this->vehicle, $this->owner, $this->stationA, '2026-08-21', 10, 50);
+        $this->makeHaul($this->otherVehicle, $this->otherOwner, $this->routeA, '2026-08-22 08:00:00', 700);
+        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 1000);
+
+        $report = fn (int $month) => collect($this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-balance', $this->filters(['month' => $month])))
+            ->assertOk()
+            ->viewData('report')['rows'])->keyBy('name');
+
+        $august = $report(8);
+        $september = $report(9);
+
+        $this->assertSame(-1500.0, $august['Ahmet Yılmaz']['balance']);
+        $this->assertSame($august['Ahmet Yılmaz']['balance'], $september['Ahmet Yılmaz']['opening']);
+        $this->assertSame(1000.0, $september['Ahmet Yılmaz']['credit']);
+        $this->assertSame(-2500.0, $september['Ahmet Yılmaz']['balance']);
+
+        $this->assertSame(-700.0, $september['Mehmet Demir']['opening'], 'Dönemde hareketi olmayan ama devri olan satır listede kalır.');
+        $this->assertSame(0.0, $september['Mehmet Demir']['credit']);
+        $this->assertSame(-700.0, $september['Mehmet Demir']['balance']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-balance', $this->filters()))
+            ->assertSeeInOrder(['Devir', 'Alacak', 'Elden', 'Borç', 'Filtreli bakiye']);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>

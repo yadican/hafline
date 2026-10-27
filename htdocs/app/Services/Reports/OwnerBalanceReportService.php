@@ -46,7 +46,8 @@ class OwnerBalanceReportService extends Service
      *     to: string,
      *     filtered: bool,
      *     balance_label: string,
-     *     rows: list<array{name: string, credit: float, cash: float, debit: float, balance: float}>,
+     *     rows: list<array{party_id: string, name: string, opening: float, credit: float, cash: float, debit: float, balance: float}>,
+     *     total_opening: float,
      *     total_credit: float,
      *     total_cash: float,
      *     total_debit: float,
@@ -58,38 +59,41 @@ class OwnerBalanceReportService extends Service
         [$from, $toExclusive, $meta] = $this->resolvePeriod($filters);
         $siteId = $filters['site'];
         $fuelStationId = $filters['fuel_station'];
-        $filtered = true;
+        $filtered = filled($siteId) || filled($fuelStationId);
+
+        // Listed: rows the filters select in the period, plus any row carrying a balance in. Amounts
+        // come from every filtered movement, so a listed row never loses part of its period or devir.
+        $listed = $this->reports->ownerTotals($from, $toExclusive, $siteId, $fuelStationId)->keyBy('party_id');
+        $period = $this->reports->ownerTotals($from, $toExclusive, $siteId, $fuelStationId, false)->keyBy('party_id');
+        $before = $this->reports->ownerTotals(null, $from, $siteId, $fuelStationId, false)->keyBy('party_id');
+        $carried = $before->filter(fn (object $row) => abs($this->amounts($row)['net']) >= 0.005);
 
         $rows = [];
+        $totalOpening = 0.0;
         $totalCredit = 0.0;
         $totalCash = 0.0;
         $totalDebit = 0.0;
         $totalBalance = 0.0;
 
-        foreach ($this->reports->ownerTotals($from, $toExclusive, $siteId, $fuelStationId) as $row) {
-            $credit = round((float) $row->credit_hauls + (float) $row->credit_machine_works + (float) $row->credit_transfers, 2);
-            $cash = round((float) $row->credit_receivables, 2);
-            $debit = round(
-                (float) $row->debit_payments
-                + (float) $row->debit_fuel
-                + (float) $row->debit_fines
-                + (float) $row->debit_transfers
-                + (float) $row->debit_owner_payments,
-                2,
-            );
-            $balance = round($debit - ($credit + $cash), 2);
+        foreach ($listed->union($carried)->sortBy('name') as $id => $row) {
+            $opening = $before->has($id) ? $this->amounts($before[$id])['net'] : 0.0;
+            $amounts = $period->has($id) ? $this->amounts($period[$id]) : ['credit' => 0.0, 'cash' => 0.0, 'debit' => 0.0, 'net' => 0.0];
+            $balance = round($opening + $amounts['net'], 2);
 
             $rows[] = [
+                'party_id' => (string) $id,
                 'name' => (string) $row->name,
-                'credit' => $credit,
-                'cash' => $cash,
-                'debit' => $debit,
+                'opening' => $opening,
+                'credit' => $amounts['credit'],
+                'cash' => $amounts['cash'],
+                'debit' => $amounts['debit'],
                 'balance' => $balance,
             ];
 
-            $totalCredit += $credit;
-            $totalCash += $cash;
-            $totalDebit += $debit;
+            $totalOpening += $opening;
+            $totalCredit += $amounts['credit'];
+            $totalCash += $amounts['cash'];
+            $totalDebit += $amounts['debit'];
             $totalBalance += $balance;
         }
 
@@ -104,8 +108,9 @@ class OwnerBalanceReportService extends Service
             'from' => $meta['from'],
             'to' => $meta['to'],
             'filtered' => $filtered,
-            'balance_label' => $filtered ? 'Filtreli net' : 'Bakiye',
+            'balance_label' => $filtered ? 'Filtreli bakiye' : 'Bakiye',
             'rows' => $rows,
+            'total_opening' => round($totalOpening, 2),
             'total_credit' => round($totalCredit, 2),
             'total_cash' => round($totalCash, 2),
             'total_debit' => round($totalDebit, 2),
@@ -131,6 +136,7 @@ class OwnerBalanceReportService extends Service
 
             fputcsv($handle, [
                 'Plaka Sahibi',
+                'Devir',
                 'Alacak',
                 'Elden',
                 'Borç',
@@ -140,6 +146,7 @@ class OwnerBalanceReportService extends Service
             foreach ($report['rows'] as $row) {
                 fputcsv($handle, [
                     $row['name'],
+                    number_format($row['opening'], 2, ',', '.'),
                     number_format($row['credit'], 2, ',', '.'),
                     number_format($row['cash'], 2, ',', '.'),
                     number_format($row['debit'], 2, ',', '.'),
@@ -149,6 +156,7 @@ class OwnerBalanceReportService extends Service
 
             fputcsv($handle, [
                 'Toplam',
+                number_format($report['total_opening'], 2, ',', '.'),
                 number_format($report['total_credit'], 2, ',', '.'),
                 number_format($report['total_cash'], 2, ',', '.'),
                 number_format($report['total_debit'], 2, ',', '.'),
@@ -159,6 +167,20 @@ class OwnerBalanceReportService extends Service
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * Alacak (work + carried-in), elden and borç of one row, and its net (debit − credit; positive: they owe us).
+     *
+     * @return array{credit: float, cash: float, debit: float, net: float}
+     */
+    private function amounts(object $row): array
+    {
+        $credit = round((float) $row->credit_hauls + (float) $row->credit_machine_works + (float) $row->credit_transfers, 2);
+        $cash = round((float) $row->credit_receivables, 2);
+        $debit = round((float) $row->debit_payments + (float) $row->debit_fuel + (float) $row->debit_fines + (float) $row->debit_transfers + (float) $row->debit_owner_payments, 2);
+
+        return ['credit' => $credit, 'cash' => $cash, 'debit' => $debit, 'net' => round($debit - $credit - $cash, 2)];
     }
 
     /**

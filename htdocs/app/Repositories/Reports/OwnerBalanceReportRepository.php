@@ -34,7 +34,8 @@ class OwnerBalanceReportRepository
 
     /**
      * Per-owner credit/debit totals in a half-open date window [from, toExclusive).
-     * Null bounds mean no date filter (all time). SAHİP = snapshot party_id on each row.
+     * Null bounds mean no date filter (all time). With $requireFilteredActivity the site / station
+     * filters also decide which rows are listed; without it every row with a non-zero amount is returned. SAHİP = snapshot party_id on each row.
      *
      * @return Collection<int, object{
      *     party_id: string,
@@ -55,6 +56,7 @@ class OwnerBalanceReportRepository
         ?Carbon $toExclusive,
         ?string $siteId = null,
         ?string $fuelStationId = null,
+        bool $requireFilteredActivity = true,
     ): Collection {
         $haulFrom = $from?->copy();
         $haulTo = $toExclusive?->copy();
@@ -163,21 +165,21 @@ class OwnerBalanceReportRepository
                 DB::raw('COALESCE(transfers_sum.debit, 0) as debit_transfers'),
                 DB::raw('COALESCE(owner_payments_sum.total, 0) as debit_owner_payments'),
             ])
-            ->where(function ($query) use ($siteId, $fuelStationId): void {
-                if (filled($siteId) && filled($fuelStationId)) {
+            ->where(function ($query) use ($siteId, $fuelStationId, $requireFilteredActivity): void {
+                if ($requireFilteredActivity && filled($siteId) && filled($fuelStationId)) {
                     $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0)) > 0')
                         ->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
 
                     return;
                 }
 
-                if (filled($fuelStationId)) {
+                if ($requireFilteredActivity && filled($fuelStationId)) {
                     $query->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
 
                     return;
                 }
 
-                if (filled($siteId)) {
+                if ($requireFilteredActivity && filled($siteId)) {
                     $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0)) > 0');
 
                     return;

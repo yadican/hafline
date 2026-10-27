@@ -52,7 +52,8 @@ class CompanyBalanceReportService extends Service
      *     month_label: ?string,
      *     from: string,
      *     to: string,
-     *     rows: list<array{name: string, credit: float, debit: float, balance: float}>,
+     *     rows: list<array{name: string, opening: float, credit: float, debit: float, balance: float}>,
+     *     total_opening: float,
      *     total_credit: float,
      *     total_debit: float,
      *     total_balance: float,
@@ -65,22 +66,26 @@ class CompanyBalanceReportService extends Service
         $roleLabel = CariEntryKind::from($role->value)->label();
 
         $rows = [];
+        $totalOpening = 0.0;
         $totalCredit = 0.0;
         $totalDebit = 0.0;
         $totalBalance = 0.0;
 
         foreach ($this->reports->partyTotals($role, $from, $toExclusive) as $row) {
+            $opening = round((float) $row->opening, 2);
             $credit = round((float) $row->period_credit, 2);
             $debit = round((float) $row->period_debit, 2);
             $balance = round((float) $row->closing, 2);
 
             $rows[] = [
                 'name' => (string) $row->name,
+                'opening' => $opening,
                 'credit' => $credit,
                 'debit' => $debit,
                 'balance' => $balance,
             ];
 
+            $totalOpening += $opening;
             $totalCredit += $credit;
             $totalDebit += $debit;
             $totalBalance += $balance;
@@ -99,6 +104,7 @@ class CompanyBalanceReportService extends Service
             'from' => $meta['from'],
             'to' => $meta['to'],
             'rows' => $rows,
+            'total_opening' => round($totalOpening, 2),
             'total_credit' => round($totalCredit, 2),
             'total_debit' => round($totalDebit, 2),
             'total_balance' => round($totalBalance, 2),
@@ -123,6 +129,7 @@ class CompanyBalanceReportService extends Service
 
             fputcsv($handle, [
                 'Firma',
+                'Devir',
                 'Alacak',
                 'Borç',
                 'Bakiye',
@@ -131,6 +138,7 @@ class CompanyBalanceReportService extends Service
             foreach ($report['rows'] as $row) {
                 fputcsv($handle, [
                     $row['name'],
+                    number_format($row['opening'], 2, ',', '.'),
                     number_format($row['credit'], 2, ',', '.'),
                     number_format($row['debit'], 2, ',', '.'),
                     number_format($row['balance'], 2, ',', '.'),
@@ -139,6 +147,7 @@ class CompanyBalanceReportService extends Service
 
             fputcsv($handle, [
                 'Toplam',
+                number_format($report['total_opening'], 2, ',', '.'),
                 number_format($report['total_credit'], 2, ',', '.'),
                 number_format($report['total_debit'], 2, ',', '.'),
                 number_format($report['total_balance'], 2, ',', '.'),
