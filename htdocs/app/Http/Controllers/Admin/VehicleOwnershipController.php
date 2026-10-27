@@ -22,7 +22,7 @@ class VehicleOwnershipController extends AdminController
     public function store(VehicleOwnershipRequest $request, Vehicle $vehicle): RedirectResponse
     {
         return $this->complete(
-            fn () => $this->ownerships->transfer($vehicle, $request->party(), $request->startedOn()),
+            fn () => $this->ownerships->transfer($vehicle, $request->party(), $request->startedOn(), $request->carriesBalance()),
             'admin.vehicles.edit',
             'Araç devredildi.',
             [$vehicle],

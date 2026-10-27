@@ -8,26 +8,36 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Keeps a source document's postings in step with what it says now. Posted rows are never
- * edited: a change reverses the live rows and posts fresh ones, so the history stays readable.
+ * edited: a change reverses the rows that no longer hold and posts fresh ones, so the history stays readable.
  * Callers must already be inside a database transaction.
  */
 class Ledger
 {
     /**
+     * Only the lines that changed are reversed and re-posted; a line the source still wants stays as
+     * it is, so other parties on the same document do not get cancel / re-post noise.
+     *
      * @param  list<LedgerLine>  $lines
      */
     public function sync(Model $source, array $lines): void
     {
-        $lines = array_values(array_filter($lines, fn (LedgerLine $line) => ! $line->isZero()));
-        $live = $this->live($source);
+        $wanted = collect($lines)->reject(fn (LedgerLine $line) => $line->isZero())->values();
+        $stale = [];
 
-        if ($this->keys($live->map(fn (LedgerEntry $entry) => $this->lineOf($entry))->all()) === $this->keys($lines)) {
-            return;
+        foreach ($this->live($source) as $entry) {
+            $key = $this->lineOf($entry)->key();
+            $match = $wanted->search(fn (LedgerLine $line) => $line->key() === $key);
+
+            if ($match === false) {
+                $stale[] = $entry;
+            } else {
+                $wanted->forget($match);
+            }
         }
 
-        $this->reverse($live);
+        $this->reverse($stale);
 
-        foreach ($lines as $line) {
+        foreach ($wanted as $line) {
             LedgerEntry::query()->create([
                 'party_id' => $line->partyId,
                 'occurred_on' => $line->occurredOn,
@@ -50,6 +60,23 @@ class Ledger
     }
 
     /**
+     * Re-posts the source's live lines unchanged on another party's account.
+     */
+    public function moveTo(Model $source, string $partyId): void
+    {
+        $this->sync($source, $this->live($source)->map(fn (LedgerEntry $entry) => new LedgerLine(
+            $partyId,
+            $entry->occurred_on,
+            $entry->debit,
+            $entry->credit,
+            $entry->description,
+            $entry->vehicle_id,
+            $entry->payment_method,
+            $entry->cash_category_id,
+        ))->all());
+    }
+
+    /**
      * Rows of the source that have not been reversed and are not reversals themselves.
      *
      * @return Collection<int, LedgerEntry>
@@ -66,9 +93,9 @@ class Ledger
     }
 
     /**
-     * @param  Collection<int, LedgerEntry>  $entries
+     * @param  iterable<LedgerEntry>  $entries
      */
-    private function reverse(Collection $entries): void
+    private function reverse(iterable $entries): void
     {
         foreach ($entries as $entry) {
             LedgerEntry::query()->create([
@@ -99,17 +126,5 @@ class Ledger
             paymentMethod: $entry->payment_method,
             cashCategoryId: $entry->cash_category_id,
         );
-    }
-
-    /**
-     * @param  list<LedgerLine>  $lines
-     * @return list<string>
-     */
-    private function keys(array $lines): array
-    {
-        $keys = array_map(fn (LedgerLine $line) => $line->key(), $lines);
-        sort($keys);
-
-        return $keys;
     }
 }

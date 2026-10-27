@@ -45,6 +45,7 @@ class CariEntryService extends Service
         private BankRepository $banks,
         private CashCategoryRepository $categories,
         private Ledger $ledger,
+        private VehicleOwnershipService $ownerships,
     ) {}
 
     /**
@@ -86,6 +87,7 @@ class CariEntryService extends Service
     public function create(array $data, ?string $userId): void
     {
         $this->transaction(function () use ($data, $userId): void {
+            $this->assertPlateOpen($this->kind($data), null, $data);
             $entry = $this->persist($this->kind($data), $data, $userId);
             $this->post($entry, $data);
         });
@@ -98,8 +100,13 @@ class CariEntryService extends Service
     {
         $this->transaction(function () use ($kind, $id, $data): void {
             $entry = $this->find($kind, $id);
+            $this->assertPlateOpen($kind, $entry, $data);
+            $postedParty = $kind === CariEntryKind::DumpPayment && $entry->dump_site_id === $data['dump_site_id']
+                ? $this->ledger->live($entry)->first()?->party_id
+                : null;
+
             $entry = $this->persist($kind, $data, $entry->created_by, $entry);
-            $this->post($entry, $data);
+            $this->post($entry, $data, $postedParty);
         });
     }
 
@@ -107,6 +114,7 @@ class CariEntryService extends Service
     {
         $this->transaction(function () use ($kind, $id): void {
             $entry = $this->find($kind, $id);
+            $this->assertPlateOpen($kind, $entry, null);
 
             if ($kind->postsLedger()) {
                 $this->ledger->void($entry);
@@ -236,12 +244,12 @@ class CariEntryService extends Service
                 'liters' => $kind === CariEntryKind::Fuel ? ($data['liters'] ?? null) : null,
                 'unit_price' => $kind === CariEntryKind::Fuel ? ($data['unit_price'] ?? null) : null,
                 'vehicle_id' => $kind === CariEntryKind::Market ? $this->vehicle($data)?->id : null,
-                'owner_party_id' => $kind === CariEntryKind::Market ? $this->ownerId($data) : null,
+                'owner_party_id' => $kind === CariEntryKind::Market ? $this->ownerFor($data, $existing, 'owner_party_id') : null,
             ],
             CariEntryKind::VehiclePayment, CariEntryKind::VehicleReceivable => [
                 ...$shared,
                 'vehicle_id' => $this->vehicle($data)->id,
-                'party_id' => $this->ownerId($data),
+                'party_id' => $this->ownerFor($data, $existing),
                 'amount' => $amount,
             ],
             CariEntryKind::OwnerPayment => [
@@ -293,9 +301,11 @@ class CariEntryService extends Service
     }
 
     /**
+     * A dump payment stays on the operator it was paid to, even if the dump site has changed operator since.
+     *
      * @param  array<string, mixed>  $data
      */
-    private function post(Model $entry, array $data): void
+    private function post(Model $entry, array $data, ?string $postedParty = null): void
     {
         $kind = $this->kind($data);
 
@@ -304,7 +314,7 @@ class CariEntryService extends Service
         }
 
         $direction = $kind->directionMode() === 'choice' ? $data['direction'] : $kind->directionMode();
-        $partyId = match ($kind) {
+        $partyId = $postedParty ?? match ($kind) {
             CariEntryKind::DumpPayment => DumpSite::query()->find($entry->dump_site_id)?->party_id
                 ?? throw new OperationRejectedException('Döküm yerinin işletmecisi yok.'),
             CariEntryKind::VehiclePayment, CariEntryKind::VehicleReceivable => $entry->party_id,
@@ -317,6 +327,26 @@ class CariEntryService extends Service
         $method = isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null;
 
         $this->ledger->sync($entry, [$line->paidBy($method, $data['cash_category_id'] ?? null)]);
+    }
+
+    /**
+     * Plate payments and receivables cannot touch a period a transfer has closed, before or after the edit.
+     *
+     * @param  array<string, mixed>|null  $data
+     */
+    private function assertPlateOpen(CariEntryKind $kind, ?Model $entry, ?array $data): void
+    {
+        if (! in_array($kind, [CariEntryKind::VehiclePayment, CariEntryKind::VehicleReceivable], true)) {
+            return;
+        }
+
+        if ($entry) {
+            $this->ownerships->assertOpen($entry->vehicle, $entry->occurred_on, $entry->party_id);
+        }
+
+        if ($data && ($vehicle = $this->vehicle($data))) {
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['occurred_on']));
+        }
     }
 
     /**
@@ -346,6 +376,24 @@ class CariEntryService extends Service
 
         return Vehicle::findByPlate((string) $data['plate'])
             ?? throw new OperationException('Plaka bulunamadı.');
+    }
+
+    /**
+     * An edit that keeps the plate and date keeps the party the money went to, even after a
+     * back-dated transfer moved that date to another owner.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function ownerFor(array $data, ?Model $existing, string $column = 'party_id'): ?string
+    {
+        $vehicle = $this->vehicle($data);
+
+        if ($existing && $vehicle && $existing->vehicle_id === $vehicle->id && $existing->{$column} !== null
+            && Carbon::parse($existing->occurred_on)->isSameDay(Carbon::parse($data['occurred_on']))) {
+            return $existing->{$column};
+        }
+
+        return $this->ownerId($data);
     }
 
     /**

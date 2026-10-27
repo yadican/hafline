@@ -26,6 +26,7 @@ class HaulService extends Service
         private HaulRouteRepository $routes,
         private HaulPricing $pricing,
         private HaulLedger $ledger,
+        private VehicleOwnershipService $ownerships,
     ) {}
 
     /**
@@ -117,6 +118,8 @@ class HaulService extends Service
         [$vehicle, $route] = $this->resolve($data);
 
         return $this->transaction(function () use ($data, $userId, $vehicle, $route): Collection {
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['hauled_at']));
+
             $attributes = [
                 ...$this->attributes($data, $vehicle, $route),
                 ...$this->pricing->quote($vehicle, $route),
@@ -146,6 +149,9 @@ class HaulService extends Service
         [$vehicle, $route] = $this->resolve($data, $haul->route_id);
 
         return $this->transaction(function () use ($haul, $data, $vehicle, $route): Haul {
+            $this->ownerships->assertOpen($haul->vehicle, $haul->hauled_at, $haul->party_id);
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['hauled_at']));
+
             $attributes = $this->attributes($data, $vehicle, $route);
 
             if ($haul->vehicle_id !== $vehicle->id || $haul->route_id !== $route->id) {
@@ -171,6 +177,7 @@ class HaulService extends Service
     public function delete(Haul $haul): void
     {
         $this->transaction(function () use ($haul): void {
+            $this->ownerships->assertOpen($haul->vehicle, $haul->hauled_at, $haul->party_id);
             $this->ledger->void($haul);
             $this->hauls->delete($haul);
         });

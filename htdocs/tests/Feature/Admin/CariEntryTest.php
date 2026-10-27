@@ -295,7 +295,24 @@ class CariEntryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('plate', '34 CR 10')
             ->assertJsonPath('name', 'Araç sahibi')
-            ->assertJsonPath('balance', 800);
+            ->assertJsonPath('balance', 800)
+            ->assertJsonPath('plate_balance', 800);
+
+        $other = Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 CR 11']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'vehicle_payment',
+                'plate' => $other->plate,
+                'amount' => '300',
+                'occurred_on' => '2026-06-03',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.cari-entries.lookups.plate', ['plate' => '34 CR 10', 'date' => '2026-06-02']))
+            ->assertJsonPath('balance', 1100)
+            ->assertJsonPath('plate_balance', 800);
 
         $this->actingAs($this->admin)
             ->getJson(route('admin.cari-entries.lookups.plate', ['plate' => '34 YOK', 'date' => '2026-06-02']))

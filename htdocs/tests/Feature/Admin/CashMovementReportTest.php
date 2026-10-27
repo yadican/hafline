@@ -6,6 +6,8 @@ use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
 use App\Models\CashEntry;
 use App\Models\CompanyTransaction;
+use App\Models\Employee;
+use App\Models\EmployeePayment;
 use App\Models\LedgerEntry;
 use App\Models\Party;
 use App\Models\Site;
@@ -213,6 +215,31 @@ class CashMovementReportTest extends TestCase
 
         $this->assertSame(200.0, $report['total_giris']);
         $this->assertCount(1, $report['lines']);
+    }
+
+    public function test_cash_staff_payments_leave_the_cash_drawer(): void
+    {
+        $employee = Employee::factory()->create();
+
+        foreach ([['2026-08-20', 300, PaymentMethod::Cash], ['2026-09-10', 750, PaymentMethod::Cash], ['2026-09-11', 900, PaymentMethod::BankTransfer]] as [$on, $amount, $method]) {
+            EmployeePayment::query()->create([
+                'employee_id' => $employee->id,
+                'payment_method' => $method,
+                'amount' => $amount,
+                'period' => '2026-09-01',
+                'occurred_on' => $on,
+            ]);
+        }
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.cash-movements', $this->filters()))
+            ->assertOk()
+            ->viewData('report');
+
+        $this->assertSame(-300.0, $report['opening']);
+        $this->assertSame(750.0, $report['total_cikis']);
+        $this->assertSame(-1050.0, $report['closing']);
+        $this->assertStringContainsString('Personel Ödeme', $report['lines'][0]['kind_label']);
     }
 
     public function test_csv_export(): void

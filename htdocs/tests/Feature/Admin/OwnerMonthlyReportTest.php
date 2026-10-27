@@ -16,10 +16,8 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
-use App\Services\Ledger\Ledger;
-use App\Services\Ledger\LedgerLine;
+use App\Services\Ledger\HaulLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -221,17 +219,15 @@ class OwnerMonthlyReportTest extends TestCase
         $this->assertSame(3500.0, $report['total_credit']);
     }
 
-    public function test_carryover_from_prior_owner_ledger_is_included(): void
+    public function test_carryover_is_the_net_of_prior_period_owner_rows(): void
     {
-        $haul = $this->makeHaul($this->vehicleA, $this->routeA, '2026-08-10 08:00:00', 5000);
-        app(Ledger::class)->sync($haul, [
-            LedgerLine::credit($this->owner->id, Carbon::parse('2026-08-10'), 5000, 'Önceki taşıma', $this->vehicleA->id),
-        ]);
-
-        $payment = $this->makeOwnerPayment('2026-08-20', 1000, 'Önceki sahip ödemesi');
-        app(Ledger::class)->sync($payment, [
-            LedgerLine::debit($this->owner->id, Carbon::parse('2026-08-20'), 1000, 'Önceki sahip ödemesi'),
-        ]);
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-08-10 08:00:00', 5000);
+        $this->makeReceipt($this->vehicleA, '2026-08-12', 20, 50);
+        $this->makeVehiclePayment($this->vehicleA, '2026-08-14', 500);
+        $this->makeReceivable($this->vehicleB, '2026-08-16', 300);
+        $this->makePaidFine($this->vehicleA, '2026-08-18', 200, 'Önceki ceza');
+        $this->makeOwnerPayment('2026-08-20', 1000, 'Önceki sahip ödemesi');
+        $this->makeHaul($this->otherVehicle, $this->routeA, '2026-08-10 08:00:00', 9999);
 
         $report = $this->actingAs($this->admin)
             ->get(route('admin.reports.owner-monthly', [
@@ -244,12 +240,56 @@ class OwnerMonthlyReportTest extends TestCase
 
         $carryover = $report['carryover'];
 
-        // debit 1000 - credit 5000 = -4000 → shown as 4000 credit
+        // 5000 + 300 credit; 1000 + 500 + 200 + 1000 debit
         $this->assertNull($carryover['debit']);
-        $this->assertSame(4000.0, $carryover['credit']);
-        $this->assertSame(4000.0, $report['total_credit']);
+        $this->assertSame(2600.0, $carryover['credit']);
+        $this->assertSame(2600.0, $report['total_credit']);
         $this->assertSame(0.0, $report['total_debit']);
-        $this->assertSame(4000.0, $report['balance']);
+        $this->assertSame(2600.0, $report['balance']);
+    }
+
+    public function test_carryover_ignores_dump_fee_ledger_lines_when_owner_is_also_the_dump_operator(): void
+    {
+        $haul = $this->makeHaul($this->vehicleA, $this->routeA, '2026-08-10 08:00:00', 5000);
+        $haul->update(['dump_party_id' => $this->owner->id, 'dump_price' => 700]);
+        app(HaulLedger::class)->sync($haul->refresh());
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-monthly', [
+                'owner' => $this->owner->id,
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->viewData('report');
+
+        $this->assertSame(5000.0, $report['carryover']['credit']);
+    }
+
+    public function test_next_period_carryover_equals_previous_period_balance(): void
+    {
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-07-20 08:00:00', 3000);
+        $this->makeHaul($this->vehicleA, $this->routeA, '2026-08-10 08:00:00', 4000);
+        $this->makeHaul($this->vehicleB, $this->routeB, '2026-08-31 23:30:00', 1500);
+        $this->makeReceipt($this->vehicleA, '2026-08-12', 60, 50);
+        $this->makeVehiclePayment($this->vehicleA, '2026-08-14', 2500);
+        $this->makeReceivable($this->vehicleB, '2026-08-16', 400);
+        $this->makePaidFine($this->vehicleA, '2026-08-18', 150, 'Ceza');
+        $this->makeOwnerPayment('2026-08-20', 1000, 'Sahibe nakit');
+
+        $august = $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-monthly', ['owner' => $this->owner->id, 'year' => 2026, 'month' => 8]))
+            ->assertOk()
+            ->viewData('report');
+
+        $september = $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-monthly', ['owner' => $this->owner->id, 'year' => 2026, 'month' => 9]))
+            ->assertOk()
+            ->viewData('report');
+
+        // 3000 carryover + 4000 + 1500 + 400 credit; 3000 + 2500 + 150 + 1000 debit
+        $this->assertSame(2250.0, $august['balance']);
+        $this->assertSame($august['balance'], $september['carryover']['credit']);
     }
 
     public function test_date_range_filters_entries_inclusively(): void
@@ -379,6 +419,26 @@ class OwnerMonthlyReportTest extends TestCase
             'unit_price' => $unitPrice,
             'issued_on' => $issuedOn,
             'haul_ticket_count' => $haulTicketCount,
+        ]);
+    }
+
+    private function makeVehiclePayment(Vehicle $vehicle, string $occurredOn, float $amount): void
+    {
+        VehiclePayment::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'party_id' => $vehicle->currentOwnership->party_id,
+            'amount' => $amount,
+            'occurred_on' => $occurredOn,
+        ]);
+    }
+
+    private function makeReceivable(Vehicle $vehicle, string $occurredOn, float $amount): void
+    {
+        VehicleReceivable::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'party_id' => $vehicle->currentOwnership->party_id,
+            'amount' => $amount,
+            'occurred_on' => $occurredOn,
         ]);
     }
 

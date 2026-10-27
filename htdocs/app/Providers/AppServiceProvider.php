@@ -8,6 +8,7 @@ use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\MachineWork;
 use App\Models\PartyPayment;
+use App\Models\VehicleOwnership;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
             'vehicle_receivable' => VehicleReceivable::class,
             'party_payment' => PartyPayment::class,
             'dump_site_payment' => DumpSitePayment::class,
+            'vehicle_ownership' => VehicleOwnership::class,
         ]);
     }
 }

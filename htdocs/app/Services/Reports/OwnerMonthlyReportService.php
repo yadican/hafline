@@ -61,8 +61,20 @@ class OwnerMonthlyReportService extends Service
      *         fuel_liters: float,
      *         fuel_receipts: int,
      *         fuel_haul_tickets: int,
+     *         machine_hours: float,
+     *         machine_tickets: int,
      *         total_debit: float,
      *         total_credit: float,
+     *     }>,
+     *     operator_works: list<array{
+     *         type: string,
+     *         date: string|null,
+     *         description: string,
+     *         quantity: float|null,
+     *         quantity_unit: string|null,
+     *         unit_price: float|null,
+     *         debit: float|null,
+     *         credit: float|null,
      *     }>,
      *     owner_payments: list<array{
      *         type: string,
@@ -122,6 +134,26 @@ class OwnerMonthlyReportService extends Service
             $fuelHaulTickets += $block['fuel_haul_tickets'];
         }
 
+        $operatorWorks = [];
+
+        foreach ($this->reports->operatorTotals($owner->id, $from, $toExclusive) as $work) {
+            $hours = round((float) $work->hours, 2);
+            $amount = round((float) $work->amount, 2);
+
+            $operatorWorks[] = [
+                'type' => 'operator',
+                'date' => null,
+                'description' => $work->plate.' · '.$work->site_name.' - Operatörlük',
+                'quantity' => $hours,
+                'quantity_unit' => 'saat',
+                'unit_price' => $hours > 0 ? round($amount / $hours, 4) : 0.0,
+                'debit' => null,
+                'credit' => $amount,
+            ];
+
+            $totalCredit += $amount;
+        }
+
         $ownerPayments = [];
 
         foreach ($this->reports->ownerPayments($owner->id, $from, $toExclusive) as $payment) {
@@ -168,6 +200,7 @@ class OwnerMonthlyReportService extends Service
             'from' => $meta['from'],
             'to' => $meta['to'],
             'vehicles' => $vehicles,
+            'operator_works' => $operatorWorks,
             'owner_payments' => $ownerPayments,
             'carryover' => [
                 'type' => 'carryover',
@@ -252,11 +285,14 @@ class OwnerMonthlyReportService extends Service
                     '',
                     '',
                     sprintf(
-                        'Sefer:%d Yakıt:%s lt %d yakıt fişi %d hareket fişi',
+                        'Sefer:%d Yakıt:%s lt %d yakıt fişi %d hareket fişi%s',
                         $vehicle['trips'],
                         number_format($vehicle['fuel_liters'], 2, ',', '.'),
                         $vehicle['fuel_receipts'],
                         $vehicle['fuel_haul_tickets'],
+                        $vehicle['machine_tickets'] > 0
+                            ? sprintf(' Makine:%s saat %d fiş', number_format($vehicle['machine_hours'], 2, ',', '.'), $vehicle['machine_tickets'])
+                            : '',
                     ),
                     '',
                     '',
@@ -265,17 +301,17 @@ class OwnerMonthlyReportService extends Service
                 ], ';');
             }
 
-            foreach ($report['owner_payments'] as $row) {
+            foreach ([...$report['operator_works'], ...$report['owner_payments']] as $row) {
                 $index++;
                 fputcsv($handle, [
                     'Plaka sahibi',
                     $index,
                     $row['date'] ?? '',
                     $row['description'],
-                    '',
-                    '',
+                    $this->formatQuantity($row),
+                    $row['unit_price'] !== null ? number_format($row['unit_price'], 2, ',', '.') : '',
                     $row['debit'] !== null ? number_format($row['debit'], 2, ',', '.') : '',
-                    '',
+                    $row['credit'] !== null ? number_format($row['credit'], 2, ',', '.') : '',
                 ], ';');
             }
 
@@ -331,6 +367,8 @@ class OwnerMonthlyReportService extends Service
      *     fuel_liters: float,
      *     fuel_receipts: int,
      *     fuel_haul_tickets: int,
+     *     machine_hours: float,
+     *     machine_tickets: int,
      *     total_debit: float,
      *     total_credit: float,
      * }
@@ -353,6 +391,24 @@ class OwnerMonthlyReportService extends Service
                 'quantity' => (float) $tripCount,
                 'quantity_unit' => null,
                 'unit_price' => $unitPrice,
+                'debit' => null,
+                'credit' => $amount,
+            ];
+
+            $totalCredit += $amount;
+        }
+
+        foreach ($this->reports->machineTotals($partyId, $vehicle->id, $from, $to) as $work) {
+            $hours = round((float) $work->hours, 2);
+            $amount = round((float) $work->amount, 2);
+
+            $rows[] = [
+                'type' => 'machine',
+                'date' => null,
+                'description' => $work->site_name.' - Makine çalışması',
+                'quantity' => $hours,
+                'quantity_unit' => 'saat',
+                'unit_price' => $hours > 0 ? round($amount / $hours, 4) : 0.0,
                 'debit' => null,
                 'credit' => $amount,
             ];
@@ -430,6 +486,25 @@ class OwnerMonthlyReportService extends Service
             $totalDebit += $amount;
         }
 
+        foreach ($this->reports->transferLines($partyId, $vehicle->id, $from, $to) as $line) {
+            $debit = round((float) $line->debit, 2);
+            $credit = round((float) $line->credit, 2);
+
+            $rows[] = [
+                'type' => 'transfer',
+                'date' => Carbon::parse($line->occurred_on)->toDateString(),
+                'description' => (string) $line->description,
+                'quantity' => null,
+                'quantity_unit' => null,
+                'unit_price' => null,
+                'debit' => $debit > 0 ? $debit : null,
+                'credit' => $credit > 0 ? $credit : null,
+            ];
+
+            $totalDebit += $debit;
+            $totalCredit += $credit;
+        }
+
         $stats = $this->reports->vehicleStats($partyId, $vehicle->id, $from, $to);
 
         return [
@@ -439,6 +514,8 @@ class OwnerMonthlyReportService extends Service
             'fuel_liters' => $stats['liters'],
             'fuel_receipts' => $stats['receipts'],
             'fuel_haul_tickets' => $stats['haul_tickets'],
+            'machine_hours' => $stats['machine_hours'],
+            'machine_tickets' => $stats['machine_tickets'],
             'total_debit' => round($totalDebit, 2),
             'total_credit' => round($totalCredit, 2),
         ];
@@ -453,9 +530,10 @@ class OwnerMonthlyReportService extends Service
             return '';
         }
 
-        return $row['quantity_unit'] === 'lt'
-            ? number_format($row['quantity'], 2, ',', '.').' lt'
-            : (string) (int) $row['quantity'];
+        return match ($row['quantity_unit']) {
+            'lt', 'saat' => number_format($row['quantity'], 2, ',', '.').' '.$row['quantity_unit'],
+            default => (string) (int) $row['quantity'],
+        };
     }
 
     /**

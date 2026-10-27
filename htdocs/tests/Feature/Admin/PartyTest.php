@@ -217,6 +217,35 @@ class PartyTest extends TestCase
             ->assertSee('34 RB 1');
     }
 
+    public function test_statement_and_totals_leave_out_cancelled_postings_unless_asked(): void
+    {
+        $owner = Party::factory()->create();
+        $vehicle = Vehicle::factory()->ownedBy($owner)->create(['plate' => '34 RB 1']);
+        $haul = Haul::factory()->create([
+            'ticket_no' => 'T-1',
+            'vehicle_id' => $vehicle->id,
+            'party_id' => $owner->id,
+            'price' => 1000,
+            'dump_price' => 0,
+            'hauled_at' => now()->subDays(2),
+        ]);
+        app(HaulLedger::class)->sync($haul);
+        $haul->update(['price' => 1200]);
+        app(HaulLedger::class)->sync($haul->refresh());
+
+        $response = $this->actingAs($this->admin)->get(route('admin.parties.edit', $owner))->assertOk();
+
+        $this->assertSame(['debit' => 0.0, 'credit' => 1200.0, 'balance' => -1200.0], $response->viewData('totals'));
+        $this->assertCount(1, $response->viewData('entries'));
+        $response->assertSee('İptal edilen kayıtları göster');
+
+        $withReversals = $this->actingAs($this->admin)->get(route('admin.parties.edit', [$owner, 'iptaller' => 1]))->assertOk();
+
+        $this->assertCount(3, $withReversals->viewData('entries'));
+        $this->assertSame(-1200.0, (float) $withReversals->viewData('entries')->first()->running_balance);
+        $withReversals->assertSee('İptal edilen kayıtları gizle');
+    }
+
     public function test_company_is_listed_separately_and_returns_to_its_list(): void
     {
         $this->actingAs($this->admin)

@@ -67,12 +67,13 @@ class OwnerBalanceReportService extends Service
         $totalBalance = 0.0;
 
         foreach ($this->reports->ownerTotals($from, $toExclusive, $siteId, $fuelStationId) as $row) {
-            $credit = round((float) $row->credit_hauls, 2);
+            $credit = round((float) $row->credit_hauls + (float) $row->credit_machine_works + (float) $row->credit_transfers, 2);
             $cash = round((float) $row->credit_receivables, 2);
             $debit = round(
                 (float) $row->debit_payments
                 + (float) $row->debit_fuel
                 + (float) $row->debit_fines
+                + (float) $row->debit_transfers
                 + (float) $row->debit_owner_payments,
                 2,
             );

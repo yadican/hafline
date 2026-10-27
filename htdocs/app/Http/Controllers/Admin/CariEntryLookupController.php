@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Party;
 use App\Models\Vehicle;
+use App\Repositories\VehicleAccountRepository;
 use App\Services\PartyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ class CariEntryLookupController extends AdminController
 {
     protected ?string $permissionAbility = 'view-cari-entry';
 
-    public function __construct(private PartyService $parties) {}
+    public function __construct(
+        private PartyService $parties,
+        private VehicleAccountRepository $accounts,
+    ) {}
 
     /**
      * Current ledger totals for the selected company, shown beside the new entry.
@@ -32,7 +36,7 @@ class CariEntryLookupController extends AdminController
     }
 
     /**
-     * The owner's ledger on the entry date, resolved from the plate being paid.
+     * The owner on the entry date: their whole cari and their balance on this plate (debit − credit).
      */
     public function plate(Request $request): JsonResponse
     {
@@ -62,6 +66,7 @@ class CariEntryLookupController extends AdminController
             'debit' => $totals['debit'],
             'credit' => $totals['credit'],
             'balance' => $totals['balance'],
+            'plate_balance' => -$this->accounts->balance($vehicle->id, $owner->id),
         ]);
     }
 }

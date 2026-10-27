@@ -23,12 +23,21 @@ class VehicleOwnershipRequest extends FormRequest
         return [
             'party_id' => ['required', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
             'started_on' => ['required', 'date', 'before_or_equal:today'],
+            'settlement' => ['required', Rule::in(['carry', 'settled'])],
         ];
     }
 
     public function party(): Party
     {
         return Party::query()->findOrFail($this->validated('party_id'));
+    }
+
+    /**
+     * carry: the previous owner's plate balance moves to the new owner; settled: it was paid off first.
+     */
+    public function carriesBalance(): bool
+    {
+        return $this->validated('settlement') === 'carry';
     }
 
     public function startedOn(): Carbon
@@ -44,6 +53,7 @@ class VehicleOwnershipRequest extends FormRequest
         return [
             'party_id' => 'yeni sahip',
             'started_on' => 'devir tarihi',
+            'settlement' => 'eski sahibin bakiyesi',
         ];
     }
 }

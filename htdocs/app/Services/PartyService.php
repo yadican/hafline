@@ -57,9 +57,14 @@ class PartyService extends Service
         return $this->parties->options($role, $include);
     }
 
-    public function statement(Party $party): LengthAwarePaginator
+    public function statement(Party $party, bool $withReversals = false): LengthAwarePaginator
     {
-        return $this->parties->statement($party);
+        return $this->parties->statement($party, withReversals: $withReversals);
+    }
+
+    public function hasReversals(Party $party): bool
+    {
+        return $this->parties->hasReversals($party);
     }
 
     /**

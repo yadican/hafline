@@ -56,7 +56,7 @@ class PartyController extends AdminController
         );
     }
 
-    public function show(Party $party): View
+    public function show(Request $request, Party $party): View
     {
         $party->load([
             'person',
@@ -72,12 +72,14 @@ class PartyController extends AdminController
         return view('admin.parties.show', [
             'title' => 'Cari kart detayı',
             'party' => $party,
-            'entries' => $this->parties->statement($party),
+            'entries' => $this->parties->statement($party, $request->boolean('iptaller')),
             'totals' => $this->parties->totals($party),
+            'withReversals' => $request->boolean('iptaller'),
+            'hasReversals' => $this->parties->hasReversals($party),
         ]);
     }
 
-    public function edit(Party $party): View
+    public function edit(Request $request, Party $party): View
     {
         $party->load(['ownerships' => fn ($query) => $query->with('vehicle')->orderByDesc('started_on'), 'sites']);
 
@@ -92,8 +94,10 @@ class PartyController extends AdminController
                 old('district_id', $values['district_id']),
             ),
             'lockedRoles' => $this->parties->lockedRoles($party),
-            'entries' => $this->parties->statement($party),
+            'entries' => $this->parties->statement($party, $request->boolean('iptaller')),
             'totals' => $this->parties->totals($party),
+            'withReversals' => $request->boolean('iptaller'),
+            'hasReversals' => $this->parties->hasReversals($party),
         ]);
     }
 

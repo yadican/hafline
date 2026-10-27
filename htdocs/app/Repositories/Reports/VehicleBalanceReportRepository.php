@@ -40,10 +40,13 @@ class VehicleBalanceReportRepository
      *     vehicle_id: string,
      *     plate: string,
      *     credit_hauls: string,
+     *     credit_machine_works: string,
      *     credit_receivables: string,
      *     debit_payments: string,
      *     debit_fuel: string,
-     *     debit_fines: string
+     *     debit_fines: string,
+     *     credit_transfers: string,
+     *     debit_transfers: string
      * }>
      */
     public function vehicleTotals(
@@ -65,7 +68,15 @@ class VehicleBalanceReportRepository
             ->when($siteId, fn ($q) => $q->where('site_id', $siteId))
             ->groupBy('vehicle_id');
 
-        // Site filters hauls only; fuel station filters fuel only (legacy card).
+        $machineWorks = DB::table('machine_works')
+            ->select('vehicle_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
+            ->whereNull('deleted_at')
+            ->when($dateFrom, fn ($q) => $q->where('worked_on', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->where('worked_on', '<', $dateTo))
+            ->when($siteId, fn ($q) => $q->where('site_id', $siteId))
+            ->groupBy('vehicle_id');
+
+        // Site filters hauls and machine work only; fuel station filters fuel only (legacy card).
         $fuel = DB::table('fuel_receipts')
             ->select('vehicle_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
             ->whereNull('deleted_at')
@@ -88,6 +99,13 @@ class VehicleBalanceReportRepository
             ->when($dateTo, fn ($q) => $q->where('occurred_on', '<', $dateTo))
             ->groupBy('vehicle_id');
 
+        $transfers = DB::table('ledger_entries')
+            ->select('vehicle_id', DB::raw('COALESCE(SUM(credit), 0) as credit'), DB::raw('COALESCE(SUM(debit), 0) as debit'))
+            ->where('source_type', 'vehicle_ownership')
+            ->when($dateFrom, fn ($q) => $q->where('occurred_on', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->where('occurred_on', '<', $dateTo))
+            ->groupBy('vehicle_id');
+
         $fines = DB::table('vehicle_fines')
             ->select('vehicle_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
             ->whereNull('deleted_at')
@@ -100,23 +118,28 @@ class VehicleBalanceReportRepository
             ->withTrashed()
             ->toBase()
             ->leftJoinSub($hauls, 'hauls_sum', 'hauls_sum.vehicle_id', '=', 'vehicles.id')
+            ->leftJoinSub($machineWorks, 'machine_sum', 'machine_sum.vehicle_id', '=', 'vehicles.id')
             ->leftJoinSub($fuel, 'fuel_sum', 'fuel_sum.vehicle_id', '=', 'vehicles.id')
             ->leftJoinSub($payments, 'payments_sum', 'payments_sum.vehicle_id', '=', 'vehicles.id')
             ->leftJoinSub($receivables, 'receivables_sum', 'receivables_sum.vehicle_id', '=', 'vehicles.id')
+            ->leftJoinSub($transfers, 'transfers_sum', 'transfers_sum.vehicle_id', '=', 'vehicles.id')
             ->leftJoinSub($fines, 'fines_sum', 'fines_sum.vehicle_id', '=', 'vehicles.id')
             ->select([
                 'vehicles.id as vehicle_id',
                 'vehicles.plate',
                 DB::raw('COALESCE(hauls_sum.total, 0) as credit_hauls'),
+                DB::raw('COALESCE(machine_sum.total, 0) as credit_machine_works'),
                 DB::raw('COALESCE(receivables_sum.total, 0) as credit_receivables'),
                 DB::raw('COALESCE(payments_sum.total, 0) as debit_payments'),
                 DB::raw('COALESCE(fuel_sum.total, 0) as debit_fuel'),
                 DB::raw('COALESCE(fines_sum.total, 0) as debit_fines'),
+                DB::raw('COALESCE(transfers_sum.credit, 0) as credit_transfers'),
+                DB::raw('COALESCE(transfers_sum.debit, 0) as debit_transfers'),
             ])
             ->where(function ($query) use ($siteId, $fuelStationId): void {
                 // Required filters must match real activity; Elden/ödeme alone must not fill the list.
                 if (filled($siteId) && filled($fuelStationId)) {
-                    $query->whereRaw('COALESCE(hauls_sum.total, 0) > 0')
+                    $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0)) > 0')
                         ->whereRaw('COALESCE(fuel_sum.total, 0) > 0');
 
                     return;
@@ -129,12 +152,12 @@ class VehicleBalanceReportRepository
                 }
 
                 if (filled($siteId)) {
-                    $query->whereRaw('COALESCE(hauls_sum.total, 0) > 0');
+                    $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0)) > 0');
 
                     return;
                 }
 
-                $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0)) <> 0');
+                $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0) + COALESCE(transfers_sum.credit, 0) + COALESCE(transfers_sum.debit, 0)) <> 0');
             })
             ->orderBy('vehicles.plate')
             ->get();

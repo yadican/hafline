@@ -9,6 +9,7 @@
     ], fn ($value) => $value !== null && $value !== '');
 
     $rowIndex = 0;
+    $ownerRows = [...$report['operator_works'], ...$report['owner_payments']];
 @endphp
 
 <div class="report-matrix">
@@ -48,8 +49,8 @@
                         <td>{{ $row['description'] }}</td>
                         <td class="is-end">
                             @if ($row['quantity'] !== null)
-                                @if ($row['quantity_unit'] === 'lt')
-                                    {{ number_format($row['quantity'], 2, ',', '.') }} lt
+                                @if (in_array($row['quantity_unit'], ['lt', 'saat'], true))
+                                    {{ number_format($row['quantity'], 2, ',', '.') }} {{ $row['quantity_unit'] }}
                                 @else
                                     {{ (int) $row['quantity'] }}
                                 @endif
@@ -85,6 +86,10 @@
                         Yakıt:{{ number_format($vehicle['fuel_liters'], 2, ',', '.') }}lt
                         {{ $vehicle['fuel_receipts'] }} yakıt fişi
                         {{ $vehicle['fuel_haul_tickets'] }} hareket fişi
+                        @if ($vehicle['machine_tickets'] > 0)
+                            Makine:{{ number_format($vehicle['machine_hours'], 2, ',', '.') }} saat
+                            {{ $vehicle['machine_tickets'] }} fiş
+                        @endif
                     </td>
                     <td></td>
                     <td></td>
@@ -92,14 +97,14 @@
                     <td class="panel-tutar is-end">{{ number_format($vehicle['total_credit'], 2, ',', '.') }} TL</td>
                 </tr>
             @empty
-                @unless (count($report['owner_payments']) > 0)
+                @unless (count($ownerRows) > 0)
                     <tr>
                         <td colspan="7" class="is-center report-empty-note">Bu dönemde araç hareketi yok.</td>
                     </tr>
                 @endunless
             @endforelse
 
-            @if (count($report['owner_payments']) > 0)
+            @if (count($ownerRows) > 0)
                 @if (count($report['vehicles']) > 0)
                     <tr class="report-vehicle-gap" aria-hidden="true">
                         <td colspan="7"></td>
@@ -120,20 +125,32 @@
                     <th class="is-end">Alacak</th>
                 </tr>
 
-                @foreach ($report['owner_payments'] as $row)
+                @foreach ($ownerRows as $row)
                     @php $rowIndex++; @endphp
                     <tr>
                         <td class="is-center">{{ $rowIndex }}</td>
                         <td>{{ $row['date'] ? \Illuminate\Support\Carbon::parse($row['date'])->format('d.m.Y') : '' }}</td>
                         <td>{{ $row['description'] }}</td>
-                        <td></td>
-                        <td></td>
+                        <td class="is-end">
+                            @if ($row['quantity'] !== null)
+                                {{ number_format($row['quantity'], 2, ',', '.') }} {{ $row['quantity_unit'] }}
+                            @endif
+                        </td>
+                        <td class="panel-tutar is-end">
+                            @if ($row['unit_price'] !== null)
+                                {{ number_format($row['unit_price'], 2, ',', '.') }} TL
+                            @endif
+                        </td>
                         <td class="panel-tutar is-end">
                             @if ($row['debit'] !== null)
                                 {{ number_format($row['debit'], 2, ',', '.') }} TL
                             @endif
                         </td>
-                        <td></td>
+                        <td class="panel-tutar is-end">
+                            @if ($row['credit'] !== null)
+                                {{ number_format($row['credit'], 2, ',', '.') }} TL
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             @endif

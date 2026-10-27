@@ -117,7 +117,7 @@ class FuelReceiptTest extends TestCase
         $buyer = Party::factory()->create();
 
         $this->actingAs($this->admin)
-            ->post(route('admin.vehicles.ownerships.store', $this->vehicle), ['party_id' => $buyer->id, 'started_on' => '2026-06-05'])
+            ->post(route('admin.vehicles.ownerships.store', $this->vehicle), ['party_id' => $buyer->id, 'started_on' => '2026-06-05', 'settlement' => 'settled'])
             ->assertSessionHas('success');
 
         $this->assertSame($buyer->id, FuelReceipt::query()->sole()->party_id);

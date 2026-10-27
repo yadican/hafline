@@ -158,7 +158,7 @@ class VehicleTest extends TestCase
             ->assertDontSee('34 KM 100');
     }
 
-    public function test_transfer_moves_later_hauls_and_their_ledger_to_the_new_owner(): void
+    public function test_transfer_moves_later_hauls_and_carries_the_previous_owners_plate_balance(): void
     {
         $seller = Party::factory()->create();
         $buyer = Party::factory()->create();
@@ -167,7 +167,7 @@ class VehicleTest extends TestCase
         $after = $this->haul($vehicle, '2026-03-20 10:00', 2000);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => $buyer->id, 'started_on' => '2026-03-15'])
+            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => $buyer->id, 'started_on' => '2026-03-15', 'settlement' => 'carry'])
             ->assertRedirect(route('admin.vehicles.edit', $vehicle))
             ->assertSessionHas('success');
 
@@ -179,9 +179,12 @@ class VehicleTest extends TestCase
 
         $this->assertSame($seller->id, $before->fresh()->party_id);
         $this->assertSame($buyer->id, $after->fresh()->party_id);
-        $this->assertSame(1000.0, $this->balance($seller) * -1);
-        $this->assertSame(2000.0, $this->balance($buyer) * -1);
         $this->assertSame(1, LedgerEntry::query()->whereNotNull('reversal_of')->where('party_id', $seller->id)->count());
+
+        $this->assertSame($seller->id, $ownerships[0]->carried_from_party_id);
+        $this->assertSame('1000.00', $ownerships[0]->carried_balance);
+        $this->assertSame(0.0, $this->balance($seller), 'Eski sahibin plakadaki alacağı devir kapanışıyla kapanır.');
+        $this->assertSame(-3000.0, $this->balance($buyer), 'Yeni sahip kendi seferine ek olarak devralınan bakiyeyi alır.');
     }
 
     public function test_transfer_must_start_after_the_current_period_and_change_the_owner(): void
@@ -190,11 +193,11 @@ class VehicleTest extends TestCase
         $vehicle = Vehicle::factory()->ownedBy($owner, '2026-02-01')->create();
 
         $this->actingAs($this->admin)
-            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => Party::factory()->create()->id, 'started_on' => '2026-02-01'])
+            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => Party::factory()->create()->id, 'started_on' => '2026-02-01', 'settlement' => 'carry'])
             ->assertSessionHas('error');
 
         $this->actingAs($this->admin)
-            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => $owner->id, 'started_on' => '2026-03-01'])
+            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => $owner->id, 'started_on' => '2026-03-01', 'settlement' => 'carry'])
             ->assertSessionHas('error', 'Araç zaten bu cariye kayıtlı.');
 
         $this->assertSame(1, $vehicle->ownerships()->count());
@@ -208,7 +211,7 @@ class VehicleTest extends TestCase
         $haul = $this->haul($vehicle, '2026-03-20 10:00', 1500);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => $buyer->id, 'started_on' => '2026-03-15']);
+            ->post(route('admin.vehicles.ownerships.store', $vehicle), ['party_id' => $buyer->id, 'started_on' => '2026-03-15', 'settlement' => 'carry']);
         $this->assertSame($buyer->id, $haul->fresh()->party_id);
 
         $first = $vehicle->ownerships()->get()->last();

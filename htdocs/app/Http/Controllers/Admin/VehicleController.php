@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\Admin\VehicleRequest;
 use App\Http\Requests\Admin\VehicleSearchRequest;
 use App\Models\Vehicle;
+use App\Services\VehicleOwnershipService;
 use App\Services\VehicleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -13,7 +14,10 @@ class VehicleController extends AdminController
 {
     protected ?string $permissionResource = 'vehicle';
 
-    public function __construct(private VehicleService $vehicles) {}
+    public function __construct(
+        private VehicleService $vehicles,
+        private VehicleOwnershipService $ownerships,
+    ) {}
 
     public function index(VehicleSearchRequest $request): View
     {
@@ -62,6 +66,7 @@ class VehicleController extends AdminController
             'title' => 'Aracı düzenle',
             'vehicle' => $vehicle,
             'options' => $this->vehicles->formOptions($vehicle),
+            'ownerBalance' => $this->ownerships->currentBalance($vehicle),
         ]);
     }
 

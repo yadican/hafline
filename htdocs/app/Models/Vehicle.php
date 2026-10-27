@@ -58,6 +58,19 @@ class Vehicle extends Model
     }
 
     /**
+     * The start of the latest ownership whose transfer closed the previous owner's account on this
+     * plate; nothing before it may change. Transfers recorded without a closing do not lock.
+     */
+    public function closedBefore(): ?CarbonInterface
+    {
+        return $this->hasMany(VehicleOwnership::class)
+            ->whereNotNull('carried_from_party_id')
+            ->orderByDesc('started_on')
+            ->first()
+            ?->started_on;
+    }
+
+    /**
      * @return HasMany<VehicleRate, $this>
      */
     public function rates(): HasMany

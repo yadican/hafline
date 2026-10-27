@@ -62,6 +62,23 @@ class LedgerTest extends TestCase
         $this->assertSame(0.0, (float) LedgerEntry::query()->where('party_id', $second->id)->get()->sum(fn ($e) => $e->debit - $e->credit));
     }
 
+    public function test_only_the_changed_line_is_reversed_and_reposted(): void
+    {
+        $haul = Haul::factory()->create();
+        $owner = Party::factory()->create();
+        $buyer = Party::factory()->create();
+        $dumpOperator = Party::factory()->create();
+        $ledger = app(Ledger::class);
+        $day = Carbon::parse('2026-05-01');
+
+        $ledger->sync($haul, [LedgerLine::credit($owner->id, $day, 1000, 'Sefer'), LedgerLine::credit($dumpOperator->id, $day, 300, 'Sefer')]);
+        $ledger->sync($haul, [LedgerLine::credit($buyer->id, $day, 1000, 'Sefer'), LedgerLine::credit($dumpOperator->id, $day, 300, 'Sefer')]);
+
+        $this->assertSame(1, LedgerEntry::query()->where('party_id', $dumpOperator->id)->count(), 'Değişmeyen döküm satırı iptal edilmez.');
+        $this->assertSame(2, LedgerEntry::query()->where('party_id', $owner->id)->count());
+        $this->assertCount(2, $ledger->live($haul));
+    }
+
     public function test_description_only_changes_post_nothing(): void
     {
         $haul = Haul::factory()->create();

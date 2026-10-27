@@ -28,6 +28,7 @@ class MachineWorkService extends Service
         private PartyRepository $parties,
         private HaulLookupRepository $lookups,
         private MachineWorkLedger $ledger,
+        private VehicleOwnershipService $ownerships,
     ) {}
 
     /**
@@ -130,6 +131,8 @@ class MachineWorkService extends Service
         $vehicle = $this->resolve($data);
 
         return $this->transaction(function () use ($data, $userId, $vehicle): MachineWork {
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['worked_on']));
+
             /** @var MachineWork $work */
             $work = $this->works->create([...$this->attributes($data, $vehicle), 'created_by' => $userId]);
             $this->ledger->sync($work);
@@ -146,6 +149,9 @@ class MachineWorkService extends Service
         $vehicle = $this->resolve($data);
 
         return $this->transaction(function () use ($work, $data, $vehicle): MachineWork {
+            $this->ownerships->assertOpen($work->vehicle, $work->worked_on, $work->party_id);
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['worked_on']));
+
             /** @var MachineWork $updated */
             $updated = $this->works->update($work, $this->attributes($data, $vehicle));
             $this->ledger->sync($updated);
@@ -157,6 +163,7 @@ class MachineWorkService extends Service
     public function delete(MachineWork $work): void
     {
         $this->transaction(function () use ($work): void {
+            $this->ownerships->assertOpen($work->vehicle, $work->worked_on, $work->party_id);
             $this->ledger->void($work);
             $this->works->delete($work);
         });

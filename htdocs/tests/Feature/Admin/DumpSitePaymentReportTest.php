@@ -132,6 +132,55 @@ class DumpSitePaymentReportTest extends TestCase
         $this->assertSame(1500.0, $report['balance']);
     }
 
+    public function test_balances_exclude_other_dump_sites_of_the_same_operator(): void
+    {
+        $this->makeHaul($this->vehicleTir, '2026-08-20 10:00:00', 10, 1000);
+        $this->makeHaul($this->vehicleTir, '2026-09-05 10:00:00', 10, 500);
+        $this->makePayment('2026-09-15', 250, 'Dönem ödeme');
+
+        $siblingSite = DumpSite::factory()->create([
+            'name' => 'KARDEŞ SAHA',
+            'party_id' => $this->dumpSite->party_id,
+        ]);
+        $siblingRoute = HaulRoute::factory()->create([
+            'site_id' => $this->route->site_id,
+            'dump_site_id' => $siblingSite->id,
+        ]);
+
+        foreach (['2026-08-21 10:00:00', '2026-09-06 10:00:00'] as $hauledAt) {
+            app(HaulLedger::class)->sync(Haul::factory()->create([
+                'vehicle_id' => $this->vehicleTir->id,
+                'party_id' => $this->vehicleTir->currentOwnership->party_id,
+                'route_id' => $siblingRoute->id,
+                'site_id' => $siblingRoute->site_id,
+                'dump_site_id' => $siblingSite->id,
+                'dump_party_id' => $siblingSite->party_id,
+                'dump_price' => 9000,
+                'hauled_at' => $hauledAt,
+            ]));
+        }
+
+        $siblingPayment = DumpSitePayment::query()->create([
+            'dump_site_id' => $siblingSite->id,
+            'payment_method' => PaymentMethod::Cash,
+            'amount' => 7000,
+            'occurred_on' => '2026-08-25',
+        ]);
+        app(Ledger::class)->sync($siblingPayment, [
+            LedgerLine::debit($siblingSite->party_id, Carbon::parse('2026-08-25'), 7000, 'Kardeş saha ödemesi'),
+        ]);
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.dump-site-payments', $this->filters()))
+            ->assertOk()
+            ->viewData('report');
+
+        $this->assertSame(1000.0, $report['opening_dump']);
+        $this->assertSame(0.0, $report['opening_payment']);
+        $this->assertSame(1000.0, $report['opening']);
+        $this->assertSame(1250.0, $report['balance']);
+    }
+
     public function test_soft_deleted_excluded(): void
     {
         $haul = $this->makeHaul($this->vehicleTir, '2026-09-05 10:00:00', 10, 500);

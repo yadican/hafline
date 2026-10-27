@@ -160,6 +160,29 @@ class CashMovementReportRepository
             ");
         $branches[] = $ledger;
 
+        // employee_payments (no ledger): cash paid to staff = çıkış
+        $employeePayments = DB::table('employee_payments as t')
+            ->leftJoin('employees as e', 'e.id', '=', 't.employee_id')
+            ->leftJoin('parties as p', 'p.id', '=', 'e.party_id')
+            ->whereNull('t.deleted_at')
+            ->where('t.payment_method', $cash)
+            ->when($fromInclusive !== null && $toExclusive !== null, function ($q) use ($fromInclusive, $toExclusive): void {
+                $q->where('t.occurred_on', '>=', $fromInclusive)
+                    ->where('t.occurred_on', '<', $toExclusive);
+            })
+            ->when($fromInclusive !== null && $toExclusive === null, fn ($q) => $q->where('t.occurred_on', '<', $fromInclusive))
+            ->selectRaw("
+                t.occurred_on,
+                t.created_at,
+                t.id,
+                COALESCE(p.name, 'Personel') || ' Personel Ödeme' as kind_label,
+                t.description,
+                'Nakit' as payment_label,
+                0 as giris,
+                t.amount as cikis
+            ");
+        $branches[] = $employeePayments;
+
         // other_payments (no ledger morph) — include cash rows if table exists
         if (Schema::hasTable('other_payments')) {
             $other = DB::table('other_payments as t')

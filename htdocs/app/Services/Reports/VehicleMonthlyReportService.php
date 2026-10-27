@@ -56,6 +56,8 @@ class VehicleMonthlyReportService extends Service
      *     fuel_liters: float,
      *     fuel_receipts: int,
      *     fuel_haul_tickets: int,
+     *     machine_hours: float,
+     *     machine_tickets: int,
      *     total_debit: float,
      *     total_credit: float,
      *     balance: float,
@@ -87,6 +89,24 @@ class VehicleMonthlyReportService extends Service
                 'quantity' => (float) $trips,
                 'quantity_unit' => null,
                 'unit_price' => $unitPrice,
+                'debit' => null,
+                'credit' => $amount,
+            ];
+
+            $totalCredit += $amount;
+        }
+
+        foreach ($this->reports->machineTotals($vehicle->id, $from, $toExclusive) as $work) {
+            $hours = round((float) $work->hours, 2);
+            $amount = round((float) $work->amount, 2);
+
+            $rows[] = [
+                'type' => 'machine',
+                'date' => null,
+                'description' => $work->site_name.' - Makine çalışması',
+                'quantity' => $hours,
+                'quantity_unit' => 'saat',
+                'unit_price' => $hours > 0 ? round($amount / $hours, 4) : 0.0,
                 'debit' => null,
                 'credit' => $amount,
             ];
@@ -164,6 +184,25 @@ class VehicleMonthlyReportService extends Service
             $totalDebit += $amount;
         }
 
+        foreach ($this->reports->transferLines($vehicle->id, $from, $toExclusive) as $line) {
+            $debit = round((float) $line->debit, 2);
+            $credit = round((float) $line->credit, 2);
+
+            $rows[] = [
+                'type' => 'transfer',
+                'date' => Carbon::parse($line->occurred_on)->toDateString(),
+                'description' => (string) $line->description,
+                'quantity' => null,
+                'quantity_unit' => null,
+                'unit_price' => null,
+                'debit' => $debit > 0 ? $debit : null,
+                'credit' => $credit > 0 ? $credit : null,
+            ];
+
+            $totalDebit += $debit;
+            $totalCredit += $credit;
+        }
+
         $carryover = $this->reports->carryoverBalance($vehicle->id, $from);
         $carryoverDebit = null;
         $carryoverCredit = null;
@@ -206,6 +245,8 @@ class VehicleMonthlyReportService extends Service
             'fuel_liters' => $stats['liters'],
             'fuel_receipts' => $stats['receipts'],
             'fuel_haul_tickets' => $stats['haul_tickets'],
+            'machine_hours' => $stats['machine_hours'],
+            'machine_tickets' => $stats['machine_tickets'],
             'total_debit' => $totalDebit,
             'total_credit' => $totalCredit,
             'balance' => round($totalCredit - $totalDebit, 2),
@@ -263,9 +304,10 @@ class VehicleMonthlyReportService extends Service
                 $quantity = '';
 
                 if ($row['quantity'] !== null) {
-                    $quantity = $row['quantity_unit'] === 'lt'
-                        ? number_format($row['quantity'], 2, ',', '.').' lt'
-                        : (string) (int) $row['quantity'];
+                    $quantity = match ($row['quantity_unit']) {
+                        'lt', 'saat' => number_format($row['quantity'], 2, ',', '.').' '.$row['quantity_unit'],
+                        default => (string) (int) $row['quantity'],
+                    };
                 }
 
                 fputcsv($handle, [
@@ -297,6 +339,8 @@ class VehicleMonthlyReportService extends Service
                 (string) $report['trips'],
                 'Mazot',
                 number_format($report['fuel_liters'], 2, ',', '.').' / '.$report['fuel_receipts'].' / '.$report['fuel_haul_tickets'],
+                'Makine',
+                number_format($report['machine_hours'], 2, ',', '.').' saat / '.$report['machine_tickets'].' fiş',
             ], ';');
             fputcsv($handle, [
                 'Alacak',

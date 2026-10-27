@@ -4,6 +4,11 @@
             <span>Toplam borç <x-ui.money :value="$totals['debit']" /></span>
             <span>Toplam alacak <x-ui.money :value="$totals['credit']" /></span>
             <span>Bakiye <x-ui.balance :value="$totals['balance']" /></span>
+            @if ($hasReversals)
+                <a href="{{ request()->fullUrlWithQuery(['iptaller' => $withReversals ? null : 1, 'hareket' => null]) }}#cari-hareketleri">
+                    {{ $withReversals ? 'İptal edilen kayıtları gizle' : 'İptal edilen kayıtları göster' }}
+                </a>
+            @endif
         </div>
 
         @if ($entries->isNotEmpty())

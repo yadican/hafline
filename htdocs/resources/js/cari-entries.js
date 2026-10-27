@@ -90,6 +90,16 @@ function renderSummary(element, state, info) {
         line('Alacak', amount(info.credit), Number(info.credit) > 0.005 ? 'credit' : 'zero'),
         line('Bakiye', balanceText, balanceTone, true),
     );
+
+    if (info.plate_balance !== undefined) {
+        const plateBalance = Number(info.plate_balance);
+        const plateTone = tone(plateBalance);
+        const plateText = plateTone === 'debit'
+            ? `${amount(plateBalance)} borçlu`
+            : (plateTone === 'credit' ? `${amount(plateBalance)} alacaklı` : amount(plateBalance));
+
+        element.append(line(`${info.plate} plakasında`, plateText, plateTone));
+    }
 }
 
 // Seçilen firmanın cari borç, alacak ve bakiyesini formun altında gösterir.

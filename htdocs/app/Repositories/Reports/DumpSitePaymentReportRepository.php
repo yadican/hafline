@@ -5,7 +5,6 @@ namespace App\Repositories\Reports;
 use App\Models\DumpSite;
 use App\Models\DumpSitePayment;
 use App\Models\Haul;
-use App\Models\LedgerEntry;
 use App\Repositories\DumpSiteRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -87,45 +86,45 @@ class DumpSitePaymentReportRepository
     }
 
     /**
-     * Ledger opening for the dump operator party: credit (dump fees) − debit (payments).
+     * Dump fees (credit) and payments (debit) for this dump site before the period start.
      *
      * @return array{credit: float, debit: float, net: float}
      */
-    public function openingLedger(string $partyId, Carbon $from): array
+    public function openingTotals(string $dumpSiteId, Carbon $from): array
     {
-        return $this->ledgerTotals($partyId, null, $from);
+        return $this->totalsBefore($dumpSiteId, $from);
     }
 
     /**
-     * Ledger closing through end of period (exclusive upper bound).
+     * Dump fees and payments for this dump site through the end of the period (exclusive upper bound).
      *
      * @return array{credit: float, debit: float, net: float}
      */
-    public function closingLedger(string $partyId, Carbon $toExclusive): array
+    public function closingTotals(string $dumpSiteId, Carbon $toExclusive): array
     {
-        return $this->ledgerTotals($partyId, null, $toExclusive);
+        return $this->totalsBefore($dumpSiteId, $toExclusive);
     }
 
     /**
+     * Not read from the dump operator's ledger: one operator can own several dump sites.
+     *
      * @return array{credit: float, debit: float, net: float}
      */
-    private function ledgerTotals(string $partyId, ?Carbon $fromInclusive, Carbon $toExclusive): array
+    private function totalsBefore(string $dumpSiteId, Carbon $before): array
     {
-        $query = LedgerEntry::query()
-            ->where('party_id', $partyId)
-            ->where('occurred_on', '<', $toExclusive->toDateString());
-
-        if ($fromInclusive !== null) {
-            $query->where('occurred_on', '>=', $fromInclusive->toDateString());
-        }
-
-        $row = $query
+        $credit = round((float) Haul::query()
             ->toBase()
-            ->selectRaw('COALESCE(SUM(credit), 0) as credit_total, COALESCE(SUM(debit), 0) as debit_total')
-            ->first();
+            ->where('dump_site_id', $dumpSiteId)
+            ->where('hauled_at', '<', $before)
+            ->whereNull('deleted_at')
+            ->sum('dump_price'), 2);
 
-        $credit = round((float) ($row->credit_total ?? 0), 2);
-        $debit = round((float) ($row->debit_total ?? 0), 2);
+        $debit = round((float) DumpSitePayment::query()
+            ->toBase()
+            ->where('dump_site_id', $dumpSiteId)
+            ->where('occurred_on', '<', $before->toDateString())
+            ->whereNull('deleted_at')
+            ->sum('amount'), 2);
 
         return [
             'credit' => $credit,

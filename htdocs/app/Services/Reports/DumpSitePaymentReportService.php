@@ -111,8 +111,8 @@ class DumpSitePaymentReportService extends Service
             $totalPaymentAmount += $amount;
         }
 
-        $opening = $this->reports->openingLedger($dumpSite->party_id, $from);
-        $closing = $this->reports->closingLedger($dumpSite->party_id, $toExclusive);
+        $opening = $this->reports->openingTotals($dumpSite->id, $from);
+        $closing = $this->reports->closingTotals($dumpSite->id, $toExclusive);
 
         return [
             'title' => 'Döküm Yeri Ödeme Raporu',

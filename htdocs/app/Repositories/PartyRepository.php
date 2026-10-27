@@ -75,14 +75,17 @@ class PartyRepository extends Repository
     }
 
     /**
-     * Newest first; `running_balance` is the balance after each row, computed over the whole account.
+     * Newest first; `running_balance` is the balance after each row, computed over the listed rows.
+     * Cancelled postings and their reversals net to zero and are left out unless asked for, so the
+     * listed rows add up to the totals and to the reports.
      */
-    public function statement(Party $party, int $perPage = 25): LengthAwarePaginator
+    public function statement(Party $party, int $perPage = 25, bool $withReversals = false): LengthAwarePaginator
     {
         $rows = LedgerEntry::query()
             ->select('ledger_entries.*')
             ->selectRaw('SUM(debit - credit) OVER (ORDER BY occurred_on, created_at, id) AS running_balance')
-            ->where('party_id', $party->id);
+            ->where('party_id', $party->id)
+            ->unless($withReversals, fn (Builder $query) => $this->live($query));
 
         return LedgerEntry::query()
             ->fromSub($rows, 'ledger_entries')
@@ -99,8 +102,7 @@ class PartyRepository extends Repository
      */
     public function totals(Party $party): array
     {
-        $row = DB::table('ledger_entries')
-            ->where('party_id', $party->id)
+        $row = $this->live(LedgerEntry::query()->toBase()->where('party_id', $party->id))
             ->selectRaw('COALESCE(SUM(debit), 0) AS debit, COALESCE(SUM(credit), 0) AS credit')
             ->first();
 
@@ -163,6 +165,28 @@ class PartyRepository extends Repository
             || DB::table('machine_works')->where('operator_id', $party->id)->exists()
             || DB::table('fuel_receipts')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('fuel_party_id', $party->id))->exists()
             || DB::table('company_transactions')->where('party_id', $party->id)->exists();
+    }
+
+    public function hasReversals(Party $party): bool
+    {
+        return LedgerEntry::query()->where('party_id', $party->id)->whereNotNull('reversal_of')->exists();
+    }
+
+    /**
+     * Postings that are neither a reversal nor reversed.
+     *
+     * @template TQuery of Builder|QueryBuilder
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    private function live(Builder|QueryBuilder $query): Builder|QueryBuilder
+    {
+        return $query
+            ->whereNull('ledger_entries.reversal_of')
+            ->whereNotExists(fn (QueryBuilder $reversal) => $reversal
+                ->from('ledger_entries as reversals')
+                ->whereColumn('reversals.reversal_of', 'ledger_entries.id'));
     }
 
     protected function defaultSort(Builder $query): void

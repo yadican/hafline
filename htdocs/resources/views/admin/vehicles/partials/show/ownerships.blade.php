@@ -7,6 +7,7 @@
                         <th>Sahip</th>
                         <th>Başlangıç</th>
                         <th>Bitiş</th>
+                        <th>Devirde eski sahibin bakiyesi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -21,6 +22,16 @@
                             </td>
                             <td>{{ $ownership->started_on->format('d.m.Y') }}</td>
                             <td>{{ $ownership->ended_on?->format('d.m.Y') ?? 'Halen' }}</td>
+                            <td>
+                                @if ($ownership->carried_balance === null)
+                                    —
+                                @elseif ((float) $ownership->carried_balance === 0.0)
+                                    Hesaplaşıldı, aktarılan bakiye yok
+                                @else
+                                    {{ number_format(abs((float) $ownership->carried_balance), 2, ',', '.') }} TL
+                                    {{ (float) $ownership->carried_balance > 0 ? 'alacaklı' : 'borçlu' }} · yeni sahibe aktarıldı
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

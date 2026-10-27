@@ -43,8 +43,8 @@
                     <td>{{ $row['description'] }}</td>
                     <td class="is-end">
                         @if ($row['quantity'] !== null)
-                            @if ($row['quantity_unit'] === 'lt')
-                                {{ number_format($row['quantity'], 2, ',', '.') }} lt
+                            @if (in_array($row['quantity_unit'], ['lt', 'saat'], true))
+                                {{ number_format($row['quantity'], 2, ',', '.') }} {{ $row['quantity_unit'] }}
                             @else
                                 {{ (int) $row['quantity'] }}
                             @endif
@@ -111,6 +111,13 @@
                         / {{ $report['fuel_receipts'] }}
                         / {{ $report['fuel_haul_tickets'] }}
                     </span>
+                    @if ($report['machine_tickets'] > 0)
+                        <span class="report-footer-meta">
+                            Makine:
+                            {{ number_format($report['machine_hours'], 2, ',', '.') }} saat
+                            / {{ $report['machine_tickets'] }} fiş
+                        </span>
+                    @endif
                 </th>
                 <th colspan="3"></th>
             </tr>

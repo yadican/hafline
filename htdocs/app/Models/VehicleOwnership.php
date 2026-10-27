@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['vehicle_id', 'party_id', 'started_on', 'ended_on'])]
+#[Fillable(['vehicle_id', 'party_id', 'started_on', 'ended_on', 'carried_from_party_id', 'carried_balance'])]
 class VehicleOwnership extends Model
 {
     use HasUuids;
@@ -31,6 +31,14 @@ class VehicleOwnership extends Model
     }
 
     /**
+     * @return BelongsTo<Party, $this>
+     */
+    public function carriedFrom(): BelongsTo
+    {
+        return $this->belongsTo(Party::class, 'carried_from_party_id')->withTrashed();
+    }
+
+    /**
      * @param  Builder<self>  $query
      */
     public function scopeCovering(Builder $query, CarbonInterface $date): void
@@ -49,6 +57,7 @@ class VehicleOwnership extends Model
         return [
             'started_on' => 'date',
             'ended_on' => 'date',
+            'carried_balance' => 'decimal:2',
         ];
     }
 }

@@ -26,6 +26,7 @@ class FuelReceiptService extends Service
         private FuelStationRepository $stations,
         private HaulLookupRepository $lookups,
         private FuelReceiptLedger $ledger,
+        private VehicleOwnershipService $ownerships,
     ) {}
 
     /**
@@ -89,6 +90,8 @@ class FuelReceiptService extends Service
         $vehicle = $this->resolve($data);
 
         return $this->transaction(function () use ($data, $userId, $vehicle): FuelReceipt {
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['issued_on']));
+
             /** @var FuelReceipt $receipt */
             $receipt = $this->receipts->create([...$this->attributes($data, $vehicle), 'created_by' => $userId]);
             $this->ledger->sync($receipt);
@@ -105,8 +108,11 @@ class FuelReceiptService extends Service
         $vehicle = $this->resolve($data);
 
         return $this->transaction(function () use ($receipt, $data, $vehicle): FuelReceipt {
+            $this->ownerships->assertOpen($receipt->vehicle, $receipt->issued_on, $receipt->party_id);
+            $this->ownerships->assertOpen($vehicle, Carbon::parse($data['issued_on']));
+
             /** @var FuelReceipt $updated */
-            $updated = $this->receipts->update($receipt, $this->attributes($data, $vehicle));
+            $updated = $this->receipts->update($receipt, $this->attributes($data, $vehicle, $receipt));
             $this->ledger->sync($updated);
 
             return $updated;
@@ -116,6 +122,7 @@ class FuelReceiptService extends Service
     public function delete(FuelReceipt $receipt): void
     {
         $this->transaction(function () use ($receipt): void {
+            $this->ownerships->assertOpen($receipt->vehicle, $receipt->issued_on, $receipt->party_id);
             $this->ledger->void($receipt);
             $this->receipts->delete($receipt);
         });
@@ -131,17 +138,19 @@ class FuelReceiptService extends Service
     }
 
     /**
-     * A blank unit price falls back to the station's current price.
+     * A blank unit price falls back to the station's current price; an edit at the same station
+     * keeps the receipt's own price so a later tariff change does not reprice an old receipt.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function attributes(array $data, Vehicle $vehicle): array
+    private function attributes(array $data, Vehicle $vehicle, ?FuelReceipt $existing = null): array
     {
         $issuedOn = Carbon::parse($data['issued_on'])->startOfDay();
         $party = $this->ownerOn($vehicle, $issuedOn);
         $station = FuelStation::query()->find($data['fuel_station_id']);
-        $price = $data['unit_price'] ?? $station?->unit_price;
+        $keptPrice = $existing?->fuel_station_id === $station?->id ? $existing?->unit_price : null;
+        $price = $data['unit_price'] ?? $keptPrice ?? $station?->unit_price;
 
         if (! $party) {
             throw new OperationRejectedException(sprintf('%s aracının %s tarihinde kayıtlı sahibi yok.', $vehicle->plate, $issuedOn->format('d.m.Y')));

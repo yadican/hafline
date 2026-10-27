@@ -93,11 +93,13 @@ class HaulTest extends TestCase
     {
         $seller = $this->vehicle->currentOwnership->party;
         $buyer = Party::factory()->create();
-        $this->vehicle->currentOwnership->update(['ended_on' => now()->subDays(3)->toDateString()]);
-        $this->vehicle->ownerships()->create(['party_id' => $buyer->id, 'started_on' => now()->subDays(2)->toDateString()]);
 
         $this->actingAs($this->admin)
             ->post(route('admin.hauls.store'), $this->payload(['ticket_no' => 'OLD', 'hauled_at' => now()->subDays(5)->format('Y-m-d\TH:i')]));
+
+        $this->vehicle->currentOwnership->update(['ended_on' => now()->subDays(3)->toDateString()]);
+        $this->vehicle->ownerships()->create(['party_id' => $buyer->id, 'started_on' => now()->subDays(2)->toDateString()]);
+
         $this->actingAs($this->admin)
             ->post(route('admin.hauls.store'), $this->payload(['ticket_no' => 'NEW']));
 
