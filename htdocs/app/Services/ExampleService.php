@@ -15,7 +15,7 @@ class ExampleService extends Service
     /**
      * @param  array{q?: string, active?: string, shift?: string}  $filters
      */
-    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 10): LengthAwarePaginator
+    public function paginate(array $filters = [], ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         return $this->examples->search($filters, $sort, $perPage);
     }

@@ -17,7 +17,7 @@ class ExampleRepository extends Repository
     /**
      * @param  array{q?: string, active?: string, shift?: string}  $filters
      */
-    public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
             ->when($filters['q'] ?? null, function (Builder $query, string $term): void {

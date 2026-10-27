@@ -21,7 +21,7 @@ class HaulRouteRepository extends Repository
     /**
      * @param  array{site?: string, dump_site?: string, active?: string}  $filters
      */
-    public function search(array $filters, ?Sort $sort = null, int $perPage = 15): LengthAwarePaginator
+    public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
             ->with(['site', 'dumpSite', 'classPrices.vehicleClass'])
