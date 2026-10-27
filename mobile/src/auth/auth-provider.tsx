@@ -21,20 +21,25 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// In development the dev machine's address changes with the network; `npm run dev` passes the current one.
+const devServerUrl = __DEV__ && process.env.EXPO_PUBLIC_API_URL ? normalizeServerUrl(process.env.EXPO_PUBLIC_API_URL) : null;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({ status: 'loading' });
 
   useEffect(() => {
     readStoredSession()
-      .then(({ serverUrl, token, user }) => {
+      .then(({ serverUrl: storedServerUrl, token, user }) => {
+        const serverUrl = devServerUrl ?? storedServerUrl;
+
         if (serverUrl && token && user) {
           setState({ status: 'signedIn', serverUrl, token, user });
         } else {
           setState({ status: 'signedOut', serverUrl });
         }
       })
-      .catch(() => setState({ status: 'signedOut', serverUrl: null }));
+      .catch(() => setState({ status: 'signedOut', serverUrl: devServerUrl }));
   }, []);
 
   const value = useMemo<AuthContextValue>(() => {

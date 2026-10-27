@@ -2,6 +2,8 @@
 
 Bu dosya, mobil uygulamayı geliştirip test etmek için gereken servisleri ayağa kaldırmayı ve tek seferlik kurulumları anlatır. Hedef makine: **Windows 11 + WSL2 (Ubuntu 24.04) + Docker Desktop**. Mac farkları en sondadır.
 
+Günlük çalıştırma ve saha demosu için kısa yol: [run.md](run.md).
+
 ---
 
 ## 1. Parçalar ve portlar
@@ -13,7 +15,7 @@ Bu dosya, mobil uygulamayı geliştirip test etmek için gereken servisleri aya�
 | Metro (Expo geliştirme sunucusu) | WSL, `mobile/` | `exp://192.168.1.200:8081` | Uygulama kodunu Expo Go'ya canlı yükler |
 | Android emülatörü | Windows, Android Studio | `emulator-5554` | Telefon taşımadan test |
 
-`192.168.1.200` bu bilgisayarın Wi-Fi adresidir. Adres değişirse bölüm 7'deki "IP değişti" satırına bak.
+`192.168.1.200` örnek adrestir. Gerçek adres `npm run dev` başlarken bulunur ve terminale yazılır (`mobile/.env.local` > `DEV_HOST_IP=auto`). Bu dosyadaki komutlarda kendi adresinle değiştir.
 
 ---
 
@@ -54,13 +56,18 @@ WSL terminalinde:
 
 ```bash
 cd /home/dev/PROJECT/hafline/mobile
-export EXPO_TOKEN="$(tr -d '[:space:]' < ~/.expo-token)"
-export REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.200
-npx expo start --go --lan --port 8081
+npm run dev
 ```
 
-- `REACT_NATIVE_PACKAGER_HOSTNAME`: Metro WSL içinde çalıştığı için kendi adresini yanlış (WSL iç adresi) bulur; telefona bilgisayarın Wi-Fi adresini vermesi için gerekir.
-- `EXPO_TOKEN`: iPhone'daki Expo Go imzalı proje ister; anahtar olmadan "You need to be signed in" hatası çıkar. Android için şart değil.
+Terminale telefonda açılacak `Expo Go` adresini ve girişte kullanılacak `Server (app)` adresini yazar. Ayarlar, ağ değişimi ve demo senaryoları: [run.md](run.md).
+
+`npm run dev` (`scripts/dev-start.sh`) şunları yapar:
+
+- `.env.local`'ı okur. `DEV_HOST_IP=auto` ise bilgisayarın o anki ağ adresini bulur.
+- `REACT_NATIVE_PACKAGER_HOSTNAME`: Metro WSL içinde çalıştığı için kendi adresini yanlış (WSL iç adresi) bulur; telefona bilgisayarın ağ adresini vermesi için bu adresle başlatılır.
+- `EXPO_PUBLIC_API_URL`: giriş ekranındaki sunucu adresi, `http://DEV_HOST_IP:API_PORT` (veya `API_URL`).
+- `EXPO_TOKEN`: `~/.expo-token` varsa yükler. iPhone'daki Expo Go imzalı proje ister; anahtar olmadan "You need to be signed in" hatası çıkar. Android için şart değil.
+- Windows ağ ayarı bu ağ için hazır değilse `scripts/dev-network.ps1`'i çalıştırır (bölüm 3.4). **Windows yönetici onayı ister**; yeni bir ağda bir kez gerekir.
 
 Kontrol (Windows'tan):
 
@@ -119,10 +126,9 @@ cd /home/dev/PROJECT/hafline/mobile && npm install
 
 ```bash
 cp mobile/.env.example mobile/.env.local
-# EXPO_PUBLIC_API_URL=http://192.168.1.200:8010
 ```
 
-`.env.local` git'e girmez. Giriş ekranındaki sunucu adresini önceden doldurur.
+`.env.local` git'e girmez. Alanların açıklaması: [run.md](run.md) bölüm 1. Varsayılanlarla (`DEV_HOST_IP=auto`) değiştirmeden çalışır.
 
 ### 3.3 Expo hesabı ve anahtarı
 
@@ -142,22 +148,19 @@ cp mobile/.env.example mobile/.env.local
 
 ### 3.4 Telefonların bilgisayara ulaşması (ağ)
 
-WSL varsayılan (NAT) ağ modunda çalışır; telefon WSL'deki Metro'ya doğrudan ulaşamaz. Çözüm Windows port yönlendirmesi. **Yönetici PowerShell**'de:
+WSL varsayılan (NAT) ağ modunda çalışır; telefon WSL'deki Metro'ya doğrudan ulaşamaz. Çözüm Windows port yönlendirmesi. Bunu `scripts/dev-network.ps1` yapar. Adresi `.env.local`'dan okur (`auto` ise internete çıkan bağlantının adresi), yönetici onayını kendisi ister:
+
+- Adresin bağlı olduğu ağı "Özel" yapar.
+- `Hafline-API-8010` ve `Hafline-Metro-8081` güvenlik duvarı kurallarını açar (sadece yerel alt ağ, `LocalSubnet`; ağ değişince kural güncellemek gerekmez).
+- `DEV_HOST_IP:METRO_PORT -> ::1:METRO_PORT` port yönlendirmesini ekler. Eski ağların yönlendirmeleri kalır, o ağa dönünce tekrar onay gerekmez.
+
+`npm run dev` gerektiğinde bunu kendisi çağırır. Elle çalıştırmak için (Windows PowerShell):
 
 ```powershell
-# Wi-Fi ağı "Özel" olmalı (ev ağı). Ağ adı farklıysa Get-NetConnectionProfile ile bak.
-Set-NetConnectionProfile -Name 'home_wifi' -NetworkCategory Private
-
-# API (Docker Desktop zaten Windows'ta dinler, sadece güvenlik duvarı izni)
-New-NetFirewallRule -Name 'Hafline-API-8010' -DisplayName 'Hafline API (8010)' `
-  -Direction Inbound -Protocol TCP -LocalPort 8010 -Action Allow -Profile Private -RemoteAddress 192.168.1.0/24
-
-# Metro: güvenlik duvarı + port yönlendirme
-New-NetFirewallRule -Name 'Hafline-Metro-8081' -DisplayName 'Hafline Expo Metro (8081)' `
-  -Direction Inbound -Protocol TCP -LocalPort 8081 -Action Allow -Profile Private -RemoteAddress 192.168.1.0/24
-netsh interface portproxy add v4tov6 listenaddress=192.168.1.200 listenport=8081 connectaddress=::1 connectport=8081
+powershell -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu-24.04\home\dev\PROJECT\hafline\mobile\scripts\dev-network.ps1
 ```
 
+- `DEV_HOST_IP` bu bilgisayarın adreslerinden biri değilse betik değişiklik yapmadan durur ve mevcut adresleri listeler.
 - **v4tov6 ve `::1`**: WSL'in Windows'a açtığı köprü (`wslrelay`) Metro'yu IPv6 `::1` üzerinde dinler. `127.0.0.1`'e yönlendirme bağlantıyı koparır.
 - Kontrol: `netsh interface portproxy show all`
 - **WSL `networkingMode=mirrored` KULLANMA.** Docker Desktop ile uyumsuz; WSL entegrasyonu kopar, bind mount'lar boş gelir.
@@ -274,7 +277,8 @@ npx eas-cli@latest build -p android --profile preview --non-interactive
 | iPhone Expo Go: "There was a problem running the requested project. You're signed in to Expo Go as "yagotak", but not signed in to Expo CLI" | Metro'yu çalıştıran Expo CLI'da oturum yok (`npx expo whoami` > "Not logged in") ve `EXPO_TOKEN` verilmemiş | WSL'de `npx expo login --no-browser` (bölüm 3.3). Sonra Metro'yu durdurup (Ctrl + C) bölüm 2.3'teki gibi yeniden başlat, telefonda **Try again**. |
 | Expo Go: "Could not connect to development server" | Metro kapanmış (terminal kapatıldı / süreç öldü) | Windows'tan `curl.exe http://192.168.1.200:8081/status` cevap vermiyorsa Metro'yu bölüm 2.3'teki gibi yeniden başlat, telefonda **Reload**. |
 | Telefon Metro'ya bağlanamıyor | Port yönlendirme yok / yanlış | `netsh interface portproxy show all` > `192.168.1.200:8081 -> ::1:8081` olmalı |
-| IP değişti (`192.168.1.200` değil) | Modem yeni adres verdi | Port yönlendirmeyi yeni adresle yeniden ekle, `.env.local` ve `eas.json` içindeki adresi güncelle. Kalıcı çözüm: modemde bu bilgisayara IP rezervasyonu. |
+| IP değişti / ağ değişti | Modem yeni adres verdi veya başka Wi-Fi'ye bağlanıldı | Metro'yu durdurup (`Ctrl + C`) `npm run dev`; yeni adresi bulur ve Windows ağ ayarını gerekirse yapar. Expo Go'da uygulamayı yeniden aç; geliştirme modunda kayıtlı sunucu adresi yerine `npm run dev`'in verdiği adres kullanılır (`src/auth/auth-provider.tsx`). APK'da çıkış yapıp yeni adresle gir. APK derlenecekse `eas.json` içindeki adresi de güncelle. |
+| iPhone hotspot'una bağlıyken aynı iPhone'daki Expo Go bağlanamıyor | iOS, hotspot paylaşan telefondan ona bağlı bilgisayara bağlantıya bazen izin vermiyor | Telefonun Safari'sinde `http://DEV_HOST_IP:8081/status` dene. Açılmıyorsa bilgisayarı ve telefonu aynı normal Wi-Fi'ye bağla veya Expo Go'yu hotspot'a bağlanan ikinci bir cihazda aç. Ayrıca iPhone > Ayarlar > Gizlilik > Yerel Ağ > Expo Go açık olmalı. |
 | `/up` 404 "File not found" | Docker, WSL entegrasyonu hazır olmadan container başlattı; proje klasörü boş bağlandı | `docker compose restart app scheduler` (gerekirse `web db_backup` de) |
 | WSL'de `docker` bulunamıyor, `/var/run/docker.sock` yok | Docker Desktop'ta Ubuntu entegrasyonu kapandı | Docker Desktop > Settings > Resources > WSL Integration > Ubuntu-24.04 aç, Apply. Ayar dosyasını (`%APPDATA%\Docker\settings-store.json`) PowerShell `Set-Content` ile **düzenleme**: BOM ekler, Docker tüm ayarları sıfırlar (veri klasörü `D:\Docker-Containers\DockerDesktopWSL` dahil). |
 | `wsl --shutdown` sonrası Docker bozuldu | Docker Desktop açıkken WSL kapatıldı | Önce `docker desktop stop`, sonra `wsl --shutdown`, sonra `docker desktop start` |
@@ -291,7 +295,7 @@ npx eas-cli@latest build -p android --profile preview --non-interactive
 
 - Port yönlendirme, güvenlik duvarı kuralları ve `REACT_NATIVE_PACKAGER_HOSTNAME` gerekmez; `npx expo start` ağ adresini kendisi bulur ve terminalde QR gösterir.
 - `npx expo login` tarayıcıyla sorunsuz çalışır; `~/.expo-token` gerekmez.
-- `mobile/.env.local` içindeki adresi Mac'in adresiyle değiştir: `ipconfig getifaddr en0`
+- Metro'yu Windows'takiyle aynı şekilde başlat: `cd mobile && npm run dev`. `DEV_HOST_IP=auto` Mac'in adresini kendisi bulur; port yönlendirme kısmı Mac'te atlanır.
 - iOS Simülatörü: Xcode kuruluysa Metro terminalinde `i`. Android emülatörü: `a`.
 - Kafka/RabbitMQ compose'tan çıkarıldı; ilk açılışta `docker compose up -d --remove-orphans` ve `data/kafka`, `data/rabbitmq` klasörlerini sil.
 - OCR için `D:\PROJECT\Read-Plate\README.md` > macOS bölümü (`PLATFORM=mac`).
