@@ -22,4 +22,12 @@ class Company extends Model
     {
         return $this->belongsTo(Party::class)->withTrashed();
     }
+
+    /**
+     * @return BelongsTo<CompanyGroup, $this>
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(CompanyGroup::class, 'company_group_id')->withTrashed();
+    }
 }

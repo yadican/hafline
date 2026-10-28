@@ -25,12 +25,14 @@ class PartyRepository extends Repository
     /**
      * Every word must match somewhere, so "ali yılmaz" finds the party across name and contact fields.
      *
-     * @param  array{q?: string, type?: string, role?: string, side?: string, active?: string}  $filters
+     * @param  array{q?: string, type?: string, role?: string, side?: string, tag?: string, group?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
-            ->with(['roleAssignments', 'person', 'company'])
+            ->with(['roleAssignments', 'person', 'company', 'tags'])
+            ->when($filters['tag'] ?? null, fn (Builder $query, string $tag) => $query->whereHas('tags', fn (Builder $query) => $query->whereKey($tag)))
+            ->when($filters['group'] ?? null, fn (Builder $query, string $group) => $query->whereHas('company', fn (Builder $query) => $query->where('company_group_id', $group)))
             ->withCount(['ownerships as vehicles_count' => fn (Builder $query) => $query->whereNull('ended_on')])
             ->addSelect(['balance' => $this->balanceQuery()])
             ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))

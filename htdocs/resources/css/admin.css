@@ -1076,6 +1076,38 @@ input.panel-plate::placeholder {
     font-size: 14px;
 }
 
+.panel-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 9px;
+    border: 1px solid var(--ui-border);
+    border-radius: 999px;
+    color: var(--ui-muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+}
+
+.panel-tag-green {
+    border-color: #6aa77a;
+    color: #3d6340;
+}
+
+.panel-tag-red {
+    border-color: #c46a6a;
+    color: var(--ui-danger);
+}
+
+.panel-tag-blue {
+    border-color: #6a9fd0;
+    color: var(--ui-edit-dark);
+}
+
+.panel-tag-orange {
+    border-color: var(--ui-brand-line);
+    color: var(--ui-ochre-dark);
+}
+
 .panel-ledger-modules {
     display: flex;
     flex-wrap: wrap;

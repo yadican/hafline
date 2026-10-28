@@ -8,7 +8,9 @@ use App\Enums\PartyType;
 use App\Http\Requests\Admin\PartyRequest;
 use App\Http\Requests\Admin\PartySearchRequest;
 use App\Models\Party;
+use App\Services\CompanyGroupService;
 use App\Services\PartyService;
+use App\Services\TagService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +19,11 @@ class PartyController extends AdminController
 {
     protected ?string $permissionResource = 'party';
 
-    public function __construct(private PartyService $parties) {}
+    public function __construct(
+        private PartyService $parties,
+        private TagService $tags,
+        private CompanyGroupService $groups,
+    ) {}
 
     public function index(PartySearchRequest $request, string $type): View
     {
@@ -29,6 +35,8 @@ class PartyController extends AdminController
             'type' => $type,
             'parties' => $this->parties->paginate([...$filters, 'type' => $type->value], $request->sort()),
             'filters' => $filters,
+            'tags' => $this->tags->options(array_filter([$filters['tag'] ?? null])),
+            'groups' => $type === PartyType::Company ? $this->groups->options($filters['group'] ?? null) : [],
         ]);
     }
 
@@ -43,6 +51,8 @@ class PartyController extends AdminController
             'type' => $type,
             'values' => ['roles' => $prefilled],
             'locations' => $this->parties->locationOptions(old('city_id'), old('district_id')),
+            'tags' => $this->tags->options(),
+            'groups' => $this->groups->options(),
         ]);
     }
 
@@ -92,6 +102,8 @@ class PartyController extends AdminController
                 old('district_id', $values['district_id']),
             ),
             'lockedRoles' => $this->parties->lockedRoles($party),
+            'tags' => $this->tags->options($values['tag_ids']),
+            'groups' => $this->groups->options($values['company_group_id'] ?? null),
             ...$this->statementData($request, $party),
         ]);
     }

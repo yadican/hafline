@@ -40,18 +40,20 @@ class PartySearchRequest extends FormRequest
             'q' => ['nullable', 'string', 'max:100'],
             'role' => ['nullable', Rule::in($allowedRoles)],
             'side' => ['nullable', Rule::enum(PartySide::class)],
+            'tag' => ['nullable', 'uuid'],
+            'group' => [Rule::excludeIf($type !== PartyType::Company), 'nullable', 'uuid'],
             'active' => ['nullable', Rule::in(['1', '0'])],
             ...$this->sortRules(),
         ];
     }
 
     /**
-     * @return array{q?: string, role?: string, side?: string, active?: string}
+     * @return array{q?: string, role?: string, side?: string, tag?: string, group?: string, active?: string}
      */
     public function filters(): array
     {
         return array_filter(
-            $this->safe()->only(['q', 'role', 'side', 'active']),
+            $this->safe()->only(['q', 'role', 'side', 'tag', 'group', 'active']),
             fn ($value) => $value !== null && $value !== '',
         );
     }
