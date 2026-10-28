@@ -5,8 +5,8 @@ namespace App\Services\Ledger;
 use App\Models\Shipment;
 
 /**
- * A shipment debits the customer (sale + VAT − withholding) and credits the carrier on the plate,
- * the quarry firm when we sold the material, and the commission agent.
+ * A shipment debits the customer (sale + VAT − withholding) and credits the carrier on the plate
+ * (base + VAT − withholding), the quarry firm when we sold the material, and the commission agent.
  */
 class ShipmentLedger
 {
@@ -29,7 +29,7 @@ class ShipmentLedger
 
         $lines = [
             LedgerLine::debit($shipment->customer_party_id, $shipment->shipped_on, $shipment->customer_amount, $withPlate),
-            LedgerLine::credit($shipment->party_id, $shipment->shipped_on, $shipment->carrier_amount, $description, $shipment->vehicle_id),
+            LedgerLine::credit($shipment->party_id, $shipment->shipped_on, $shipment->carrier_net_amount, $description, $shipment->vehicle_id),
         ];
 
         if ($shipment->quarry_party_id) {

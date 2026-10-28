@@ -16,41 +16,48 @@ function round2(value) {
 function bindShipment(form) {
     const field = (name) => form.querySelector(`[name="${name}"]`);
     const prices = [...form.querySelectorAll('[data-shipment-price]')];
+    const kg = form.querySelector('[data-shipment-kg]');
     const quantity = form.querySelector('[data-shipment-quantity]');
-    const vat = form.querySelector('[data-shipment-vat]');
-    const withholding = form.querySelector('[data-shipment-withholding]');
     const commission = form.querySelector('[data-shipment-commission]');
     const total = form.querySelector('[data-shipment-total]');
+    const carrierTotal = form.querySelector('[data-shipment-carrier-total]');
+    const customerTotal = form.querySelector('[data-shipment-customer-total]');
 
-    if (! quantity || ! total || ! form.dataset.pricesUrl) {
+    if (! kg || ! quantity || ! total || ! carrierTotal || ! customerTotal || ! form.dataset.pricesUrl) {
         return;
     }
 
     const kind = () => form.querySelector('[name="kind"]:checked')?.value ?? 'material_sale';
     const price = (key) => parseNumber(prices.find((input) => input.dataset.shipmentPrice === key)?.value);
+    const rate = (name) => parseNumber(field(name)?.value);
+    // Tonluk malzemede miktar kantardaki net kg'dan, m³'lük malzemede doğrudan girilir.
+    const amount = () => (kg.offsetParent !== null ? parseNumber(kg.value) / 1000 : parseNumber(quantity.value));
+    const taxed = (base, vatName, withholdingName) => {
+        const tax = round2(base * rate(vatName) / 100);
+
+        return base + tax - round2(tax * rate(withholdingName));
+    };
     let request = 0;
 
     const renderTotal = () => {
-        const amount = parseNumber(quantity.value);
+        const units = amount();
 
-        if (amount <= 0) {
-            setStatus(total, 'idle', 'Miktar ve fiyatlar girilince cari tutarları hesaplanır');
+        if (units <= 0) {
+            setStatus(carrierTotal, 'idle', 'Nakliyeci net toplamı hesaplanır');
+            setStatus(customerTotal, 'idle', 'Müşteri net toplamı hesaplanır');
+            setStatus(total, 'idle', 'Sefer kârı hesaplanır');
 
             return;
         }
 
-        const sale = round2(amount * price('sale_price'));
-        const tax = round2(sale * parseNumber(vat?.value) / 100);
-        const withheld = round2(tax * parseNumber(withholding?.value));
-        const carrier = round2(amount * price('carrier_price'));
-        const quarry = kind() === 'material_sale' ? round2(amount * price('quarry_price')) : 0;
+        const sale = round2(units * price('sale_price'));
+        const carrier = round2(units * price('carrier_price'));
+        const quarry = kind() === 'material_sale' ? round2(units * price('quarry_price')) : 0;
         const fee = parseNumber(commission?.value);
-        const profit = sale - carrier - quarry - fee;
 
-        setStatus(total, 'ok', `Müşteri ${money.format(sale + tax - withheld)} TL borç · nakliyeci ${money.format(carrier)} TL`
-            + (quarry ? ` · ocak ${money.format(quarry)} TL` : '')
-            + (fee ? ` · komisyon ${money.format(fee)} TL` : '')
-            + ` · kâr ${money.format(profit)} TL`);
+        setStatus(carrierTotal, 'ok', `Matrah ${money.format(carrier)} TL · nakliyeci net ${money.format(taxed(carrier, 'carrier_vat_rate', 'carrier_withholding_rate'))} TL alacak`);
+        setStatus(customerTotal, 'ok', `Matrah ${money.format(sale)} TL · müşteri net ${money.format(taxed(sale, 'vat_rate', 'withholding_rate'))} TL borç`);
+        setStatus(total, 'ok', (quarry ? `Ocak ${money.format(quarry)} TL · ` : '') + `Sefer kârı (KDV hariç) ${money.format(sale - carrier - quarry - fee)} TL`);
     };
 
     const refresh = async () => {
@@ -83,8 +90,9 @@ function bindShipment(form) {
 
     form.querySelectorAll('[data-shipment-price-key]').forEach((input) => input.addEventListener('change', refresh));
     form.querySelectorAll('[name="kind"]').forEach((input) => input.addEventListener('change', refresh));
-    [quantity, vat, withholding, commission, ...prices].forEach((input) => input?.addEventListener('input', renderTotal));
-    [vat, withholding].forEach((input) => input?.addEventListener('change', renderTotal));
+    [kg, quantity, commission, ...prices].forEach((input) => input?.addEventListener('input', renderTotal));
+    form.querySelectorAll('[data-shipment-tax]').forEach((input) => input.addEventListener('change', renderTotal));
+    field('material_id')?.addEventListener('change', () => window.setTimeout(renderTotal));
 
     if (form.hasAttribute('data-keep-price')) {
         renderTotal();

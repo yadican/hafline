@@ -52,11 +52,19 @@ class ShipmentTest extends TestCase
         $agent = Party::factory()->withRole(PartyRole::Commission)->create();
 
         $this->actingAs($this->admin)
-            ->post(route('admin.shipments.store'), $this->payload(['commission_party_id' => $agent->id, 'commission_amount' => '500']))
+            ->post(route('admin.shipments.store'), $this->payload([
+                'commission_party_id' => $agent->id,
+                'commission_amount' => '500',
+                'carrier_vat_rate' => '20',
+                'carrier_withholding_rate' => '0.20',
+            ]))
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('admin.shipments.index'));
 
         $shipment = Shipment::query()->sole();
+        $this->assertSame(25000, $shipment->net_kg);
+        $this->assertSame('25.000', $shipment->quantity);
+        $this->assertSame('5800.00', $shipment->carrier_net_amount);
         $this->assertSame($this->carrier->id, $shipment->party_id);
         $this->assertSame($this->address->party_id, $shipment->customer_party_id);
         $this->assertSame('650.0000', $shipment->sale_price);
@@ -65,7 +73,7 @@ class ShipmentTest extends TestCase
         $this->assertSame(3250.0, $shipment->profit());
 
         $this->assertSame(18850.0, $this->balance($this->address->party));
-        $this->assertSame(-5000.0, $this->balance($this->carrier));
+        $this->assertSame(-5800.0, $this->balance($this->carrier));
         $this->assertSame(-7500.0, $this->balance($this->quarry->party));
         $this->assertSame(-500.0, $this->balance($agent));
         $this->assertSame(['transport'], LedgerEntry::query()->where('source_type', 'shipment')->distinct()->pluck('module')->map->value->all());
@@ -105,6 +113,15 @@ class ShipmentTest extends TestCase
             ]))
             ->assertOk()
             ->assertJson(['sale_price' => '600.0000', 'carrier_price' => '200.0000', 'quarry_price' => '300.0000']);
+    }
+
+    public function test_weighed_material_needs_its_net_kg(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.shipments.store'), $this->payload(['net_kg' => '', 'quantity' => '25']))
+            ->assertSessionHasErrors('net_kg');
+
+        $this->assertSame(0, Shipment::query()->count());
     }
 
     public function test_a_material_sale_needs_a_quarry_with_a_cari(): void
@@ -198,7 +215,7 @@ class ShipmentTest extends TestCase
             'quarry_id' => $this->quarry->id,
             'material_id' => $this->sand->id,
             'delivery_address_id' => $this->address->id,
-            'quantity' => '25',
+            'net_kg' => '25.000',
             'sale_price' => '',
             'carrier_price' => '',
             'quarry_price' => '',

@@ -34,7 +34,14 @@
                 <x-form.field label="Ocak / yükleme yeri"><div>{{ $shipment->quarry?->name }}</div></x-form.field>
                 <x-form.field label="Sevk yeri"><div>{{ $shipment->deliveryAddress?->name }}</div></x-form.field>
                 <x-form.field label="Müşteri"><div>{{ $shipment->customer?->name }}</div></x-form.field>
-                <x-form.field label="Malzeme"><div>{{ \App\Models\Shipment::formatQuantity($shipment->quantity) }} {{ $unit }} {{ $shipment->material?->name }}</div></x-form.field>
+                <x-form.field label="Malzeme">
+                    <div>
+                        {{ \App\Models\Shipment::formatQuantity($shipment->quantity) }} {{ $unit }} {{ $shipment->material?->name }}
+                        @if ($shipment->net_kg)
+                            · net {{ number_format($shipment->net_kg, 0, ',', '.') }} kg
+                        @endif
+                    </div>
+                </x-form.field>
             </x-form.group>
 
             <x-form.group legend="Cariye yazılanlar" icon="fa-solid fa-scale-balanced" description="Borç ve alacaklar ile sefer kârı (KDV hariç)">
@@ -45,9 +52,13 @@
                     <div>%{{ (int) $shipment->vat_rate }} · {{ $money($shipment->vat_amount) }} / {{ \App\Enums\Withholding::tryFrom((string) $shipment->withholding_rate)?->label() }} · {{ $money($shipment->withholding_amount) }}</div>
                 </x-form.field>
                 <x-form.field label="Müşteriye borç"><div><strong>{{ $money($shipment->customer_amount) }}</strong> · {{ $shipment->customer?->name }}</div></x-form.field>
-                <x-form.field label="Nakliyeciye alacak">
+                <x-form.field label="Nakliye matrahı">
                     <div>{{ number_format((float) $shipment->carrier_price, 4, ',', '.') }} TL/{{ $unit }} · {{ $money($shipment->carrier_amount) }}</div>
                 </x-form.field>
+                <x-form.field label="Nakliyeci KDV / tevkifat">
+                    <div>%{{ (int) $shipment->carrier_vat_rate }} · {{ $money($shipment->carrier_vat_amount) }} / {{ \App\Enums\Withholding::tryFrom((string) $shipment->carrier_withholding_rate)?->label() }} · {{ $money($shipment->carrier_withholding_amount) }}</div>
+                </x-form.field>
+                <x-form.field label="Nakliyeciye alacak"><div><strong>{{ $money($shipment->carrier_net_amount) }}</strong> · {{ $shipment->party?->name }}</div></x-form.field>
                 @if ($shipment->quarry_party_id)
                     <x-form.field label="Ocağa alacak">
                         <div>{{ number_format((float) $shipment->quarry_price, 4, ',', '.') }} TL/{{ $unit }} · {{ $money($shipment->quarry_amount) }} · {{ $shipment->quarryParty?->name }}</div>

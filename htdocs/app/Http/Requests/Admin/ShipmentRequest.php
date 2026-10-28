@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\MaterialUnit;
 use App\Enums\PartyRole;
 use App\Enums\ShipmentKind;
 use App\Enums\Withholding;
@@ -28,10 +29,14 @@ class ShipmentRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $text = fn (string $key): ?string => trim((string) $this->input($key)) ?: null;
+        $kg = preg_replace('/\D/', '', (string) $this->input('net_kg'));
 
         $this->merge([
             'plate' => mb_strtoupper((string) $this->input('plate'), 'UTF-8'),
+            'net_kg' => $kg === '' ? null : $kg,
             'quantity' => $this->decimal('quantity'),
+            'carrier_vat_rate' => (string) ($this->input('carrier_vat_rate') ?? '0'),
+            'carrier_withholding_rate' => (string) ($this->input('carrier_withholding_rate') ?: Withholding::None->value),
             'sale_price' => $this->decimal('sale_price'),
             'carrier_price' => $this->decimal('carrier_price'),
             'quarry_price' => $this->input('kind') === ShipmentKind::MaterialSale->value ? $this->decimal('quarry_price') : null,
@@ -66,7 +71,10 @@ class ShipmentRequest extends FormRequest
             'quarry_id' => ['required', 'uuid', $activeOr(Quarry::class, $current?->quarry_id)],
             'material_id' => ['required', 'uuid', $activeOr(Material::class, $current?->material_id)],
             'delivery_address_id' => ['required', 'uuid', $activeOr(DeliveryAddress::class, $current?->delivery_address_id)],
-            'quantity' => ['required', 'numeric', 'decimal:0,3', 'gt:0', 'max:9999'],
+            'net_kg' => ['nullable', 'integer', 'min:1', 'max:9999999'],
+            'quantity' => ['nullable', 'numeric', 'decimal:0,3', 'gt:0', 'max:9999'],
+            'carrier_vat_rate' => ['required', Rule::in(array_keys(Shipment::VAT_RATES))],
+            'carrier_withholding_rate' => ['required', Rule::enum(Withholding::class)],
             'sale_price' => ['nullable', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
             'carrier_price' => ['nullable', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
             'quarry_price' => ['nullable', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
@@ -99,6 +107,16 @@ class ShipmentRequest extends FormRequest
                     $validator->errors()->add('plate', sprintf('Bu aracın %s tarihinde kayıtlı sahibi yok.', $date->format('d.m.Y')));
                 }
 
+                $unit = Material::withTrashed()->find($this->input('material_id'))?->unit;
+
+                if ($unit === MaterialUnit::Ton && ! $this->input('net_kg')) {
+                    $validator->errors()->add('net_kg', 'Net miktarı kg olarak girin.');
+                }
+
+                if ($unit === MaterialUnit::CubicMetre && ! $this->input('quantity')) {
+                    $validator->errors()->add('quantity', 'Miktarı m³ olarak girin.');
+                }
+
                 if ($this->input('kind') === ShipmentKind::MaterialSale->value && ! Quarry::query()->whereKey($this->input('quarry_id'))->whereNotNull('party_id')->exists()) {
                     $validator->errors()->add('quarry_id', 'Malzeme satışlı seferde ocağın carisi olmalı; ocak kartından cari seçin.');
                 }
@@ -124,7 +142,10 @@ class ShipmentRequest extends FormRequest
             'quarry_id' => 'ocak / yükleme yeri',
             'material_id' => 'malzeme',
             'delivery_address_id' => 'sevk yeri',
+            'net_kg' => 'net miktar (kg)',
             'quantity' => 'miktar',
+            'carrier_vat_rate' => 'nakliyeci KDV oranı',
+            'carrier_withholding_rate' => 'nakliyeci tevkifatı',
             'sale_price' => 'müşteri birim fiyatı',
             'carrier_price' => 'nakliyeci birim fiyatı',
             'quarry_price' => 'ocak alış fiyatı',

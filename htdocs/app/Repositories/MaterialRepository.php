@@ -46,6 +46,18 @@ class MaterialRepository extends Repository
             ->all();
     }
 
+    /**
+     * Unit of every material, so the shipment form asks for net kg or m³.
+     *
+     * @return array<string, string>
+     */
+    public function units(): array
+    {
+        return $this->query()->withTrashed()->get(['id', 'unit'])
+            ->mapWithKeys(fn (Material $material): array => [$material->id => $material->unit->value])
+            ->all();
+    }
+
     protected function defaultSort(Builder $query): void
     {
         $query->orderBy('name');

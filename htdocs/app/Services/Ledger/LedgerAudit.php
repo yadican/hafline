@@ -29,7 +29,7 @@ class LedgerAudit
         union all select 'fuel_receipt', cast(id as text), cast(fuel_party_id as text), substr(cast(issued_on as text), 1, 10), 0, purchase_amount from fuel_receipts where deleted_at is null and fuel_party_id is not null and purchase_amount <> 0
         union all select 'fuel_tank_fill', cast(id as text), cast(party_id as text), substr(cast(filled_on as text), 1, 10), 0, amount from fuel_tank_fills where deleted_at is null
         union all select 'shipment', cast(id as text), cast(customer_party_id as text), substr(cast(shipped_on as text), 1, 10), customer_amount, 0 from shipments where deleted_at is null and customer_amount <> 0
-        union all select 'shipment', cast(id as text), cast(party_id as text), substr(cast(shipped_on as text), 1, 10), 0, carrier_amount from shipments where deleted_at is null and carrier_amount <> 0
+        union all select 'shipment', cast(id as text), cast(party_id as text), substr(cast(shipped_on as text), 1, 10), 0, carrier_net_amount from shipments where deleted_at is null and carrier_net_amount <> 0
         union all select 'shipment', cast(id as text), cast(quarry_party_id as text), substr(cast(shipped_on as text), 1, 10), 0, quarry_amount from shipments where deleted_at is null and quarry_party_id is not null and quarry_amount <> 0
         union all select 'shipment', cast(id as text), cast(commission_party_id as text), substr(cast(shipped_on as text), 1, 10), 0, commission_amount from shipments where deleted_at is null and commission_party_id is not null and commission_amount <> 0
         union all select 'machine_work', cast(id as text), cast(party_id as text), substr(cast(worked_on as text), 1, 10), 0, amount from machine_works where deleted_at is null and amount <> 0

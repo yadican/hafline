@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\MaterialUnit;
 use App\Enums\PartyRole;
 use App\Enums\ShipmentKind;
 use App\Enums\Withholding;
 use App\Exceptions\OperationRejectedException;
 use App\Models\DeliveryAddress;
+use App\Models\Material;
 use App\Models\Quarry;
 use App\Models\Shipment;
 use App\Models\Vehicle;
@@ -74,6 +76,7 @@ class ShipmentService extends Service
             'kinds' => ShipmentKind::options(),
             'quarries' => $this->quarries->options($shipment?->quarry_id),
             'materials' => $this->materials->options($shipment?->material_id),
+            'units' => $this->materials->units(),
             'addresses' => $this->addresses->options($shipment?->delivery_address_id),
             'commissions' => $this->parties->options(PartyRole::Commission, $shipment?->commission_party_id),
             'vat' => Shipment::VAT_RATES,
@@ -159,16 +162,25 @@ class ShipmentService extends Service
             return $data[$key] ?? $defaults[$key] ?? throw new OperationRejectedException("{$label} girin veya fiyat listesine ekleyin.");
         };
 
-        $quantity = (float) $data['quantity'];
+        $material = Material::query()->findOrFail($data['material_id']);
+        $netKg = isset($data['net_kg']) ? (int) $data['net_kg'] : null;
+        $quantity = $material->unit === MaterialUnit::Ton
+            ? round(($netKg ?? throw new OperationRejectedException('Net miktarı (kg) girin.')) / 1000, 3)
+            : (float) $data['quantity'];
         $salePrice = $price('sale_price', 'Müşteri birim fiyatını');
         $carrierPrice = $price('carrier_price', 'Nakliyeci birim fiyatını');
         $quarryPrice = $kind === ShipmentKind::MaterialSale ? $price('quarry_price', 'Ocak alış fiyatını') : '0';
         $vatRate = (float) ($data['vat_rate'] ?? 0);
         $withholding = (float) ($data['withholding_rate'] ?? 0);
+        $carrierVatRate = (float) ($data['carrier_vat_rate'] ?? 0);
+        $carrierWithholding = (float) ($data['carrier_withholding_rate'] ?? 0);
 
         $sale = round($quantity * (float) $salePrice, 2);
         $vat = round($sale * $vatRate / 100, 2);
         $withheld = round($vat * $withholding, 2);
+        $carrierBase = round($quantity * (float) $carrierPrice, 2);
+        $carrierVat = round($carrierBase * $carrierVatRate / 100, 2);
+        $carrierWithheld = round($carrierVat * $carrierWithholding, 2);
 
         $commissionParty = $data['commission_party_id'] ?? null;
 
@@ -179,20 +191,26 @@ class ShipmentService extends Service
             'party_id' => $carrier,
             'quarry_id' => $quarry->id,
             'quarry_party_id' => $kind === ShipmentKind::MaterialSale ? $quarry->party_id : null,
-            'material_id' => $data['material_id'],
+            'material_id' => $material->id,
             'delivery_address_id' => $address->id,
             'customer_party_id' => $address->party_id,
-            'quantity' => $data['quantity'],
+            'net_kg' => $netKg,
+            'quantity' => $quantity,
             'sale_price' => $salePrice,
             'carrier_price' => $carrierPrice,
             'quarry_price' => $quarryPrice,
             'vat_rate' => $vatRate,
             'withholding_rate' => $withholding,
+            'carrier_vat_rate' => $carrierVatRate,
+            'carrier_withholding_rate' => $carrierWithholding,
             'sale_amount' => LedgerLine::money($sale),
             'vat_amount' => LedgerLine::money($vat),
             'withholding_amount' => LedgerLine::money($withheld),
             'customer_amount' => LedgerLine::money($sale + $vat - $withheld),
-            'carrier_amount' => LedgerLine::money(round($quantity * (float) $carrierPrice, 2)),
+            'carrier_amount' => LedgerLine::money($carrierBase),
+            'carrier_vat_amount' => LedgerLine::money($carrierVat),
+            'carrier_withholding_amount' => LedgerLine::money($carrierWithheld),
+            'carrier_net_amount' => LedgerLine::money($carrierBase + $carrierVat - $carrierWithheld),
             'quarry_amount' => LedgerLine::money(round($quantity * (float) $quarryPrice, 2)),
             'commission_party_id' => $commissionParty,
             'commission_amount' => $commissionParty ? LedgerLine::money($data['commission_amount'] ?? 0) : 0,
