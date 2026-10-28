@@ -2,14 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\MaterialUnit;
-use App\Enums\PartyRole;
-use App\Enums\ShipmentKind;
 use App\Enums\Withholding;
-use App\Models\DeliveryAddress;
-use App\Models\Material;
 use App\Models\Party;
-use App\Models\Quarry;
 use App\Models\Shipment;
 use App\Models\Vehicle;
 use Closure;
@@ -34,20 +28,22 @@ class ShipmentRequest extends FormRequest
         $this->merge([
             'plate' => mb_strtoupper((string) $this->input('plate'), 'UTF-8'),
             'net_kg' => $kg === '' ? null : $kg,
-            'quantity' => $this->decimal('quantity'),
+            'carrier_price' => $this->decimal('carrier_price'),
+            'sale_price' => $this->decimal('sale_price'),
             'carrier_vat_rate' => (string) ($this->input('carrier_vat_rate') ?? '0'),
             'carrier_withholding_rate' => (string) ($this->input('carrier_withholding_rate') ?: Withholding::None->value),
-            'sale_price' => $this->decimal('sale_price'),
-            'carrier_price' => $this->decimal('carrier_price'),
-            'quarry_price' => $this->input('kind') === ShipmentKind::MaterialSale->value ? $this->decimal('quarry_price') : null,
             'vat_rate' => (string) ($this->input('vat_rate') ?? '0'),
             'withholding_rate' => (string) ($this->input('withholding_rate') ?: Withholding::None->value),
             'commission_party_id' => $this->input('commission_party_id') ?: null,
             'commission_amount' => $this->input('commission_party_id') ? $this->decimal('commission_amount') : null,
+            'loading_place' => $text('loading_place'),
+            'delivery_address' => $text('delivery_address'),
+            'driver_name' => $text('driver_name'),
             'waybill_no' => $text('waybill_no'),
             'scale_ticket_no' => $text('scale_ticket_no'),
-            'quarry_invoice_no' => $text('quarry_invoice_no'),
-            'description' => $text('description'),
+            'carrier_note' => $text('carrier_note'),
+            'customer_note' => $text('customer_note'),
+            'commission_note' => $text('commission_note'),
         ]);
     }
 
@@ -56,36 +52,34 @@ class ShipmentRequest extends FormRequest
      */
     public function rules(): array
     {
-        $current = $this->route('shipment');
-        $current = $current instanceof Shipment ? $current : null;
-        $activeOr = fn (string $model, ?string $id) => Rule::exists($model, 'id')->where(fn ($query) => $query->whereNull('deleted_at')->orWhere('id', $id));
+        $party = fn () => Rule::exists(Party::class, 'id')->withoutTrashed();
 
         return [
-            'kind' => ['required', Rule::enum(ShipmentKind::class)],
-            'shipped_on' => ['required', 'date', 'before_or_equal:today'],
+            'party_id' => ['required', 'uuid', $party()],
             'plate' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, Closure $fail): void {
                 if (! Vehicle::findByPlate((string) $value)) {
-                    $fail('Kayıtlı bir plaka girin. Tanımsız plakayı araç kartından Geçici Cari\'ye ekleyebilirsiniz.');
+                    $fail('Kayıtlı bir plaka girin; yeni plakayı "+ Plaka" ile ekleyin.');
                 }
             }],
-            'quarry_id' => ['required', 'uuid', $activeOr(Quarry::class, $current?->quarry_id)],
-            'material_id' => ['required', 'uuid', $activeOr(Material::class, $current?->material_id)],
-            'delivery_address_id' => ['required', 'uuid', $activeOr(DeliveryAddress::class, $current?->delivery_address_id)],
-            'net_kg' => ['nullable', 'integer', 'min:1', 'max:9999999'],
-            'quantity' => ['nullable', 'numeric', 'decimal:0,3', 'gt:0', 'max:9999'],
+            'waybill_no' => ['nullable', 'string', 'max:30'],
+            'carrier_price' => ['required', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
             'carrier_vat_rate' => ['required', Rule::in(array_keys(Shipment::VAT_RATES))],
             'carrier_withholding_rate' => ['required', Rule::enum(Withholding::class)],
-            'sale_price' => ['nullable', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
-            'carrier_price' => ['nullable', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
-            'quarry_price' => ['nullable', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
+            'driver_name' => ['nullable', 'string', 'max:80'],
+            'carrier_note' => ['nullable', 'string', 'max:255'],
+            'shipped_on' => ['required', 'date', 'before_or_equal:today'],
+            'net_kg' => ['required', 'integer', 'min:1', 'max:9999999'],
+            'loading_place' => ['required', 'string', 'max:120'],
+            'scale_ticket_no' => ['nullable', 'string', 'max:30'],
+            'customer_party_id' => ['required', 'uuid', $party()->whereNull('system_key')],
+            'delivery_address' => ['nullable', 'string', 'max:255'],
+            'sale_price' => ['required', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
             'vat_rate' => ['required', Rule::in(array_keys(Shipment::VAT_RATES))],
             'withholding_rate' => ['required', Rule::enum(Withholding::class)],
-            'commission_party_id' => ['nullable', 'uuid'],
+            'customer_note' => ['nullable', 'string', 'max:255'],
+            'commission_party_id' => ['nullable', 'uuid', $party()->whereNull('system_key')],
             'commission_amount' => ['nullable', 'required_with:commission_party_id', 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999'],
-            'waybill_no' => ['nullable', 'string', 'max:30'],
-            'scale_ticket_no' => ['nullable', 'string', 'max:30'],
-            'quarry_invoice_no' => ['nullable', 'string', 'max:30'],
-            'description' => ['nullable', 'string', 'max:255'],
+            'commission_note' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -96,35 +90,15 @@ class ShipmentRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                if ($validator->errors()->isNotEmpty()) {
+                if ($validator->errors()->hasAny(['plate', 'party_id', 'shipped_on'])) {
                     return;
                 }
 
                 $date = Carbon::parse($this->input('shipped_on'));
-                $vehicle = Vehicle::findByPlate($this->string('plate')->value());
+                $owner = Vehicle::findByPlate($this->string('plate')->value())?->ownershipOn($date)?->party_id;
 
-                if ($vehicle && ! $vehicle->ownershipOn($date)) {
-                    $validator->errors()->add('plate', sprintf('Bu aracın %s tarihinde kayıtlı sahibi yok.', $date->format('d.m.Y')));
-                }
-
-                $unit = Material::withTrashed()->find($this->input('material_id'))?->unit;
-
-                if ($unit === MaterialUnit::Ton && ! $this->input('net_kg')) {
-                    $validator->errors()->add('net_kg', 'Net miktarı kg olarak girin.');
-                }
-
-                if ($unit === MaterialUnit::CubicMetre && ! $this->input('quantity')) {
-                    $validator->errors()->add('quantity', 'Miktarı m³ olarak girin.');
-                }
-
-                if ($this->input('kind') === ShipmentKind::MaterialSale->value && ! Quarry::query()->whereKey($this->input('quarry_id'))->whereNotNull('party_id')->exists()) {
-                    $validator->errors()->add('quarry_id', 'Malzeme satışlı seferde ocağın carisi olmalı; ocak kartından cari seçin.');
-                }
-
-                $commission = $this->input('commission_party_id');
-
-                if ($commission && ! Party::query()->find($commission)?->hasRole(PartyRole::Commission)) {
-                    $validator->errors()->add('commission_party_id', 'Komisyoncu, "Komisyoncu" rolüne sahip bir cari olmalı.');
+                if ($owner !== $this->input('party_id')) {
+                    $validator->errors()->add('plate', sprintf('Bu plaka %s tarihinde seçilen nakliyeciye ait değil.', $date->format('d.m.Y')));
                 }
             },
         ];
@@ -136,27 +110,27 @@ class ShipmentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'kind' => 'sefer türü',
-            'shipped_on' => 'tarih',
-            'plate' => 'plaka',
-            'quarry_id' => 'ocak / yükleme yeri',
-            'material_id' => 'malzeme',
-            'delivery_address_id' => 'sevk yeri',
-            'net_kg' => 'net miktar (kg)',
-            'quantity' => 'miktar',
+            'party_id' => 'nakliyeci cari',
+            'plate' => 'araç plakası',
+            'waybill_no' => 'irsaliye no',
+            'carrier_price' => 'nakliyeci fiyatı',
             'carrier_vat_rate' => 'nakliyeci KDV oranı',
             'carrier_withholding_rate' => 'nakliyeci tevkifatı',
-            'sale_price' => 'müşteri birim fiyatı',
-            'carrier_price' => 'nakliyeci birim fiyatı',
-            'quarry_price' => 'ocak alış fiyatı',
+            'driver_name' => 'şoför',
+            'carrier_note' => 'nakliye açıklaması',
+            'shipped_on' => 'sefer tarihi',
+            'net_kg' => 'net miktar (kg)',
+            'loading_place' => 'ocak (yükleme yeri)',
+            'scale_ticket_no' => 'kantar fiş no',
+            'customer_party_id' => 'müşteri cari',
+            'delivery_address' => 'sevkiyat adresi',
+            'sale_price' => 'nakliye hizmet bedeli',
             'vat_rate' => 'KDV oranı',
             'withholding_rate' => 'tevkifat',
-            'commission_party_id' => 'komisyoncu',
-            'commission_amount' => 'komisyon tutarı',
-            'waybill_no' => 'irsaliye no',
-            'scale_ticket_no' => 'kantar fiş no',
-            'quarry_invoice_no' => 'ocak fatura no',
-            'description' => 'açıklama',
+            'customer_note' => 'müşteri satış açıklaması',
+            'commission_party_id' => 'referans cari',
+            'commission_amount' => 'referans hakedişi',
+            'commission_note' => 'referans açıklaması',
         ];
     }
 

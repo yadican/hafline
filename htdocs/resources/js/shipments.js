@@ -11,94 +11,84 @@ function round2(value) {
     return Math.round(value * 100) / 100;
 }
 
-// Tür, tarih, ocak, malzeme veya sevk yeri değişince birim fiyatlar fiyat listesinden gelir.
-// Düzenlemede kayıtlı fiyatlar, kullanıcı anahtar alanlardan birini değiştirmedikçe korunur.
+// Fiyatlar ton başına, miktar kantardaki net kg: matrah = kg / 1000 × fiyat. KDV matrah üzerinden,
+// tevkifat KDV'nin seçilen payıdır.
 function bindShipment(form) {
     const field = (name) => form.querySelector(`[name="${name}"]`);
-    const prices = [...form.querySelectorAll('[data-shipment-price]')];
-    const kg = form.querySelector('[data-shipment-kg]');
-    const quantity = form.querySelector('[data-shipment-quantity]');
-    const commission = form.querySelector('[data-shipment-commission]');
-    const total = form.querySelector('[data-shipment-total]');
+    const carrier = form.querySelector('[data-shipment-carrier]');
+    const plate = form.querySelector('[data-shipment-plate]');
+    const customer = form.querySelector('[data-shipment-customer]');
+    const addresses = form.querySelector('[data-shipment-addresses]');
     const carrierTotal = form.querySelector('[data-shipment-carrier-total]');
     const customerTotal = form.querySelector('[data-shipment-customer-total]');
+    const total = form.querySelector('[data-shipment-total]');
 
-    if (! kg || ! quantity || ! total || ! carrierTotal || ! customerTotal || ! form.dataset.pricesUrl) {
+    if (! carrierTotal || ! customerTotal || ! total) {
         return;
     }
 
-    const kind = () => form.querySelector('[name="kind"]:checked')?.value ?? 'material_sale';
-    const price = (key) => parseNumber(prices.find((input) => input.dataset.shipmentPrice === key)?.value);
-    const rate = (name) => parseNumber(field(name)?.value);
-    // Tonluk malzemede miktar kantardaki net kg'dan, m³'lük malzemede doğrudan girilir.
-    const amount = () => (kg.offsetParent !== null ? parseNumber(kg.value) / 1000 : parseNumber(quantity.value));
-    const taxed = (base, vatName, withholdingName) => {
-        const tax = round2(base * rate(vatName) / 100);
+    const value = (name) => parseNumber(field(name)?.value);
 
-        return base + tax - round2(tax * rate(withholdingName));
+    const side = (price, vatRate, withholding) => {
+        const base = round2(value('net_kg') / 1000 * value(price));
+        const vat = round2(base * value(vatRate) / 100);
+        const withheld = round2(vat * value(withholding));
+
+        return { base, vat, withheld, net: base + vat - withheld };
     };
-    let request = 0;
 
-    const renderTotal = () => {
-        const units = amount();
+    const describe = (amounts, label) => `Matrah ${money.format(amounts.base)} TL`
+        + (amounts.vat ? ` + KDV ${money.format(amounts.vat)}` : '')
+        + (amounts.withheld ? ` − tevkifat ${money.format(amounts.withheld)}` : '')
+        + ` · ${label} ${money.format(amounts.net)} TL`;
 
-        if (units <= 0) {
+    const render = () => {
+        if (value('net_kg') <= 0) {
             setStatus(carrierTotal, 'idle', 'Nakliyeci net toplamı hesaplanır');
-            setStatus(customerTotal, 'idle', 'Müşteri net toplamı hesaplanır');
+            setStatus(customerTotal, 'idle', 'Müşteri satış net toplamı hesaplanır');
             setStatus(total, 'idle', 'Sefer kârı hesaplanır');
 
             return;
         }
 
-        const sale = round2(units * price('sale_price'));
-        const carrier = round2(units * price('carrier_price'));
-        const quarry = kind() === 'material_sale' ? round2(units * price('quarry_price')) : 0;
-        const fee = parseNumber(commission?.value);
+        const carrierSide = side('carrier_price', 'carrier_vat_rate', 'carrier_withholding_rate');
+        const customerSide = side('sale_price', 'vat_rate', 'withholding_rate');
+        const referral = value('commission_amount');
 
-        setStatus(carrierTotal, 'ok', `Matrah ${money.format(carrier)} TL · nakliyeci net ${money.format(taxed(carrier, 'carrier_vat_rate', 'carrier_withholding_rate'))} TL alacak`);
-        setStatus(customerTotal, 'ok', `Matrah ${money.format(sale)} TL · müşteri net ${money.format(taxed(sale, 'vat_rate', 'withholding_rate'))} TL borç`);
-        setStatus(total, 'ok', (quarry ? `Ocak ${money.format(quarry)} TL · ` : '') + `Sefer kârı (KDV hariç) ${money.format(sale - carrier - quarry - fee)} TL`);
+        setStatus(carrierTotal, 'ok', describe(carrierSide, 'nakliyeci net'));
+        setStatus(customerTotal, 'ok', describe(customerSide, 'müşteri net'));
+        setStatus(total, 'ok', `Sefer kârı (KDV hariç) ${money.format(customerSide.base - carrierSide.base - referral)} TL`);
     };
 
-    const refresh = async () => {
-        const current = ++request;
-
-        try {
-            const found = await getJson(form.dataset.pricesUrl, {
-                kind: kind(),
-                shipped_on: field('shipped_on')?.value ?? '',
-                quarry_id: field('quarry_id')?.value ?? '',
-                material_id: field('material_id')?.value ?? '',
-                delivery_address_id: field('delivery_address_id')?.value ?? '',
-            });
-
-            if (current !== request) {
-                return;
-            }
-
-            prices.forEach((input) => {
-                const value = Number(found[input.dataset.shipmentPrice]);
-
-                input.value = value > 0 ? value.toFixed(4) : '';
-            });
-        } catch {
-            // Fiyat listesine ulaşılamazsa elle girilen değerler kalır.
+    const loadAddresses = async () => {
+        if (! addresses || ! customer?.value || ! form.dataset.addressesUrl) {
+            return;
         }
 
-        renderTotal();
+        try {
+            const names = await getJson(form.dataset.addressesUrl, { party: customer.value });
+
+            addresses.replaceChildren(...names.map((name) => Object.assign(document.createElement('option'), { value: name })));
+        } catch {
+            addresses.replaceChildren();
+        }
     };
 
-    form.querySelectorAll('[data-shipment-price-key]').forEach((input) => input.addEventListener('change', refresh));
-    form.querySelectorAll('[name="kind"]').forEach((input) => input.addEventListener('change', refresh));
-    [kg, quantity, commission, ...prices].forEach((input) => input?.addEventListener('input', renderTotal));
-    form.querySelectorAll('[data-shipment-tax]').forEach((input) => input.addEventListener('change', renderTotal));
-    field('material_id')?.addEventListener('change', () => window.setTimeout(renderTotal));
+    carrier?.addEventListener('change', () => {
+        if (plate && form.dataset.vehiclesUrl) {
+            const url = new URL(form.dataset.vehiclesUrl, window.location.origin);
 
-    if (form.hasAttribute('data-keep-price')) {
-        renderTotal();
-    } else {
-        refresh();
-    }
+            url.searchParams.set('party', carrier.value);
+            plate.dataset.url = url.toString();
+            plate.value = '';
+        }
+    });
+    customer?.addEventListener('change', loadAddresses);
+    form.querySelectorAll('[data-shipment-amount]').forEach((input) => input.addEventListener('input', render));
+    form.querySelectorAll('[data-shipment-tax]').forEach((input) => input.addEventListener('change', render));
+
+    loadAddresses();
+    render();
 }
 
 onReady(() => {

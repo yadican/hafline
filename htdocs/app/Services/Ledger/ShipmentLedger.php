@@ -5,8 +5,8 @@ namespace App\Services\Ledger;
 use App\Models\Shipment;
 
 /**
- * A shipment debits the customer (sale + VAT − withholding) and credits the carrier on the plate
- * (base + VAT − withholding), the quarry firm when we sold the material, and the commission agent.
+ * A trip debits the customer (base + VAT − withholding) and credits the carrier on the plate
+ * (base + VAT − withholding) and the referrer.
  */
 class ShipmentLedger
 {
@@ -14,16 +14,14 @@ class ShipmentLedger
 
     public function sync(Shipment $shipment): void
     {
-        $shipment->loadMissing(['quarry', 'deliveryAddress', 'material', 'vehicle']);
+        $shipment->loadMissing(['deliveryAddress', 'vehicle']);
 
         $description = sprintf(
-            'Sefer%s · %s → %s · %s %s %s',
+            'Sefer%s · %s → %s · %s kg',
             $shipment->waybill_no ? ' '.$shipment->waybill_no : '',
-            $shipment->quarry?->name,
-            $shipment->deliveryAddress?->name,
-            Shipment::formatQuantity($shipment->quantity),
-            $shipment->material?->unit->label(),
-            $shipment->material?->name,
+            $shipment->loading_place,
+            $shipment->deliveryAddress?->name ?? 'adres yok',
+            Shipment::formatKg($shipment->net_kg),
         );
         $withPlate = $description.' · '.$shipment->vehicle?->plate;
 
@@ -31,10 +29,6 @@ class ShipmentLedger
             LedgerLine::debit($shipment->customer_party_id, $shipment->shipped_on, $shipment->customer_amount, $withPlate),
             LedgerLine::credit($shipment->party_id, $shipment->shipped_on, $shipment->carrier_net_amount, $description, $shipment->vehicle_id),
         ];
-
-        if ($shipment->quarry_party_id) {
-            $lines[] = LedgerLine::credit($shipment->quarry_party_id, $shipment->shipped_on, $shipment->quarry_amount, $withPlate);
-        }
 
         if ($shipment->commission_party_id) {
             $lines[] = LedgerLine::credit($shipment->commission_party_id, $shipment->shipped_on, $shipment->commission_amount, $withPlate);

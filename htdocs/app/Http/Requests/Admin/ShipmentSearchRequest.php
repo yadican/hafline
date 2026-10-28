@@ -2,12 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\ShipmentKind;
 use App\Http\Requests\Concerns\SortsResults;
 use App\Repositories\ShipmentRepository;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ShipmentSearchRequest extends FormRequest
 {
@@ -32,13 +30,11 @@ class ShipmentSearchRequest extends FormRequest
     {
         return [
             'f' => ['nullable', 'array'],
-            'f.kind' => ['nullable', Rule::enum(ShipmentKind::class)],
             'f.plate' => ['nullable', 'string', 'max:20'],
             'f.waybill' => ['nullable', 'string', 'max:30'],
+            'f.loading' => ['nullable', 'string', 'max:120'],
             'f.customer' => ['nullable', 'uuid'],
             'f.carrier' => ['nullable', 'uuid'],
-            'f.quarry' => ['nullable', 'uuid'],
-            'f.material' => ['nullable', 'uuid'],
             'f.from' => ['nullable', 'date'],
             'f.to' => ['nullable', 'date'],
             ...$this->sortRules(),

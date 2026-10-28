@@ -8,9 +8,8 @@
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Nakliye' => null, 'Seferler' => route('admin.shipments.index'), 'Düzenle' => null]"
         :back="route('admin.shipments.index')"
     >
-        <form method="POST" action="{{ route('admin.shipments.update', $shipment) }}" data-shipment-entry data-keep-price data-prices-url="{{ route('admin.shipments.lookups.prices') }}"
-              x-data="{ kind: @js(old('kind', $shipment->kind->value)), material: @js(old('material_id', $shipment->material_id)), units: @js($options['units']) }"
-              @change="if ($event.target.name === 'kind') kind = $event.target.value; if ($event.target.name === 'material_id') material = $event.target.value">
+        <form method="POST" action="{{ route('admin.shipments.update', $shipment) }}" data-shipment-entry
+              data-vehicles-url="{{ route('admin.shipments.lookups.vehicles') }}" data-addresses-url="{{ route('admin.shipments.lookups.addresses') }}">
             @csrf
             @method('PUT')
             <x-form.grid :model="$shipment">

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\Module;
-use App\Enums\ShipmentKind;
 use App\Services\Ledger\LedgerSource;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -13,44 +12,39 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * One transport trip. party_id is the carrier: the plate's owner on the shipment date. The quarry
- * firm, the customer and the amounts are copied onto the shipment so later card edits do not
- * rewrite what was posted.
+ * One transport trip. party_id is the carrier, who must own the plate on the trip date. Prices are
+ * per ton and the weight is the scale's net kg, so each side's base is net_kg / 1000 × price.
  */
 #[Fillable([
-    'kind',
     'shipped_on',
-    'vehicle_id',
     'party_id',
-    'quarry_id',
-    'quarry_party_id',
-    'material_id',
-    'delivery_address_id',
-    'customer_party_id',
+    'vehicle_id',
+    'driver_name',
+    'waybill_no',
+    'loading_place',
+    'scale_ticket_no',
     'net_kg',
-    'quantity',
-    'sale_price',
+    'customer_party_id',
+    'delivery_address_id',
     'carrier_price',
-    'quarry_price',
-    'vat_rate',
-    'withholding_rate',
     'carrier_vat_rate',
     'carrier_withholding_rate',
-    'sale_amount',
-    'vat_amount',
-    'withholding_amount',
-    'customer_amount',
     'carrier_amount',
     'carrier_vat_amount',
     'carrier_withholding_amount',
     'carrier_net_amount',
-    'quarry_amount',
+    'carrier_note',
+    'sale_price',
+    'vat_rate',
+    'withholding_rate',
+    'sale_amount',
+    'vat_amount',
+    'withholding_amount',
+    'customer_amount',
+    'customer_note',
     'commission_party_id',
     'commission_amount',
-    'waybill_no',
-    'scale_ticket_no',
-    'quarry_invoice_no',
-    'description',
+    'commission_note',
     'created_by',
 ])]
 class Shipment extends Model implements LedgerSource
@@ -58,7 +52,7 @@ class Shipment extends Model implements LedgerSource
     use HasUuids, SoftDeletes;
 
     /**
-     * VAT rates offered on a shipment.
+     * VAT rates offered on a trip.
      */
     public const VAT_RATES = ['0' => 'KDV yok', '1' => '%1', '10' => '%10', '20' => '%20'];
 
@@ -73,16 +67,16 @@ class Shipment extends Model implements LedgerSource
     }
 
     /**
-     * Sale before VAT less what the carrier, the quarry and the commission agent earn.
+     * Customer base less the carrier base and the referrer, VAT excluded.
      */
     public function profit(): float
     {
-        return round((float) $this->sale_amount - (float) $this->carrier_amount - (float) $this->quarry_amount - (float) $this->commission_amount, 2);
+        return round((float) $this->sale_amount - (float) $this->carrier_amount - (float) $this->commission_amount, 2);
     }
 
-    public static function formatQuantity(float|string|null $quantity): string
+    public static function formatKg(int|string|null $kg): string
     {
-        return rtrim(rtrim(number_format((float) $quantity, 3, ',', '.'), '0'), ',');
+        return number_format((int) $kg, 0, ',', '.');
     }
 
     /**
@@ -94,7 +88,7 @@ class Shipment extends Model implements LedgerSource
     }
 
     /**
-     * The carrier: owner of the plate on the shipment date.
+     * The carrier (nakliyeci).
      *
      * @return BelongsTo<Party, $this>
      */
@@ -104,27 +98,11 @@ class Shipment extends Model implements LedgerSource
     }
 
     /**
-     * @return BelongsTo<Quarry, $this>
-     */
-    public function quarry(): BelongsTo
-    {
-        return $this->belongsTo(Quarry::class)->withTrashed();
-    }
-
-    /**
      * @return BelongsTo<Party, $this>
      */
-    public function quarryParty(): BelongsTo
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(Party::class, 'quarry_party_id')->withTrashed();
-    }
-
-    /**
-     * @return BelongsTo<Material, $this>
-     */
-    public function material(): BelongsTo
-    {
-        return $this->belongsTo(Material::class)->withTrashed();
+        return $this->belongsTo(Party::class, 'customer_party_id')->withTrashed();
     }
 
     /**
@@ -133,14 +111,6 @@ class Shipment extends Model implements LedgerSource
     public function deliveryAddress(): BelongsTo
     {
         return $this->belongsTo(DeliveryAddress::class)->withTrashed();
-    }
-
-    /**
-     * @return BelongsTo<Party, $this>
-     */
-    public function customer(): BelongsTo
-    {
-        return $this->belongsTo(Party::class, 'customer_party_id')->withTrashed();
     }
 
     /**
@@ -173,26 +143,22 @@ class Shipment extends Model implements LedgerSource
     protected function casts(): array
     {
         return [
-            'kind' => ShipmentKind::class,
             'shipped_on' => 'date',
             'net_kg' => 'integer',
-            'quantity' => 'decimal:3',
-            'sale_price' => 'decimal:4',
             'carrier_price' => 'decimal:4',
-            'quarry_price' => 'decimal:4',
-            'vat_rate' => 'decimal:2',
-            'withholding_rate' => 'decimal:2',
             'carrier_vat_rate' => 'decimal:2',
             'carrier_withholding_rate' => 'decimal:2',
-            'sale_amount' => 'decimal:2',
-            'vat_amount' => 'decimal:2',
-            'withholding_amount' => 'decimal:2',
-            'customer_amount' => 'decimal:2',
             'carrier_amount' => 'decimal:2',
             'carrier_vat_amount' => 'decimal:2',
             'carrier_withholding_amount' => 'decimal:2',
             'carrier_net_amount' => 'decimal:2',
-            'quarry_amount' => 'decimal:2',
+            'sale_price' => 'decimal:4',
+            'vat_rate' => 'decimal:2',
+            'withholding_rate' => 'decimal:2',
+            'sale_amount' => 'decimal:2',
+            'vat_amount' => 'decimal:2',
+            'withholding_amount' => 'decimal:2',
+            'customer_amount' => 'decimal:2',
             'commission_amount' => 'decimal:2',
         ];
     }

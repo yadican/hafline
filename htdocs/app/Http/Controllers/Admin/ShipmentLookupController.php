@@ -2,51 +2,44 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\ShipmentKind;
 use App\Models\Vehicle;
 use App\Repositories\HaulLookupRepository;
 use App\Services\ShipmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class ShipmentLookupController extends AdminController
 {
     protected ?string $permissionAbility = 'view-shipment';
 
+    /**
+     * Plates matching the term; with a carrier, only the plates it currently owns.
+     */
     public function vehicles(Request $request, HaulLookupRepository $lookups): JsonResponse
     {
         $term = (string) $request->query('q', '');
+        $carrier = (string) $request->query('party', '');
 
         if (mb_strlen(Vehicle::normalizePlate($term)) < 2) {
             return response()->json([]);
         }
 
-        return response()->json($lookups->vehicles($term)->map(fn (Vehicle $vehicle) => [
-            'value' => $vehicle->plate,
-            'meta' => $vehicle->currentOwnership?->party?->name ?? '',
-        ]));
+        return response()->json($lookups->vehicles($term)
+            ->filter(fn (Vehicle $vehicle) => $carrier === '' || $vehicle->currentOwnership?->party_id === $carrier)
+            ->values()
+            ->map(fn (Vehicle $vehicle) => [
+                'value' => $vehicle->plate,
+                'meta' => $vehicle->currentOwnership?->party?->name ?? '',
+            ]));
     }
 
     /**
-     * Default unit prices from the price lists, so the form can fill them in.
+     * Delivery addresses already used for the customer.
      */
-    public function prices(Request $request, ShipmentService $shipments): JsonResponse
+    public function addresses(Request $request, ShipmentService $shipments): JsonResponse
     {
-        $validated = $request->validate([
-            'kind' => ['required', 'string'],
-            'quarry_id' => ['nullable', 'uuid'],
-            'material_id' => ['nullable', 'uuid'],
-            'delivery_address_id' => ['nullable', 'uuid'],
-            'shipped_on' => ['nullable', 'date'],
-        ]);
+        $validated = $request->validate(['party' => ['required', 'uuid']]);
 
-        return response()->json($shipments->defaultPrices(
-            ShipmentKind::tryFrom($validated['kind']) ?? ShipmentKind::MaterialSale,
-            $validated['quarry_id'] ?? null,
-            $validated['material_id'] ?? null,
-            $validated['delivery_address_id'] ?? null,
-            Carbon::parse($validated['shipped_on'] ?? today()),
-        ));
+        return response()->json($shipments->addressNames($validated['party']));
     }
 }

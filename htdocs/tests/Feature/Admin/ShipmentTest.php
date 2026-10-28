@@ -5,9 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Enums\PartyRole;
 use App\Models\DeliveryAddress;
 use App\Models\LedgerEntry;
-use App\Models\Material;
 use App\Models\Party;
-use App\Models\Quarry;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -22,13 +20,9 @@ class ShipmentTest extends TestCase
 
     private Party $carrier;
 
+    private Party $customer;
+
     private Vehicle $truck;
-
-    private Quarry $quarry;
-
-    private Material $sand;
-
-    private DeliveryAddress $address;
 
     protected function setUp(): void
     {
@@ -36,58 +30,54 @@ class ShipmentTest extends TestCase
 
         $this->admin = User::factory()->yonetici()->create();
         $this->carrier = Party::factory()->create();
+        $this->customer = Party::factory()->company()->create(['name' => 'DOĞA PEYZAJ']);
         $this->truck = Vehicle::factory()->ownedBy($this->carrier, '2026-01-01')->create(['plate' => '34 NK 100']);
-        $this->quarry = Quarry::factory()->create();
-        $this->sand = Material::factory()->create(['name' => 'DERE KUMU']);
-        $this->address = DeliveryAddress::factory()->create(['name' => 'TUZLA BETON SANTRALİ']);
-
-        $this->price(['kind' => 'quarry', 'quarry_id' => $this->quarry->id, 'material_id' => $this->sand->id, 'price' => '300', 'valid_from' => '2026-01-01']);
-        $this->price(['kind' => 'freight', 'quarry_id' => $this->quarry->id, 'delivery_address_id' => $this->address->id, 'price' => '200', 'valid_from' => '2026-01-01']);
-        $this->price(['kind' => 'sale', 'delivery_address_id' => $this->address->id, 'material_id' => $this->sand->id, 'price' => '600', 'valid_from' => '2026-01-01']);
-        $this->price(['kind' => 'sale', 'delivery_address_id' => $this->address->id, 'material_id' => $this->sand->id, 'price' => '650', 'valid_from' => '2026-03-01']);
     }
 
-    public function test_a_material_sale_debits_the_customer_and_credits_carrier_quarry_and_commission(): void
+    public function test_a_trip_debits_the_customer_and_credits_the_carrier_and_referrer_with_vat_and_withholding(): void
     {
-        $agent = Party::factory()->withRole(PartyRole::Commission)->create();
+        $referrer = Party::factory()->create();
+
+        $this->actingAs($this->admin)->get(route('admin.shipments.create'))->assertOk();
 
         $this->actingAs($this->admin)
             ->post(route('admin.shipments.store'), $this->payload([
-                'commission_party_id' => $agent->id,
-                'commission_amount' => '500',
                 'carrier_vat_rate' => '20',
                 'carrier_withholding_rate' => '0.20',
+                'commission_party_id' => $referrer->id,
+                'commission_amount' => '500',
             ]))
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('admin.shipments.index'));
 
         $shipment = Shipment::query()->sole();
-        $this->assertSame(25000, $shipment->net_kg);
-        $this->assertSame('25.000', $shipment->quantity);
+        $this->assertSame('5000.00', $shipment->carrier_amount);
         $this->assertSame('5800.00', $shipment->carrier_net_amount);
-        $this->assertSame($this->carrier->id, $shipment->party_id);
-        $this->assertSame($this->address->party_id, $shipment->customer_party_id);
-        $this->assertSame('650.0000', $shipment->sale_price);
-        $this->assertSame('3250.00', $shipment->vat_amount);
-        $this->assertSame('650.00', $shipment->withholding_amount);
-        $this->assertSame(3250.0, $shipment->profit());
+        $this->assertSame('15000.00', $shipment->sale_amount);
+        $this->assertSame('17400.00', $shipment->customer_amount);
+        $this->assertSame(9500.0, $shipment->profit());
+        $this->assertSame('Kartal şantiyesi', $shipment->deliveryAddress->name);
 
-        $this->assertSame(18850.0, $this->balance($this->address->party));
+        $this->assertSame(17400.0, $this->balance($this->customer));
         $this->assertSame(-5800.0, $this->balance($this->carrier));
-        $this->assertSame(-7500.0, $this->balance($this->quarry->party));
-        $this->assertSame(-500.0, $this->balance($agent));
-        $this->assertSame(['transport'], LedgerEntry::query()->where('source_type', 'shipment')->distinct()->pluck('module')->map->value->all());
+        $this->assertSame(-500.0, $this->balance($referrer));
+        $this->assertTrue($this->customer->fresh()->hasRole(PartyRole::Customer));
+        $this->assertTrue($referrer->fresh()->hasRole(PartyRole::Commission));
 
         $this->actingAs($this->admin)->get(route('admin.shipments.index', ['f' => ['from' => '2026-03-01']]))->assertOk()->assertSee('34 NK 100');
-        $this->actingAs($this->admin)->get(route('admin.shipments.show', $shipment))->assertOk()->assertSee('18.850,00 TL');
-        $this->actingAs($this->admin)->get(route('admin.shipments.edit', $shipment))->assertOk();
+        $this->actingAs($this->admin)->get(route('admin.shipments.show', $shipment))->assertOk()->assertSee('17.400,00 TL');
+        $this->actingAs($this->admin)->get(route('admin.shipments.edit', $shipment))->assertOk()->assertSee('Kartal şantiyesi');
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.shipments.lookups.addresses', ['party' => $this->customer->id]))
+            ->assertExactJson(['Kartal şantiyesi']);
 
         $this->actingAs($this->admin)
-            ->put(route('admin.shipments.update', $shipment), $this->payload(['kind' => 'transport']))
+            ->put(route('admin.shipments.update', $shipment), $this->payload())
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(0.0, $this->balance($this->quarry->party));
-        $this->assertSame(0.0, $this->balance($agent));
+        $this->assertSame(0.0, $this->balance($referrer));
+        $this->assertSame(-5000.0, $this->balance($this->carrier));
+        $this->assertSame(1, DeliveryAddress::query()->count());
 
         $this->artisan('ledger:audit')
             ->expectsOutputToContain('Cari, belgeler ve raporlar birebir tutuyor.')
@@ -97,45 +87,31 @@ class ShipmentTest extends TestCase
             ->delete(route('admin.shipments.destroy', $shipment))
             ->assertSessionHas('success');
 
-        $this->assertSame(0.0, $this->balance($this->address->party));
+        $this->assertSame(0.0, $this->balance($this->customer));
         $this->assertSame(0.0, $this->balance($this->carrier));
     }
 
-    public function test_price_lookup_follows_the_list_valid_on_the_date(): void
+    public function test_the_plate_must_belong_to_the_chosen_carrier(): void
     {
         $this->actingAs($this->admin)
-            ->getJson(route('admin.shipments.lookups.prices', [
-                'kind' => 'material_sale',
-                'quarry_id' => $this->quarry->id,
-                'material_id' => $this->sand->id,
-                'delivery_address_id' => $this->address->id,
-                'shipped_on' => '2026-02-15',
-            ]))
+            ->post(route('admin.shipments.store'), $this->payload(['party_id' => Party::factory()->withRole(PartyRole::VehicleOwner)->create()->id]))
+            ->assertSessionHasErrors('plate');
+
+        $this->assertSame(0, Shipment::query()->count());
+    }
+
+    public function test_plate_lookup_lists_only_the_carriers_plates(): void
+    {
+        Vehicle::factory()->ownedBy(Party::factory()->create(), '2026-01-01')->create(['plate' => '34 NK 200']);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('admin.shipments.lookups.vehicles', ['q' => '34NK', 'party' => $this->carrier->id]))
             ->assertOk()
-            ->assertJson(['sale_price' => '600.0000', 'carrier_price' => '200.0000', 'quarry_price' => '300.0000']);
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.value', '34 NK 100');
     }
 
-    public function test_weighed_material_needs_its_net_kg(): void
-    {
-        $this->actingAs($this->admin)
-            ->post(route('admin.shipments.store'), $this->payload(['net_kg' => '', 'quantity' => '25']))
-            ->assertSessionHasErrors('net_kg');
-
-        $this->assertSame(0, Shipment::query()->count());
-    }
-
-    public function test_a_material_sale_needs_a_quarry_with_a_cari(): void
-    {
-        $place = Quarry::factory()->loadingPlace()->create();
-
-        $this->actingAs($this->admin)
-            ->post(route('admin.shipments.store'), $this->payload(['quarry_id' => $place->id, 'sale_price' => '600', 'carrier_price' => '200', 'quarry_price' => '300']))
-            ->assertSessionHasErrors('quarry_id');
-
-        $this->assertSame(0, Shipment::query()->count());
-    }
-
-    public function test_a_shipment_moves_with_the_plate_when_ownership_changes(): void
+    public function test_a_trip_moves_with_the_plate_when_ownership_changes(): void
     {
         $this->actingAs($this->admin)
             ->post(route('admin.shipments.store'), $this->payload())
@@ -156,72 +132,30 @@ class ShipmentTest extends TestCase
             ->assertSuccessful();
     }
 
-    public function test_transport_definitions_can_be_managed(): void
-    {
-        $customer = Party::factory()->create();
-        $firm = Party::factory()->company()->create();
-
-        $this->actingAs($this->admin)
-            ->post(route('admin.materials.store'), ['name' => 'mıcır', 'unit' => 'm3', 'active' => '1'])
-            ->assertRedirect(route('admin.materials.index'));
-        $this->actingAs($this->admin)
-            ->post(route('admin.quarries.store'), ['name' => 'Şile ocağı', 'party_id' => $firm->id, 'active' => '1'])
-            ->assertRedirect(route('admin.quarries.index'));
-        $this->actingAs($this->admin)
-            ->post(route('admin.delivery-addresses.store'), ['party_id' => $customer->id, 'name' => 'Kartal şantiyesi', 'active' => '1'])
-            ->assertRedirect(route('admin.delivery-addresses.index'));
-
-        $this->assertTrue($firm->fresh()->hasRole(PartyRole::Quarry));
-        $this->assertTrue($customer->fresh()->hasRole(PartyRole::Customer));
-
-        foreach (['materials', 'quarries', 'delivery-addresses'] as $resource) {
-            $this->actingAs($this->admin)->get(route("admin.{$resource}.index"))->assertOk();
-            $this->actingAs($this->admin)->get(route("admin.{$resource}.create"))->assertOk();
-        }
-
-        $this->actingAs($this->admin)->get(route('admin.quarries.edit', $this->quarry))->assertOk()->assertSee('DERE KUMU');
-        $this->actingAs($this->admin)->get(route('admin.delivery-addresses.edit', $this->address))->assertOk()->assertSee('650,0000');
-
-        $this->actingAs($this->admin)
-            ->post(route('admin.shipments.store'), $this->payload())
-            ->assertSessionHasNoErrors();
-
-        $this->actingAs($this->admin)
-            ->delete(route('admin.materials.destroy', $this->sand))
-            ->assertSessionHas('error');
-    }
-
     /**
-     * @param  array<string, string>  $data
-     */
-    private function price(array $data): void
-    {
-        $this->actingAs($this->admin)
-            ->post(route('admin.transport-prices.store'), $data)
-            ->assertSessionHasNoErrors()
-            ->assertSessionHas('success');
-    }
-
-    /**
+     * 25.000 kg at 200 TL/ton to the carrier and 600 TL/ton to the customer (VAT 20%, 2/10 withheld).
+     *
      * @param  array<string, string>  $overrides
      * @return array<string, string>
      */
     private function payload(array $overrides = []): array
     {
         return [
-            'kind' => 'material_sale',
-            'shipped_on' => '2026-03-10',
+            'party_id' => $this->carrier->id,
             'plate' => '34 NK 100',
-            'quarry_id' => $this->quarry->id,
-            'material_id' => $this->sand->id,
-            'delivery_address_id' => $this->address->id,
+            'waybill_no' => 'IRS-1',
+            'carrier_price' => '200',
+            'carrier_vat_rate' => '0',
+            'carrier_withholding_rate' => '0.00',
+            'driver_name' => 'Hasan Çelik',
+            'shipped_on' => '2026-03-10',
             'net_kg' => '25.000',
-            'sale_price' => '',
-            'carrier_price' => '',
-            'quarry_price' => '',
+            'loading_place' => 'Şile kum ocağı',
+            'customer_party_id' => $this->customer->id,
+            'delivery_address' => 'Kartal şantiyesi',
+            'sale_price' => '600',
             'vat_rate' => '20',
             'withholding_rate' => '0.20',
-            'waybill_no' => 'IRS-1',
             ...$overrides,
         ];
     }

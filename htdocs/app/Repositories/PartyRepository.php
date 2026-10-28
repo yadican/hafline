@@ -185,11 +185,7 @@ class PartyRepository extends Repository
             $roles[] = PartyRole::MachineOperator;
         }
 
-        if (DB::table('quarries')->where('party_id', $party->id)->exists()) {
-            $roles[] = PartyRole::Quarry;
-        }
-
-        if (DB::table('delivery_addresses')->where('party_id', $party->id)->exists()) {
+        if (DB::table('shipments')->where('customer_party_id', $party->id)->exists()) {
             $roles[] = PartyRole::Customer;
         }
 
@@ -216,10 +212,8 @@ class PartyRepository extends Repository
             || DB::table('machine_works')->where('operator_id', $party->id)->exists()
             || DB::table('fuel_receipts')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('fuel_party_id', $party->id))->exists()
             || DB::table('fuel_tank_fills')->where('party_id', $party->id)->exists()
-            || DB::table('quarries')->where('party_id', $party->id)->exists()
-            || DB::table('delivery_addresses')->where('party_id', $party->id)->exists()
             || DB::table('shipments')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('customer_party_id', $party->id)
-                ->orWhere('quarry_party_id', $party->id)->orWhere('commission_party_id', $party->id))->exists()
+                ->orWhere('commission_party_id', $party->id))->exists()
             || DB::table('company_transactions')->where('party_id', $party->id)->exists();
     }
 

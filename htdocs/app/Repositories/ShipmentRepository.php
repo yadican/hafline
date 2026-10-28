@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\DeliveryAddress;
 use App\Models\Party;
 use App\Models\Shipment;
 use App\Models\Vehicle;
@@ -26,7 +27,7 @@ class ShipmentRepository extends Repository
     public function search(array $filters, ?Sort $sort, int $perPage): LengthAwarePaginator
     {
         $query = $this->filtered($filters)
-            ->with(['vehicle', 'party', 'quarry', 'material', 'deliveryAddress', 'customer']);
+            ->with(['vehicle', 'party', 'deliveryAddress', 'customer']);
 
         return $this->applySort($query, $sort)
             ->paginate($perPage)
@@ -35,25 +36,22 @@ class ShipmentRepository extends Repository
 
     /**
      * @param  array<string, string>  $filters
-     * @return array{count: int, quantity: float, sale: float, customer: float, carrier: float, quarry: float, commission: float, profit: float}
+     * @return array{count: int, net_kg: int, customer: float, carrier: float, profit: float}
      */
     public function totals(array $filters): array
     {
         $row = $this->filtered($filters)
             ->toBase()
-            ->selectRaw('count(*) as count, COALESCE(SUM(quantity), 0) AS quantity, COALESCE(SUM(sale_amount), 0) AS sale, COALESCE(SUM(customer_amount), 0) AS customer,
-                COALESCE(SUM(carrier_amount), 0) AS carrier, COALESCE(SUM(quarry_amount), 0) AS quarry, COALESCE(SUM(commission_amount), 0) AS commission')
+            ->selectRaw('count(*) as count, COALESCE(SUM(net_kg), 0) AS net_kg, COALESCE(SUM(sale_amount), 0) AS sale, COALESCE(SUM(customer_amount), 0) AS customer,
+                COALESCE(SUM(carrier_amount), 0) AS carrier_base, COALESCE(SUM(carrier_net_amount), 0) AS carrier, COALESCE(SUM(commission_amount), 0) AS commission')
             ->first();
 
         return [
             'count' => (int) $row->count,
-            'quantity' => (float) $row->quantity,
-            'sale' => (float) $row->sale,
+            'net_kg' => (int) $row->net_kg,
             'customer' => (float) $row->customer,
             'carrier' => (float) $row->carrier,
-            'quarry' => (float) $row->quarry,
-            'commission' => (float) $row->commission,
-            'profit' => round((float) $row->sale - (float) $row->carrier - (float) $row->quarry - (float) $row->commission, 2),
+            'profit' => round((float) $row->sale - (float) $row->carrier_base - (float) $row->commission, 2),
         ];
     }
 
@@ -69,6 +67,16 @@ class ShipmentRepository extends Repository
             ->lazyById();
     }
 
+    /**
+     * Address names already used for a customer, for the trip form's suggestions.
+     *
+     * @return list<string>
+     */
+    public function addressNames(string $customerId): array
+    {
+        return DeliveryAddress::query()->where('party_id', $customerId)->orderBy('name')->pluck('name')->all();
+    }
+
     protected function defaultSort(Builder $query): void
     {
         $query->orderByDesc('shipped_on')->latest();
@@ -78,7 +86,7 @@ class ShipmentRepository extends Repository
     {
         return [
             'shipped_on' => 'shipped_on',
-            'quantity' => 'quantity',
+            'net_kg' => 'net_kg',
             'customer_amount' => 'customer_amount',
             'plate' => fn (Builder $query, string $direction) => $query->orderBy(
                 Vehicle::withTrashed()->select('plate')->whereColumn('vehicles.id', 'shipments.vehicle_id'),
@@ -105,14 +113,12 @@ class ShipmentRepository extends Repository
         }
 
         return $query
-            ->when($filters['kind'] ?? null, fn (Builder $query, string $kind) => $query->where('kind', $kind))
             ->when($filters['customer'] ?? null, fn (Builder $query, string $party) => $query->where('customer_party_id', $party))
             ->when($filters['carrier'] ?? null, fn (Builder $query, string $party) => $query->where('party_id', $party))
-            ->when($filters['quarry'] ?? null, fn (Builder $query, string $quarry) => $query->where('quarry_id', $quarry))
-            ->when($filters['material'] ?? null, fn (Builder $query, string $material) => $query->where('material_id', $material))
             ->when($filters['from'] ?? null, fn (Builder $query, string $from) => $query->whereDate('shipped_on', '>=', $from))
             ->when($filters['to'] ?? null, fn (Builder $query, string $to) => $query->whereDate('shipped_on', '<=', $to))
             ->when($filters['waybill'] ?? null, fn (Builder $query, string $waybill) => $query->where('waybill_no', $waybill))
+            ->when($filters['loading'] ?? null, fn (Builder $query, string $place) => $query->whereLike('loading_place', $this->likePattern($place)))
             ->when($filters['plate'] ?? null, function (Builder $query, string $plate): void {
                 $like = $this->likePattern(Vehicle::normalizePlate($plate));
 

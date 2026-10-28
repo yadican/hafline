@@ -2,20 +2,15 @@
 
 namespace App\Services;
 
-use App\Enums\MaterialUnit;
+use App\Cache\FormOptionsCache;
 use App\Enums\PartyRole;
-use App\Enums\ShipmentKind;
 use App\Enums\Withholding;
 use App\Exceptions\OperationRejectedException;
 use App\Models\DeliveryAddress;
-use App\Models\Material;
-use App\Models\Quarry;
+use App\Models\Party;
 use App\Models\Shipment;
 use App\Models\Vehicle;
-use App\Repositories\DeliveryAddressRepository;
-use App\Repositories\MaterialRepository;
 use App\Repositories\PartyRepository;
-use App\Repositories\QuarryRepository;
 use App\Repositories\ShipmentRepository;
 use App\Services\Ledger\LedgerLine;
 use App\Services\Ledger\ShipmentLedger;
@@ -27,11 +22,7 @@ class ShipmentService extends Service
 {
     public function __construct(
         private ShipmentRepository $shipments,
-        private QuarryRepository $quarries,
-        private MaterialRepository $materials,
-        private DeliveryAddressRepository $addresses,
         private PartyRepository $parties,
-        private ShipmentPricing $pricing,
         private ShipmentLedger $ledger,
         private VehicleOwnershipService $ownerships,
     ) {}
@@ -46,7 +37,7 @@ class ShipmentService extends Service
 
     /**
      * @param  array<string, string>  $filters
-     * @return array{count: int, quantity: float, sale: float, customer: float, carrier: float, quarry: float, commission: float, profit: float}
+     * @return array{count: int, net_kg: int, customer: float, carrier: float, profit: float}
      */
     public function totals(array $filters): array
     {
@@ -59,11 +50,8 @@ class ShipmentService extends Service
     public function searchOptions(): array
     {
         return [
-            'kinds' => ShipmentKind::options(),
             'customers' => $this->parties->options(PartyRole::Customer),
             'carriers' => $this->parties->options(PartyRole::VehicleOwner),
-            'quarries' => $this->quarries->options(),
-            'materials' => $this->materials->options(),
         ];
     }
 
@@ -73,23 +61,19 @@ class ShipmentService extends Service
     public function formOptions(?Shipment $shipment = null): array
     {
         return [
-            'kinds' => ShipmentKind::options(),
-            'quarries' => $this->quarries->options($shipment?->quarry_id),
-            'materials' => $this->materials->options($shipment?->material_id),
-            'units' => $this->materials->units(),
-            'addresses' => $this->addresses->options($shipment?->delivery_address_id),
-            'commissions' => $this->parties->options(PartyRole::Commission, $shipment?->commission_party_id),
+            'carriers' => $this->parties->options(PartyRole::VehicleOwner, $shipment?->party_id),
+            'parties' => $this->parties->options(include: array_filter([$shipment?->customer_party_id, $shipment?->commission_party_id])),
             'vat' => Shipment::VAT_RATES,
             'withholding' => Withholding::options(),
         ];
     }
 
     /**
-     * @return array{sale_price: ?string, carrier_price: ?string, quarry_price: ?string}
+     * @return list<string>
      */
-    public function defaultPrices(ShipmentKind $kind, ?string $quarryId, ?string $materialId, ?string $addressId, Carbon $on): array
+    public function addressNames(string $customerId): array
     {
-        return $this->pricing->defaults($kind, $quarryId, $materialId, $addressId, $on);
+        return $this->shipments->addressNames($customerId);
     }
 
     /**
@@ -137,87 +121,86 @@ class ShipmentService extends Service
     }
 
     /**
-     * The carrier is the plate's owner that day and the customer is the delivery address's cari.
-     * Blank prices come from the price lists of the shipment date.
+     * Each side's base is net kg / 1000 × its price per ton; VAT is on the base and withholding is
+     * the given share of that VAT. A new delivery address is saved under the customer.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function attributes(array $data): array
     {
-        $kind = ShipmentKind::from($data['kind']);
         $date = Carbon::parse($data['shipped_on'])->startOfDay();
         $vehicle = Vehicle::findByPlate((string) $data['plate']) ?? throw new OperationRejectedException('Plaka bulunamadı.');
-        $carrier = $vehicle->ownershipOn($date)?->party_id
-            ?? throw new OperationRejectedException(sprintf('%s aracının %s tarihinde kayıtlı sahibi yok.', $vehicle->plate, $date->format('d.m.Y')));
-        $quarry = Quarry::query()->findOrFail($data['quarry_id']);
-        $address = DeliveryAddress::query()->findOrFail($data['delivery_address_id']);
 
-        if ($kind === ShipmentKind::MaterialSale && ! $quarry->party_id) {
-            throw new OperationRejectedException(sprintf('%s için cari tanımlı değil; malzeme satışlı seferde ocağa alacak yazılamaz.', $quarry->name));
+        if ($vehicle->ownershipOn($date)?->party_id !== $data['party_id']) {
+            throw new OperationRejectedException(sprintf('%s plakası %s tarihinde seçilen nakliyeciye ait değil.', $vehicle->plate, $date->format('d.m.Y')));
         }
 
-        $defaults = $this->pricing->defaults($kind, $quarry->id, $data['material_id'], $address->id, $date);
-        $price = function (string $key, string $label) use ($data, $defaults): string {
-            return $data[$key] ?? $defaults[$key] ?? throw new OperationRejectedException("{$label} girin veya fiyat listesine ekleyin.");
+        $tons = (int) $data['net_kg'] / 1000;
+        $side = function (string $price, string $vatRate, string $withholding) use ($data, $tons): array {
+            $base = round($tons * (float) $data[$price], 2);
+            $vat = round($base * (float) $data[$vatRate] / 100, 2);
+            $withheld = round($vat * (float) $data[$withholding], 2);
+
+            return [LedgerLine::money($base), LedgerLine::money($vat), LedgerLine::money($withheld), LedgerLine::money($base + $vat - $withheld)];
         };
 
-        $material = Material::query()->findOrFail($data['material_id']);
-        $netKg = isset($data['net_kg']) ? (int) $data['net_kg'] : null;
-        $quantity = $material->unit === MaterialUnit::Ton
-            ? round(($netKg ?? throw new OperationRejectedException('Net miktarı (kg) girin.')) / 1000, 3)
-            : (float) $data['quantity'];
-        $salePrice = $price('sale_price', 'Müşteri birim fiyatını');
-        $carrierPrice = $price('carrier_price', 'Nakliyeci birim fiyatını');
-        $quarryPrice = $kind === ShipmentKind::MaterialSale ? $price('quarry_price', 'Ocak alış fiyatını') : '0';
-        $vatRate = (float) ($data['vat_rate'] ?? 0);
-        $withholding = (float) ($data['withholding_rate'] ?? 0);
-        $carrierVatRate = (float) ($data['carrier_vat_rate'] ?? 0);
-        $carrierWithholding = (float) ($data['carrier_withholding_rate'] ?? 0);
-
-        $sale = round($quantity * (float) $salePrice, 2);
-        $vat = round($sale * $vatRate / 100, 2);
-        $withheld = round($vat * $withholding, 2);
-        $carrierBase = round($quantity * (float) $carrierPrice, 2);
-        $carrierVat = round($carrierBase * $carrierVatRate / 100, 2);
-        $carrierWithheld = round($carrierVat * $carrierWithholding, 2);
+        [$carrierBase, $carrierVat, $carrierWithheld, $carrierNet] = $side('carrier_price', 'carrier_vat_rate', 'carrier_withholding_rate');
+        [$saleBase, $saleVat, $saleWithheld, $customerNet] = $side('sale_price', 'vat_rate', 'withholding_rate');
 
         $commissionParty = $data['commission_party_id'] ?? null;
+        $this->assignRoles($data['customer_party_id'], $commissionParty);
 
         return [
-            'kind' => $kind,
             'shipped_on' => $date->toDateString(),
+            'party_id' => $data['party_id'],
             'vehicle_id' => $vehicle->id,
-            'party_id' => $carrier,
-            'quarry_id' => $quarry->id,
-            'quarry_party_id' => $kind === ShipmentKind::MaterialSale ? $quarry->party_id : null,
-            'material_id' => $material->id,
-            'delivery_address_id' => $address->id,
-            'customer_party_id' => $address->party_id,
-            'net_kg' => $netKg,
-            'quantity' => $quantity,
-            'sale_price' => $salePrice,
-            'carrier_price' => $carrierPrice,
-            'quarry_price' => $quarryPrice,
-            'vat_rate' => $vatRate,
-            'withholding_rate' => $withholding,
-            'carrier_vat_rate' => $carrierVatRate,
-            'carrier_withholding_rate' => $carrierWithholding,
-            'sale_amount' => LedgerLine::money($sale),
-            'vat_amount' => LedgerLine::money($vat),
-            'withholding_amount' => LedgerLine::money($withheld),
-            'customer_amount' => LedgerLine::money($sale + $vat - $withheld),
-            'carrier_amount' => LedgerLine::money($carrierBase),
-            'carrier_vat_amount' => LedgerLine::money($carrierVat),
-            'carrier_withholding_amount' => LedgerLine::money($carrierWithheld),
-            'carrier_net_amount' => LedgerLine::money($carrierBase + $carrierVat - $carrierWithheld),
-            'quarry_amount' => LedgerLine::money(round($quantity * (float) $quarryPrice, 2)),
+            'driver_name' => $data['driver_name'] ?? null,
+            'waybill_no' => $data['waybill_no'] ?? null,
+            'loading_place' => $data['loading_place'],
+            'scale_ticket_no' => $data['scale_ticket_no'] ?? null,
+            'net_kg' => (int) $data['net_kg'],
+            'customer_party_id' => $data['customer_party_id'],
+            'delivery_address_id' => $this->addressId($data['customer_party_id'], $data['delivery_address'] ?? null),
+            'carrier_price' => $data['carrier_price'],
+            'carrier_vat_rate' => $data['carrier_vat_rate'],
+            'carrier_withholding_rate' => $data['carrier_withholding_rate'],
+            'carrier_amount' => $carrierBase,
+            'carrier_vat_amount' => $carrierVat,
+            'carrier_withholding_amount' => $carrierWithheld,
+            'carrier_net_amount' => $carrierNet,
+            'carrier_note' => $data['carrier_note'] ?? null,
+            'sale_price' => $data['sale_price'],
+            'vat_rate' => $data['vat_rate'],
+            'withholding_rate' => $data['withholding_rate'],
+            'sale_amount' => $saleBase,
+            'vat_amount' => $saleVat,
+            'withholding_amount' => $saleWithheld,
+            'customer_amount' => $customerNet,
+            'customer_note' => $data['customer_note'] ?? null,
             'commission_party_id' => $commissionParty,
             'commission_amount' => $commissionParty ? LedgerLine::money($data['commission_amount'] ?? 0) : 0,
-            'waybill_no' => $data['waybill_no'] ?? null,
-            'scale_ticket_no' => $data['scale_ticket_no'] ?? null,
-            'quarry_invoice_no' => $data['quarry_invoice_no'] ?? null,
-            'description' => $data['description'] ?? null,
+            'commission_note' => $commissionParty ? ($data['commission_note'] ?? null) : null,
         ];
+    }
+
+    private function addressId(string $customerId, ?string $name): ?string
+    {
+        if ($name === null) {
+            return null;
+        }
+
+        return DeliveryAddress::query()->firstOrCreate(['party_id' => $customerId, 'name' => $name])->id;
+    }
+
+    private function assignRoles(string $customerId, ?string $commissionId): void
+    {
+        Party::query()->findOrFail($customerId)->assignRole(PartyRole::Customer);
+
+        if ($commissionId) {
+            Party::query()->findOrFail($commissionId)->assignRole(PartyRole::Commission);
+        }
+
+        FormOptionsCache::flush(FormOptionsCache::PARTIES);
     }
 }
