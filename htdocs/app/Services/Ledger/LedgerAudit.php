@@ -35,6 +35,9 @@ class LedgerAudit
         union all select 'employee_salary', cast(s.id as text), cast(e.party_id as text), %s, 0, s.earned_salary from employee_salaries s join employees e on e.id = s.employee_id where s.deleted_at is null and s.earned_salary <> 0
         union all select 'employee_bonus', cast(b.id as text), cast(e.party_id as text), substr(cast(b.occurred_on as text), 1, 10), 0, b.amount from employee_bonuses b join employees e on e.id = b.employee_id where b.deleted_at is null and b.amount <> 0
         union all select 'employee_payment', cast(t.id as text), cast(e.party_id as text), substr(cast(t.occurred_on as text), 1, 10), t.amount, 0 from employee_payments t join employees e on e.id = t.employee_id where t.deleted_at is null and t.amount <> 0
+        union all select 'opening_balance', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), debit, credit from opening_balances where deleted_at is null
+        union all select 'party_transfer', cast(id as text), cast(debit_party_id as text), substr(cast(occurred_on as text), 1, 10), amount, 0 from party_transfers where deleted_at is null
+        union all select 'party_transfer', cast(id as text), cast(credit_party_id as text), substr(cast(occurred_on as text), 1, 10), 0, amount from party_transfers where deleted_at is null
     SQL;
 
     /**
@@ -121,6 +124,8 @@ class LedgerAudit
                 union all select 'employee_salary', cast(id as text), 'general', null from employee_salaries
                 union all select 'employee_bonus', cast(id as text), 'general', null from employee_bonuses
                 union all select 'employee_payment', cast(id as text), 'general', null from employee_payments
+                union all select 'opening_balance', cast(id as text), 'general', null from opening_balances
+                union all select 'party_transfer', cast(id as text), 'general', null from party_transfers
             ) x on x.st = le.source_type and x.sid = cast(le.source_id as text)
             where le.reversal_of is null and not exists (select 1 from ledger_entries r where r.reversal_of = le.id)
               and (le.module <> x.module or coalesce(cast(le.site_id as text), '') <> coalesce(x.site, ''))
@@ -191,7 +196,7 @@ class LedgerAudit
         $cari = collect(DB::select(<<<'SQL'
             select le.party_id, sum(le.credit - le.debit) net from ledger_entries le
             where le.party_id in (select party_id from vehicle_ownerships)
-              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment')
+              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment', 'opening_balance', 'party_transfer')
               and not (le.source_type = 'haul' and exists (select 1 from hauls h where h.id = le.source_id and h.dump_party_id = le.party_id and h.party_id <> le.party_id))
             group by le.party_id
         SQL))->mapWithKeys(fn (object $row) => [$row->party_id => round((float) $row->net, 2)]);

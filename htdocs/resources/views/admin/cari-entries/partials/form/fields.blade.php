@@ -8,22 +8,26 @@
             @endforeach
         </select>
     </x-form.field>
-    <div x-show="['supplier', 'customer', 'fuel', 'market', 'site', 'cash'].includes(kind)" x-cloak>
+    <div x-show="['supplier', 'customer', 'fuel', 'market', 'site', 'cash', 'opening'].includes(kind)" x-cloak>
         <x-form.radios name="direction" label="Yön" :options="['debit' => 'Borç', 'credit' => 'Alacak']" />
         <p class="panel-hint" x-show="kind !== 'cash'">Borç: cari bize borçlu veya biz ödedik. Alacak: biz cariye borçluyuz.</p>
         <p class="panel-hint" x-show="kind === 'cash'" x-cloak>Kasada borç, kasaya giren paradır. Alacak, kasadan çıkan paradır.</p>
     </div>
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
-    <div x-show="kind !== 'cash'" x-cloak>
+    <div x-show="! ['cash', 'opening', 'party_transfer'].includes(kind)" x-cloak>
         <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" />
     </div>
-    <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
+    <div x-show="! ['opening', 'party_transfer'].includes(kind)" x-cloak>
+        <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
+    </div>
+    <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Carinin sisteme geçmeden önceki bakiyesi. Her cari için bir kez girilir; para hareketi değildir, kasayı etkilemez.</p>
+    <p class="panel-hint" x-show="kind === 'party_transfer'" x-cloak>Mahsup: borçlanan carinin bakiyesi artar, alacaklanan carinin bakiyesi aynı tutarda azalır. Kasa ve banka etkilenmez.</p>
     <x-form.input name="description" label="Açıklama" maxlength="255" />
 </x-form.group>
 
 <x-form.group legend="Bağ" icon="fa-solid fa-link" description="İşleme göre cari, plaka veya yer">
-    @foreach (['supplier' => 'Satıcı', 'customer' => 'Alıcı', 'fuel' => 'Akaryakıt firması', 'market' => 'Piyasa firması', 'owner_payment' => 'Araç sahibi'] as $roleKind => $partyLabel)
+    @foreach (['supplier' => 'Satıcı', 'customer' => 'Alıcı', 'fuel' => 'Akaryakıt firması', 'market' => 'Piyasa firması', 'owner_payment' => 'Araç sahibi', 'opening' => 'Cari', 'party_transfer' => 'Borçlanacak cari'] as $roleKind => $partyLabel)
         <div x-show="kind === '{{ $roleKind }}'" x-cloak>
             <x-form.field :label="$partyLabel" for="party-{{ $roleKind }}" name="party_id">
                 <select data-searchable-select id="party-{{ $roleKind }}" name="party_id" class="slct" data-cari-party x-bind:disabled="kind !== '{{ $roleKind }}'">
@@ -35,7 +39,17 @@
             </x-form.field>
         </div>
     @endforeach
-    <div x-show="['supplier', 'customer', 'fuel', 'market', 'owner_payment'].includes(kind)" x-cloak>
+    <div x-show="kind === 'party_transfer'" x-cloak>
+        <x-form.field label="Alacaklanacak cari" for="counter-party" name="counter_party_id">
+            <select data-searchable-select id="counter-party" name="counter_party_id" class="slct" x-bind:disabled="kind !== 'party_transfer'">
+                <option value="">Alacaklanacak cari seçin</option>
+                @foreach ($options['parties']['party_transfer'] ?? [] as $id => $name)
+                    <option value="{{ $id }}" @selected((string) old('counter_party_id', $form['counter_party_id'] ?? '') === (string) $id)>{{ $name }}</option>
+                @endforeach
+            </select>
+        </x-form.field>
+    </div>
+    <div x-show="['supplier', 'customer', 'fuel', 'market', 'owner_payment', 'opening', 'party_transfer'].includes(kind)" x-cloak>
         <div class="panel-cari-summary is-idle" data-cari-party-status aria-live="polite">Firma veya kişi seçilince cari durumu gelir</div>
     </div>
     <div x-show="['vehicle_payment', 'vehicle_receivable', 'market'].includes(kind)" x-cloak>

@@ -10,7 +10,9 @@ use App\Models\EmployeeSalary;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\MachineWork;
+use App\Models\OpeningBalance;
 use App\Models\PartyPayment;
+use App\Models\PartyTransfer;
 use App\Models\VehicleOwnership;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
@@ -46,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
             'employee_salary' => EmployeeSalary::class,
             'employee_bonus' => EmployeeBonus::class,
             'employee_payment' => EmployeePayment::class,
+            'opening_balance' => OpeningBalance::class,
+            'party_transfer' => PartyTransfer::class,
         ]);
     }
 }

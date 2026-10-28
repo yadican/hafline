@@ -90,6 +90,23 @@ class LedgerAuditCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_audit_matches_opening_balances_and_transfers_on_a_vehicle_owner(): void
+    {
+        $admin = User::query()->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('admin.cari-entries.store'), ['kind' => 'opening', 'direction' => 'credit', 'party_id' => $this->seller->id, 'amount' => '7000', 'occurred_on' => '2026-01-01'])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($admin)
+            ->post(route('admin.cari-entries.store'), ['kind' => 'party_transfer', 'party_id' => $this->seller->id, 'counter_party_id' => Party::factory()->create()->id, 'amount' => '1500', 'occurred_on' => '2026-03-20'])
+            ->assertSessionHasNoErrors();
+
+        $this->artisan('ledger:audit')
+            ->expectsOutputToContain('Plaka Sahibi Bakiye = cari ekstre · kontrol')
+            ->expectsOutputToContain('Cari, belgeler ve raporlar birebir tutuyor.')
+            ->assertSuccessful();
+    }
+
     public function test_owner_operating_their_own_machine_keeps_the_operator_share_off_the_plate(): void
     {
         $owner = Party::factory()->person()->withRole(PartyRole::VehicleOwner, PartyRole::MachineOperator)->create();

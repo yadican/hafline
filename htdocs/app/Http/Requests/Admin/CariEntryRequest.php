@@ -6,6 +6,7 @@ use App\Enums\CariEntryKind;
 use App\Enums\CashDirection;
 use App\Enums\PaymentMethod;
 use App\Models\CashCategory;
+use App\Models\OpeningBalance;
 use App\Models\Party;
 use App\Models\Vehicle;
 use Closure;
@@ -33,12 +34,13 @@ class CariEntryRequest extends FormRequest
             'unit_price' => $this->decimal('unit_price'),
             'direction' => $kind && $kind->directionMode() !== 'choice' ? $kind->directionMode() : ($this->input('direction') ?: null),
             'party_id' => $this->input('party_id') ?: null,
+            'counter_party_id' => $kind === CariEntryKind::PartyTransfer ? ($this->input('counter_party_id') ?: null) : null,
             'site_id' => $this->input('site_id') ?: null,
             'fuel_station_id' => $this->input('fuel_station_id') ?: null,
             'dump_site_id' => $this->input('dump_site_id') ?: null,
             'bank_id' => $this->input('bank_id') ?: null,
-            'cash_category_id' => $this->input('cash_category_id') ?: null,
-            'payment_method' => $this->input('payment_method') ?: null,
+            'cash_category_id' => $kind?->takesAnyParty() ? null : ($this->input('cash_category_id') ?: null),
+            'payment_method' => $kind?->takesAnyParty() ? null : ($this->input('payment_method') ?: null),
             'document_no' => trim((string) $this->input('document_no')) ?: null,
             'cheque_no' => trim((string) $this->input('cheque_no')) ?: null,
             'description' => trim((string) $this->input('description')) ?: null,
@@ -56,6 +58,7 @@ class CariEntryRequest extends FormRequest
             'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:999999999999'],
             'occurred_on' => ['required', 'date'],
             'party_id' => ['nullable', 'uuid'],
+            'counter_party_id' => ['nullable', 'uuid'],
             'plate' => ['nullable', 'string', 'max:20'],
             'site_id' => ['nullable', 'uuid'],
             'fuel_station_id' => ['nullable', 'uuid'],
@@ -95,6 +98,29 @@ class CariEntryRequest extends FormRequest
 
                     if (! $party || ! $party->hasRole($role)) {
                         $validator->errors()->add('party_id', 'Cari, "'.$role->label().'" rolüne sahip olmalı.');
+                    }
+                }
+
+                if ($kind->takesAnyParty() && ! Party::query()->whereKey($this->input('party_id'))->exists()) {
+                    $validator->errors()->add('party_id', 'Cari seçin.');
+                }
+
+                if ($kind === CariEntryKind::Opening && $this->input('party_id')) {
+                    $taken = OpeningBalance::query()
+                        ->where('party_id', $this->input('party_id'))
+                        ->when(is_string($this->route('entry')), fn ($query) => $query->whereKeyNot($this->route('entry')))
+                        ->exists();
+
+                    if ($taken) {
+                        $validator->errors()->add('party_id', 'Bu carinin açılış bakiyesi zaten girilmiş; mevcut kaydı düzenleyin.');
+                    }
+                }
+
+                if ($kind === CariEntryKind::PartyTransfer) {
+                    if (! Party::query()->whereKey($this->input('counter_party_id'))->exists()) {
+                        $validator->errors()->add('counter_party_id', 'Alacaklanacak cariyi seçin.');
+                    } elseif ($this->input('counter_party_id') === $this->input('party_id')) {
+                        $validator->errors()->add('counter_party_id', 'Virmanın iki tarafı farklı cari olmalı.');
                     }
                 }
 
@@ -144,6 +170,7 @@ class CariEntryRequest extends FormRequest
             'amount' => 'tutar',
             'occurred_on' => 'tarih',
             'party_id' => 'cari',
+            'counter_party_id' => 'alacaklanacak cari',
             'plate' => 'plaka',
             'site_id' => 'şantiye',
             'fuel_station_id' => 'yakıt yeri',

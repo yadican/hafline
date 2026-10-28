@@ -13,8 +13,10 @@ use App\Models\CompanyTransaction;
 use App\Models\DumpSite;
 use App\Models\DumpSitePayment;
 use App\Models\FuelStation;
+use App\Models\OpeningBalance;
 use App\Models\Party;
 use App\Models\PartyPayment;
+use App\Models\PartyTransfer;
 use App\Models\Site;
 use App\Models\SiteTransaction;
 use App\Models\Vehicle;
@@ -66,6 +68,8 @@ class CariEntryService extends Service
         foreach (CariEntryKind::cases() as $kind) {
             if ($role = $kind->partyRole()) {
                 $parties[$kind->value] = $this->parties->options($role, $current['party_id'] ?? null);
+            } elseif ($kind->takesAnyParty()) {
+                $parties[$kind->value] = $this->parties->options(include: array_filter([$current['party_id'] ?? null, $current['counter_party_id'] ?? null]));
             }
         }
 
@@ -145,7 +149,8 @@ class CariEntryService extends Service
 
         return [
             'kind' => $kind->value,
-            'party_id' => $entry->party_id ?? $entry->dumpSite?->party_id,
+            'party_id' => $entry->party_id ?? $entry->debit_party_id ?? $entry->dumpSite?->party_id,
+            'counter_party_id' => $entry->credit_party_id ?? null,
             'direction' => $credit > 0 ? 'credit' : 'debit',
             'amount' => number_format($debit > 0 ? $debit : $credit, 2, '.', ''),
             'occurred_on' => $entry->occurred_on,
@@ -176,7 +181,8 @@ class CariEntryService extends Service
         $method = $form['payment_method'];
 
         $links = array_filter([
-            'Cari' => $name(Party::class, $form['party_id']),
+            ($kind === CariEntryKind::PartyTransfer ? 'Borçlanan cari' : 'Cari') => $name(Party::class, $form['party_id']),
+            'Alacaklanan cari' => $name(Party::class, $form['counter_party_id']),
             'Plaka' => $form['plate'],
             'Döküm yeri' => $name(DumpSite::class, $form['dump_site_id']),
             'Çek no' => $form['cheque_no'],
@@ -189,7 +195,11 @@ class CariEntryService extends Service
         ], fn ($value) => $value !== null && $value !== '');
 
         return [
-            'direction' => $form['direction'] === 'credit' ? 'Alacak' : 'Borç',
+            'direction' => match (true) {
+                $kind === CariEntryKind::PartyTransfer => 'Borçlanan cariye borç, alacaklanan cariye alacak',
+                $form['direction'] === 'credit' => 'Alacak',
+                default => 'Borç',
+            },
             'amount' => $form['amount'],
             'occurred_on' => Carbon::parse($form['occurred_on']),
             'payment_method' => $method instanceof PaymentMethod ? $method : PaymentMethod::tryFrom((string) $method),
@@ -209,6 +219,8 @@ class CariEntryService extends Service
             CariEntryKind::DumpPayment => DumpSitePayment::query(),
             CariEntryKind::Site => SiteTransaction::query(),
             CariEntryKind::Cash => CashEntry::query(),
+            CariEntryKind::Opening => OpeningBalance::query(),
+            CariEntryKind::PartyTransfer => PartyTransfer::query(),
         };
 
         return $query->find($id) ?? throw new OperationException('Kayıt bulunamadı.');
@@ -279,6 +291,22 @@ class CariEntryService extends Service
                 'description' => $data['description'] ?? null,
                 'created_by' => $existing?->created_by ?? $userId,
             ],
+            CariEntryKind::Opening => [
+                'party_id' => $data['party_id'],
+                'debit' => $direction === 'debit' ? $amount : 0,
+                'credit' => $direction === 'credit' ? $amount : 0,
+                'occurred_on' => $date,
+                'description' => $data['description'] ?? null,
+                'created_by' => $existing?->created_by ?? $userId,
+            ],
+            CariEntryKind::PartyTransfer => [
+                'debit_party_id' => $data['party_id'],
+                'credit_party_id' => $data['counter_party_id'],
+                'amount' => $amount,
+                'occurred_on' => $date,
+                'description' => $data['description'] ?? null,
+                'created_by' => $existing?->created_by ?? $userId,
+            ],
         };
 
         if ($existing) {
@@ -295,6 +323,8 @@ class CariEntryService extends Service
             CariEntryKind::DumpPayment => DumpSitePayment::class,
             CariEntryKind::Site => SiteTransaction::class,
             CariEntryKind::Cash => CashEntry::class,
+            CariEntryKind::Opening => OpeningBalance::class,
+            CariEntryKind::PartyTransfer => PartyTransfer::class,
         };
 
         return $class::query()->create($attributes);
@@ -310,6 +340,15 @@ class CariEntryService extends Service
         $kind = $this->kind($data);
 
         if (! $kind->postsLedger()) {
+            return;
+        }
+
+        if ($entry instanceof PartyTransfer) {
+            $this->ledger->sync($entry, [
+                LedgerLine::debit($entry->debit_party_id, $entry->occurred_on, $entry->amount, $this->text($kind, $data)),
+                LedgerLine::credit($entry->credit_party_id, $entry->occurred_on, $entry->amount, $this->text($kind, $data)),
+            ]);
+
             return;
         }
 

@@ -22,10 +22,14 @@ enum CariEntryKind: string
     case DumpPayment = 'dump_payment';
     case Site = 'site';
     case Cash = 'cash';
+    case Opening = 'opening';
+    case PartyTransfer = 'party_transfer';
 
     public function label(): string
     {
         return match ($this) {
+            self::Opening => 'Açılış Bakiyesi',
+            self::PartyTransfer => 'Cari Virman',
             self::Supplier => 'Satıcı Cari',
             self::Customer => 'Alıcı Cari',
             self::Fuel => 'Satıcı Petrol',
@@ -52,12 +56,21 @@ enum CariEntryKind: string
     }
 
     /**
+     * Kinds that take any cari card, whatever its roles.
+     */
+    public function takesAnyParty(): bool
+    {
+        return in_array($this, [self::Opening, self::PartyTransfer], true);
+    }
+
+    /**
      * choice: the form asks borç or alacak. Otherwise the direction is fixed.
+     * A transfer always debits its first party and credits the second.
      */
     public function directionMode(): string
     {
         return match ($this) {
-            self::VehiclePayment, self::OwnerPayment, self::DumpPayment => 'debit',
+            self::VehiclePayment, self::OwnerPayment, self::DumpPayment, self::PartyTransfer => 'debit',
             self::VehicleReceivable => 'credit',
             default => 'choice',
         };

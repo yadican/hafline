@@ -4,14 +4,18 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\CashCategory;
 use App\Models\CashEntry;
 use App\Models\CompanyTransaction;
 use App\Models\LedgerEntry;
+use App\Models\OpeningBalance;
 use App\Models\Party;
+use App\Models\PartyTransfer;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
+use App\Repositories\PartyRepository;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -171,6 +175,106 @@ class CariEntryTest extends TestCase
             ->assertOk()
             ->assertSee('Seçilen araç ödemesi')
             ->assertDontSee('Diğer araç alacağı');
+    }
+
+    public function test_opening_balance_posts_once_per_party_without_a_payment_method(): void
+    {
+        $party = Party::factory()->create(['name' => 'Rolsüz Cari']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'opening',
+                'direction' => 'credit',
+                'party_id' => $party->id,
+                'amount' => '12500',
+                'occurred_on' => '2026-01-01',
+                'payment_method' => 'cash',
+                'cash_category_id' => CashCategory::factory()->create()->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $opening = OpeningBalance::query()->sole();
+        $entry = LedgerEntry::query()->sole();
+        $this->assertSame('opening_balance', $entry->source_type);
+        $this->assertSame($party->id, $entry->party_id);
+        $this->assertSame('12500.00', $entry->credit);
+        $this->assertNull($entry->payment_method);
+        $this->assertNull($entry->cash_category_id);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'opening',
+                'direction' => 'debit',
+                'party_id' => $party->id,
+                'amount' => '100',
+                'occurred_on' => '2026-01-01',
+            ])
+            ->assertSessionHasErrors(['party_id' => 'Bu carinin açılış bakiyesi zaten girilmiş; mevcut kaydı düzenleyin.']);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cari-entries.update', ['kind' => 'opening', 'entry' => $opening->id]), [
+                'kind' => 'opening',
+                'direction' => 'debit',
+                'party_id' => $party->id,
+                'amount' => '9000',
+                'occurred_on' => '2026-01-01',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(9000.0, app(PartyRepository::class)->totals($party)['balance']);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cari-entries.destroy', ['kind' => 'opening', 'entry' => $opening->id]));
+
+        $this->assertSame(0.0, app(PartyRepository::class)->totals($party)['balance']);
+    }
+
+    public function test_party_transfer_debits_one_party_and_credits_the_other(): void
+    {
+        $customer = Party::factory()->company()->withRole(PartyRole::Customer)->create(['name' => 'ALICI A.Ş.']);
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => 'SATICI A.Ş.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'party_transfer',
+                'party_id' => $supplier->id,
+                'counter_party_id' => $customer->id,
+                'amount' => '3000',
+                'occurred_on' => '2026-06-05',
+                'payment_method' => 'cash',
+                'description' => 'Mahsup',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $transfer = PartyTransfer::query()->sole();
+        $this->assertSame(3000.0, app(PartyRepository::class)->totals($supplier)['balance']);
+        $this->assertSame(-3000.0, app(PartyRepository::class)->totals($customer)['balance']);
+        $this->assertSame(0, LedgerEntry::query()->whereNotNull('payment_method')->count());
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.index'))
+            ->assertSee('SATICI A.Ş. → ALICI A.Ş.');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.show', ['kind' => 'party_transfer', 'entry' => $transfer->id]))
+            ->assertOk()
+            ->assertSeeInOrder(['Borçlanan cari', 'SATICI A.Ş.', 'Alacaklanan cari', 'ALICI A.Ş.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'party_transfer',
+                'party_id' => $supplier->id,
+                'counter_party_id' => $supplier->id,
+                'amount' => '10',
+                'occurred_on' => '2026-06-05',
+            ])
+            ->assertSessionHasErrors(['counter_party_id' => 'Virmanın iki tarafı farklı cari olmalı.']);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cari-entries.destroy', ['kind' => 'party_transfer', 'entry' => $transfer->id]));
+
+        $this->assertSame(0.0, app(PartyRepository::class)->totals($supplier)['balance']);
+        $this->assertSame(0.0, app(PartyRepository::class)->totals($customer)['balance']);
     }
 
     public function test_vehicle_payment_debits_the_owner_and_delete_reverses_it(): void

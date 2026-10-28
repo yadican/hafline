@@ -74,6 +74,25 @@ class CariEntryRepository
                 ->selectRaw("t.id, 'site' as kind, s.name as label, t.debit, t.credit, t.occurred_on, t.description, t.payment_method"), $filters);
         }
 
+        if ($keep('opening')) {
+            $branches[] = $this->dated(DB::table('opening_balances as t')
+                ->leftJoin('parties as p', 'p.id', '=', 't.party_id')
+                ->whereNull('t.deleted_at')
+                ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where('t.party_id', $party))
+                ->selectRaw("t.id, 'opening' as kind, p.name as label, t.debit, t.credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);
+        }
+
+        if ($keep('party_transfer')) {
+            $branches[] = $this->dated(DB::table('party_transfers as t')
+                ->leftJoin('parties as dp', 'dp.id', '=', 't.debit_party_id')
+                ->leftJoin('parties as cp', 'cp.id', '=', 't.credit_party_id')
+                ->whereNull('t.deleted_at')
+                ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where(fn (QueryBuilder $query) => $query
+                    ->where('t.debit_party_id', $party)
+                    ->orWhere('t.credit_party_id', $party)))
+                ->selectRaw("t.id, 'party_transfer' as kind, dp.name || ' → ' || cp.name as label, t.amount as debit, t.amount as credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);
+        }
+
         if ($keep('cash')) {
             $branches[] = $this->dated(DB::table('cash_entries as t')
                 ->whereNull('t.deleted_at')
