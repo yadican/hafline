@@ -16,6 +16,9 @@ enum PartyRole: string
     case Market = 'market';
     case Employee = 'employee';
     case MachineOperator = 'machine_operator';
+    case Site = 'site';
+    case Quarry = 'quarry';
+    case Commission = 'commission';
 
     public function label(): string
     {
@@ -28,6 +31,9 @@ enum PartyRole: string
             self::Market => 'Piyasa',
             self::Employee => 'Personel',
             self::MachineOperator => 'Makine operatörü',
+            self::Site => 'Şantiye',
+            self::Quarry => 'Kum ocağı',
+            self::Commission => 'Komisyoncu',
         };
     }
 
@@ -42,13 +48,35 @@ enum PartyRole: string
     }
 
     /**
-     * Personel and machine operators are people; companies cannot hold those roles.
+     * Staff are people; operators of a site, dump, quarry or fuel station are companies.
+     * Null: both kinds of party may hold the role.
      */
-    public function allowedFor(PartyType $type): bool
+    public function onlyFor(): ?PartyType
     {
         return match ($this) {
-            self::Employee, self::MachineOperator => $type === PartyType::Person,
-            default => true,
+            self::Employee, self::MachineOperator => PartyType::Person,
+            self::DumpOperator, self::Fuel, self::Site, self::Quarry => PartyType::Company,
+            default => null,
+        };
+    }
+
+    public function allowedFor(PartyType $type): bool
+    {
+        return in_array($this->onlyFor(), [null, $type], true);
+    }
+
+    /**
+     * Whether a party in this role usually owes the company (receivable) or is owed by it (payable).
+     * Market works both ways.
+     *
+     * @return list<PartySide>
+     */
+    public function sides(): array
+    {
+        return match ($this) {
+            self::Site, self::Customer => [PartySide::Receivable],
+            self::Market => [PartySide::Receivable, PartySide::Payable],
+            default => [PartySide::Payable],
         };
     }
 
@@ -88,6 +116,9 @@ enum PartyRole: string
             self::Market => 'Piyasa firmaları',
             self::Employee => 'Personel',
             self::MachineOperator => 'Makine operatörleri',
+            self::Site => 'Şantiyeler',
+            self::Quarry => 'Kum ocakları',
+            self::Commission => 'Komisyoncular',
         };
     }
 
@@ -102,6 +133,9 @@ enum PartyRole: string
             self::Market => 'fa-solid fa-store',
             self::Employee => 'fa-solid fa-user-tie',
             self::MachineOperator => 'fa-solid fa-helmet-safety',
+            self::Site => 'fa-solid fa-person-digging',
+            self::Quarry => 'fa-solid fa-mountain',
+            self::Commission => 'fa-solid fa-handshake-angle',
         };
     }
 
@@ -141,6 +175,9 @@ enum PartyRole: string
             self::Fuel => 'Akaryakıt istasyonu bağlı. Kaldırmak için ilgili istasyon kartını kullanın.',
             self::MachineOperator => 'Makine çalışma fişinde operatör olarak kullanılmış. Cari’den kaldırılamaz.',
             self::Customer, self::Supplier, self::Market => 'Şantiye veya cari hareket bağlantısı var. Cari’den kaldırılamaz.',
+            self::Site => 'Şantiye kartı bağlı. Kaldırmak için ilgili şantiye kartını kullanın.',
+            self::Quarry => 'Kum ocağı kartı bağlı. Kaldırmak için ilgili ocak kartını kullanın.',
+            self::Commission => 'Kayıtlarda komisyoncu olarak kullanılmış. Cari’den kaldırılamaz.',
         };
     }
 }

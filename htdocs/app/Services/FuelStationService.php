@@ -46,7 +46,7 @@ class FuelStationService extends Service
      */
     public function partyOptions(?FuelStation $station = null): array
     {
-        return $this->parties->options(include: $station?->party_id);
+        return $this->parties->options(include: $station?->party_id, type: PartyRole::Fuel->onlyFor());
     }
 
     /**

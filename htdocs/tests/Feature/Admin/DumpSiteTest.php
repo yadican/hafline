@@ -66,6 +66,23 @@ class DumpSiteTest extends TestCase
         $this->assertSoftDeleted($dumpSite);
     }
 
+    public function test_a_person_cannot_operate_a_dump_site(): void
+    {
+        $person = Party::factory()->person()->create(['name' => 'Veli Kaya']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.dump-sites.create'))
+            ->assertOk()
+            ->assertDontSee('Veli Kaya');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.dump-sites.store'), ['name' => 'KEMERBURGAZ', 'party_id' => $person->id, 'active' => '1'])
+            ->assertSessionHasErrors(['party_id' => 'İşletmeci, silinmemiş bir şirket cari kartı olmalı.']);
+
+        $this->assertDatabaseCount('dump_sites', 0);
+        $this->assertFalse($person->fresh()->hasRole(PartyRole::DumpOperator));
+    }
+
     public function test_dump_site_names_are_unique_and_required(): void
     {
         DumpSite::factory()->create(['name' => 'ÇATALCA']);

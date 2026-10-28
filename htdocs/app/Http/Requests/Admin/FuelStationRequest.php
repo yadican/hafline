@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\PartyRole;
 use App\Models\Party;
 use App\Models\Site;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -35,7 +36,7 @@ class FuelStationRequest extends FormRequest
                 'max:255',
                 Rule::unique('fuel_stations', 'name')->ignore($this->route('fuel_station'))->withoutTrashed(),
             ],
-            'party_id' => ['required', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
+            'party_id' => ['required', 'uuid', Rule::exists(Party::class, 'id')->where('type', PartyRole::Fuel->onlyFor()->value)->withoutTrashed()],
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999.9999', 'decimal:0,4'],
             'site_ids' => ['array'],
             'site_ids.*' => ['distinct', 'uuid', Rule::exists(Site::class, 'id')->withoutTrashed()],
@@ -54,6 +55,16 @@ class FuelStationRequest extends FormRequest
             'unit_price' => 'birim fiyat',
             'site_ids.*' => 'şantiye',
             'active' => 'aktif',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'party_id.exists' => 'İşletmeci, silinmemiş bir şirket cari kartı olmalı.',
         ];
     }
 }

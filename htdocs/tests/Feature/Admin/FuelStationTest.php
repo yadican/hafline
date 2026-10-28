@@ -86,6 +86,22 @@ class FuelStationTest extends TestCase
         $this->assertSoftDeleted($station);
     }
 
+    public function test_a_person_cannot_operate_a_station(): void
+    {
+        $person = Party::factory()->person()->create(['name' => 'Veli Kaya']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.fuel-stations.create'))
+            ->assertOk()
+            ->assertDontSee('Veli Kaya');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.fuel-stations.store'), ['name' => 'OPET', 'party_id' => $person->id, 'unit_price' => '47'])
+            ->assertSessionHasErrors(['party_id' => 'İşletmeci, silinmemiş bir şirket cari kartı olmalı.']);
+
+        $this->assertDatabaseCount('fuel_stations', 0);
+    }
+
     public function test_invalid_station_is_not_stored(): void
     {
         FuelStation::factory()->create(['name' => 'SHELL']);

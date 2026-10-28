@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Cache\FormOptionsCache;
 use App\Enums\PartyRole;
+use App\Enums\PartySide;
+use App\Enums\PartyType;
 use App\Models\LedgerEntry;
 use App\Models\Party;
 use App\Support\Sort;
@@ -22,7 +24,7 @@ class PartyRepository extends Repository
     /**
      * Every word must match somewhere, so "ali yılmaz" finds the party across name and contact fields.
      *
-     * @param  array{q?: string, type?: string, role?: string, active?: string}  $filters
+     * @param  array{q?: string, type?: string, role?: string, side?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
@@ -32,6 +34,10 @@ class PartyRepository extends Repository
             ->addSelect(['balance' => $this->balanceQuery()])
             ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))
             ->when($filters['role'] ?? null, fn (Builder $query, string $role) => $query->withRole(PartyRole::from($role)))
+            ->when($filters['side'] ?? null, fn (Builder $query, string $side) => $query->whereHas(
+                'roleAssignments',
+                fn (Builder $query) => $query->whereIn('role', PartySide::from($side)->roles()),
+            ))
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         foreach (preg_split('/\s+/u', trim($filters['q'] ?? ''), flags: PREG_SPLIT_NO_EMPTY) as $word) {
@@ -54,14 +60,15 @@ class PartyRepository extends Repository
      * @param  string|array<int, string>|null  $include
      * @return array<string, string>
      */
-    public function options(?PartyRole $role = null, string|array|null $include = null): array
+    public function options(?PartyRole $role = null, string|array|null $include = null, ?PartyType $type = null): array
     {
         $options = FormOptionsCache::remember(
             FormOptionsCache::PARTIES,
-            $role?->value ?? 'all',
+            ($role?->value ?? 'all').($type ? ':'.$type->value : ''),
             fn (): array => Party::query()
                 ->where('active', true)
                 ->when($role, fn (Builder $query, PartyRole $role) => $query->withRole($role))
+                ->when($type, fn (Builder $query, PartyType $type) => $query->where('type', $type))
                 ->orderBy('name')
                 ->pluck('name', 'id')
                 ->all(),

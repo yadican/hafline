@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\PartyRole;
+use App\Enums\PartyType;
 use App\Models\Party;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -44,7 +45,13 @@ class SiteRequest extends FormRequest
             'active' => ['boolean'],
             ...collect(PartyRole::forSites())
                 ->mapWithKeys(fn (PartyRole $role) => [
-                    'parties.'.$role->value.'.*' => ['distinct', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
+                    'parties.'.$role->value.'.*' => [
+                        'distinct',
+                        'uuid',
+                        Rule::exists(Party::class, 'id')
+                            ->when($role->onlyFor(), fn ($rule, PartyType $type) => $rule->where('type', $type->value))
+                            ->withoutTrashed(),
+                    ],
                 ])
                 ->all(),
         ];

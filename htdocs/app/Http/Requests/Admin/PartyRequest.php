@@ -57,7 +57,7 @@ class PartyRequest extends FormRequest
                     $role = PartyRole::tryFrom((string) $value);
 
                     if ($role !== null && ! $role->allowedFor($this->partyType())) {
-                        $fail("{$role->label()} yalnızca kişi cari kartlarına verilebilir.");
+                        $fail(sprintf('%s yalnızca %s cari kartlarına verilebilir.', $role->label(), mb_strtolower($role->onlyFor()->label(), 'UTF-8')));
                     }
                 },
             ],

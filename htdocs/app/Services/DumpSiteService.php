@@ -50,7 +50,7 @@ class DumpSiteService extends Service
      */
     public function partyOptions(?DumpSite $dumpSite = null): array
     {
-        return $this->parties->options(include: $dumpSite?->party_id);
+        return $this->parties->options(include: $dumpSite?->party_id, type: PartyRole::DumpOperator->onlyFor());
     }
 
     /**

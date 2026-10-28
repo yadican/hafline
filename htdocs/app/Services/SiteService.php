@@ -34,11 +34,20 @@ class SiteService extends Service
     }
 
     /**
-     * @return array<string, string>
+     * A role held only by companies lists only companies.
+     *
+     * @return array<string, array<string, string>> role => party options
      */
     public function partyOptions(?Site $site = null): array
     {
-        return $this->parties->options(include: $site?->parties->pluck('id')->all());
+        return collect(PartyRole::forSites())
+            ->mapWithKeys(fn (PartyRole $role) => [
+                $role->value => $this->parties->options(
+                    include: $site?->parties->where('pivot.role', $role->value)->pluck('id')->all(),
+                    type: $role->onlyFor(),
+                ),
+            ])
+            ->all();
     }
 
     /**

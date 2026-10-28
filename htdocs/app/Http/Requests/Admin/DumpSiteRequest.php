@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\PartyRole;
 use App\Models\Party;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,7 +32,7 @@ class DumpSiteRequest extends FormRequest
                 'max:255',
                 Rule::unique('dump_sites', 'name')->ignore($this->route('dump_site'))->withoutTrashed(),
             ],
-            'party_id' => ['required', 'uuid', Rule::exists(Party::class, 'id')->withoutTrashed()],
+            'party_id' => ['required', 'uuid', Rule::exists(Party::class, 'id')->where('type', PartyRole::DumpOperator->onlyFor()->value)->withoutTrashed()],
             'class_prices' => ['array'],
             'class_prices.*' => HaulRouteRequest::PRICE_RULES,
             'active' => ['boolean'],
@@ -48,6 +49,16 @@ class DumpSiteRequest extends FormRequest
             'party_id' => 'işletmeci',
             'class_prices.*' => 'döküm ücreti',
             'active' => 'aktif',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'party_id.exists' => 'İşletmeci, silinmemiş bir şirket cari kartı olmalı.',
         ];
     }
 }

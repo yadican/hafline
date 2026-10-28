@@ -181,6 +181,21 @@ class SiteTest extends TestCase
             ->assertSee('OPET MERKEZ');
     }
 
+    public function test_fuel_firm_of_a_site_must_be_a_company(): void
+    {
+        $person = Party::factory()->person()->create(['name' => 'Veli Kaya']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.sites.store'), [
+                'name' => 'KARTAL',
+                'parties' => ['customer' => [$person->id], 'fuel' => [$person->id]],
+            ])
+            ->assertSessionHasErrors('parties.fuel.0')
+            ->assertSessionDoesntHaveErrors('parties.customer.0');
+
+        $this->assertDatabaseCount('sites', 0);
+    }
+
     public function test_invalid_party_links_are_rejected(): void
     {
         $deleted = Party::factory()->create();

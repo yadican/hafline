@@ -3,7 +3,9 @@
 namespace Tests\Feature\Admin;
 
 use App\Enums\PartyRole;
+use App\Enums\PartySide;
 use App\Enums\PartyType;
+use App\Exceptions\OperationRejectedException;
 use App\Models\Haul;
 use App\Models\Party;
 use App\Models\User;
@@ -313,6 +315,67 @@ class PartyTest extends TestCase
             ->assertSessionHasErrors('roles.0');
 
         $this->assertFalse($company->fresh()->hasRole(PartyRole::MachineOperator));
+    }
+
+    public function test_operator_roles_are_for_companies_and_commission_for_both(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.create', ['type' => 'person']))
+            ->assertOk()
+            ->assertDontSee('value="dump_operator"', false)
+            ->assertDontSee('value="fuel"', false)
+            ->assertDontSee('value="site"', false)
+            ->assertDontSee('value="quarry"', false)
+            ->assertSee('value="commission"', false);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.create', ['type' => 'company']))
+            ->assertOk()
+            ->assertSee('value="site"', false)
+            ->assertSee('value="quarry"', false)
+            ->assertSee('value="commission"', false);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.parties.store'), [
+                'type' => 'person',
+                'first_name' => 'Veli',
+                'last_name' => 'Kaya',
+                'roles' => [PartyRole::Commission->value, PartyRole::DumpOperator->value],
+            ])
+            ->assertSessionHasErrors(['roles.1' => 'Döküm işletmecisi yalnızca şirket cari kartlarına verilebilir.'])
+            ->assertSessionDoesntHaveErrors('roles.0');
+
+        $this->assertDatabaseCount('parties', 0);
+    }
+
+    public function test_a_role_outside_the_party_type_is_refused_at_assignment(): void
+    {
+        $person = Party::factory()->person()->create();
+
+        $this->expectException(OperationRejectedException::class);
+
+        $person->assignRole(PartyRole::Site);
+    }
+
+    public function test_list_filters_by_side(): void
+    {
+        Party::factory()->company()->withRole(PartyRole::Customer)->create(['name' => 'ALICI A.Ş.']);
+        Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => 'SATICI A.Ş.']);
+        Party::factory()->company()->withRole(PartyRole::Market)->create(['name' => 'PİYASA A.Ş.']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.companies.index', ['side' => PartySide::Receivable->value]))
+            ->assertOk()
+            ->assertSee('ALICI A.Ş.')
+            ->assertSee('PİYASA A.Ş.')
+            ->assertDontSee('SATICI A.Ş.');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.companies.index', ['side' => PartySide::Payable->value]))
+            ->assertOk()
+            ->assertSee('SATICI A.Ş.')
+            ->assertSee('PİYASA A.Ş.')
+            ->assertDontSee('ALICI A.Ş.');
     }
 
     public function test_company_create_ignores_incompatible_role_query(): void

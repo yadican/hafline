@@ -3,7 +3,7 @@
         <x-form.select
             :name="'parties['.$role->value.']'"
             :label="$role->pluralLabel()"
-            :options="$parties"
+            :options="$parties[$role->value] ?? []"
             :value="old('parties.'.$role->value, $partyValues[$role->value] ?? [])"
             placeholder="Cari kart seçin"
             multiple

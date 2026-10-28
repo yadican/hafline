@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
+use App\Exceptions\OperationRejectedException;
 use Database\Factories\PartyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -142,6 +143,14 @@ class Party extends Model
 
     public function assignRole(PartyRole $role): void
     {
+        if (! $role->allowedFor($this->type)) {
+            throw new OperationRejectedException(sprintf(
+                '%s rolü %s cari kartına verilemez.',
+                $role->label(),
+                mb_strtolower($this->type->label(), 'UTF-8'),
+            ));
+        }
+
         $this->roleAssignments()->firstOrCreate(['role' => $role]);
         $this->unsetRelation('roleAssignments');
     }
