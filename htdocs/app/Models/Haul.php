@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'tonnage',
     'price',
     'dump_price',
+    'site_price',
+    'site_party_id',
     'shift',
     'hauled_at',
     'created_by',
@@ -129,6 +131,7 @@ class Haul extends Model implements LedgerSource
             'tonnage' => 'integer',
             'price' => 'decimal:2',
             'dump_price' => 'decimal:2',
+            'site_price' => 'decimal:2',
             'shift' => Shift::class,
             'hauled_at' => 'datetime',
         ];

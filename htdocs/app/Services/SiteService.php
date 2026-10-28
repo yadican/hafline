@@ -51,6 +51,16 @@ class SiteService extends Service
     }
 
     /**
+     * Companies that can be a site's own cari.
+     *
+     * @return array<string, string>
+     */
+    public function siteCariOptions(?Site $site = null): array
+    {
+        return $this->parties->options(include: $site?->party_id, type: PartyRole::Site->onlyFor());
+    }
+
+    /**
      * @return array<string, list<string>> role => party ids
      */
     public function partyValues(Site $site): array
@@ -73,6 +83,7 @@ class SiteService extends Service
         return $this->transaction(function () use ($attributes, $parties): Site {
             /** @var Site $site */
             $site = $this->sites->create($attributes);
+            $site->party?->assignRole(PartyRole::Site);
             $this->syncParties($site, $parties);
             $this->flushCaches();
 
@@ -91,6 +102,7 @@ class SiteService extends Service
         return $this->transaction(function () use ($site, $attributes, $parties): Site {
             /** @var Site $updated */
             $updated = $this->sites->update($site, $attributes);
+            $updated->party?->assignRole(PartyRole::Site);
             $this->syncParties($updated, $parties);
             $this->flushCaches();
 

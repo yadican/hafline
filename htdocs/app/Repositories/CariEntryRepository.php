@@ -74,6 +74,14 @@ class CariEntryRepository
                 ->selectRaw("t.id, 'site' as kind, s.name as label, t.debit, t.credit, t.occurred_on, t.description, t.payment_method"), $filters);
         }
 
+        if ($keep('site_bill')) {
+            $branches[] = $this->dated(DB::table('site_bills as t')
+                ->leftJoin('sites as s', 's.id', '=', 't.site_id')
+                ->whereNull('t.deleted_at')
+                ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where('t.party_id', $party))
+                ->selectRaw("t.id, 'site_bill' as kind, s.name as label, t.amount as debit, cast(0 as numeric(14,2)) as credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);
+        }
+
         if ($keep('opening')) {
             $branches[] = $this->dated(DB::table('opening_balances as t')
                 ->leftJoin('parties as p', 'p.id', '=', 't.party_id')

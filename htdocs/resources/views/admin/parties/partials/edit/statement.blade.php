@@ -44,13 +44,14 @@
                                     <a href="{{ route('admin.machine-works.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'fuel_receipt' && $entry->source && ! $entry->source->trashed())
                                     <a href="{{ route('admin.fuel-receipts.show', $entry->source) }}">{{ $entry->description }}</a>
-                                @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'opening_balance', 'party_transfer'], true) && $entry->source && ! $entry->source->trashed())
+                                @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction'], true) && $entry->source && ! $entry->source->trashed())
                                     @php
                                         $cariKind = match ($entry->source_type) {
                                             'company_transaction' => $entry->source->role->value,
                                             'party_payment' => 'owner_payment',
                                             'dump_site_payment' => 'dump_payment',
                                             'opening_balance' => 'opening',
+                                            'site_transaction' => 'site',
                                             default => $entry->source_type,
                                         };
                                     @endphp

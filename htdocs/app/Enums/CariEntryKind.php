@@ -24,12 +24,14 @@ enum CariEntryKind: string
     case Cash = 'cash';
     case Opening = 'opening';
     case PartyTransfer = 'party_transfer';
+    case SiteBill = 'site_bill';
 
     public function label(): string
     {
         return match ($this) {
             self::Opening => 'Açılış Bakiyesi',
             self::PartyTransfer => 'Cari Virman',
+            self::SiteBill => 'Şantiye Hakedişi',
             self::Supplier => 'Satıcı Cari',
             self::Customer => 'Alıcı Cari',
             self::Fuel => 'Satıcı Petrol',
@@ -64,20 +66,31 @@ enum CariEntryKind: string
     }
 
     /**
+     * Kinds that record a balance, not money changing hands: no payment method, account or category.
+     */
+    public function movesMoney(): bool
+    {
+        return ! in_array($this, [self::Opening, self::PartyTransfer, self::SiteBill], true);
+    }
+
+    /**
      * choice: the form asks borç or alacak. Otherwise the direction is fixed.
      * A transfer always debits its first party and credits the second.
      */
     public function directionMode(): string
     {
         return match ($this) {
-            self::VehiclePayment, self::OwnerPayment, self::DumpPayment, self::PartyTransfer => 'debit',
+            self::VehiclePayment, self::OwnerPayment, self::DumpPayment, self::PartyTransfer, self::SiteBill => 'debit',
             self::VehicleReceivable => 'credit',
             default => 'choice',
         };
     }
 
+    /**
+     * A site entry posts only a collection, and only when the site has its own cari.
+     */
     public function postsLedger(): bool
     {
-        return ! in_array($this, [self::Site, self::Cash], true);
+        return $this !== self::Cash;
     }
 }

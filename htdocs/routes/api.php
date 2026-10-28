@@ -31,6 +31,7 @@ Route::prefix('v1')->group(function () {
             Route::get('hauls/dump-sites', [HaulController::class, 'dumpSites'])->name('api.hauls.dump-sites');
             Route::get('hauls/vehicles', [HaulController::class, 'vehicles'])->name('api.hauls.vehicles');
             Route::get('hauls/check-plate', [HaulController::class, 'checkPlate'])->name('api.hauls.check-plate');
+            Route::post('hauls/temporary-vehicle', [HaulController::class, 'registerTemporaryVehicle'])->name('api.hauls.temporary-vehicle');
             Route::get('hauls/session', [HaulController::class, 'session'])->name('api.hauls.session');
             Route::post('hauls/scan', [HaulController::class, 'scan'])
                 ->middleware('throttle:20,1')

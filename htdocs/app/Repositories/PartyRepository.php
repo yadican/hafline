@@ -173,6 +173,10 @@ class PartyRepository extends Repository
             $roles[] = PartyRole::Fuel;
         }
 
+        if (DB::table('sites')->where('party_id', $party->id)->exists()) {
+            $roles[] = PartyRole::Site;
+        }
+
         if (DB::table('employees')->where('party_id', $party->id)->whereNull('deleted_at')->exists()) {
             $roles[] = PartyRole::Employee;
         }
@@ -195,6 +199,7 @@ class PartyRepository extends Repository
             || $party->dumpSites()->withTrashed()->exists()
             || $party->fuelStations()->withTrashed()->exists()
             || DB::table('site_parties')->where('party_id', $party->id)->exists()
+            || DB::table('sites')->where('party_id', $party->id)->exists()
             || DB::table('employees')->where('party_id', $party->id)->exists()
             || DB::table('machine_works')->where('operator_id', $party->id)->exists()
             || DB::table('fuel_receipts')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('fuel_party_id', $party->id))->exists()

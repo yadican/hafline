@@ -388,6 +388,36 @@ class FieldHaulApiTest extends TestCase
         $this->assertSame(0, HaulScan::query()->count());
     }
 
+    public function test_an_unknown_plate_is_registered_under_the_temporary_cari_and_can_take_tickets(): void
+    {
+        $sessionId = $this->lockSession();
+
+        $this->api()
+            ->getJson('/api/v1/hauls/check-plate?plate=06YB123')
+            ->assertOk()
+            ->assertJsonPath('can_create', false)
+            ->assertJsonPath('can_register', true);
+
+        $this->api()
+            ->postJson('/api/v1/hauls/temporary-vehicle', ['plate' => '06 yb 123', 'vehicle_class_id' => $this->vehicle->vehicle_class_id])
+            ->assertOk()
+            ->assertJsonPath('vehicle.plate', '06 YB 123')
+            ->assertJsonPath('owner_name', 'GEÇİCİ CARİ')
+            ->assertJsonPath('can_create', true)
+            ->assertJsonPath('can_register', false);
+
+        $this->api()
+            ->postJson('/api/v1/hauls/temporary-vehicle', ['plate' => '06YB123', 'vehicle_class_id' => $this->vehicle->vehicle_class_id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('plate');
+
+        $this->api()
+            ->postJson('/api/v1/hauls', ['plate' => '06YB123', 'field_session_id' => $sessionId, 'tonnage' => 18])
+            ->assertCreated();
+
+        $this->assertTrue(Haul::query()->sole()->party->isTemporary());
+    }
+
     public function test_unsigned_photo_url_is_forbidden(): void
     {
         Http::fake([

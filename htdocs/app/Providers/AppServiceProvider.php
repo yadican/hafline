@@ -13,6 +13,8 @@ use App\Models\MachineWork;
 use App\Models\OpeningBalance;
 use App\Models\PartyPayment;
 use App\Models\PartyTransfer;
+use App\Models\SiteBill;
+use App\Models\SiteTransaction;
 use App\Models\VehicleOwnership;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
@@ -50,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
             'employee_payment' => EmployeePayment::class,
             'opening_balance' => OpeningBalance::class,
             'party_transfer' => PartyTransfer::class,
+            'site_bill' => SiteBill::class,
+            'site_transaction' => SiteTransaction::class,
         ]);
     }
 }

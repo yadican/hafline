@@ -10,6 +10,7 @@ use App\Http\Requests\Concerns\ChecksPaymentAccount;
 use App\Models\CashCategory;
 use App\Models\OpeningBalance;
 use App\Models\Party;
+use App\Models\Site;
 use App\Models\Vehicle;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -43,11 +44,13 @@ class CariEntryRequest extends FormRequest
             'fuel_station_id' => $this->input('fuel_station_id') ?: null,
             'dump_site_id' => $this->input('dump_site_id') ?: null,
             'bank_id' => $this->accountApplies($kind) ? ($this->input('bank_id') ?: null) : null,
-            'cash_category_id' => $kind?->takesAnyParty() ? null : ($this->input('cash_category_id') ?: null),
-            'payment_method' => $kind?->takesAnyParty() ? null : ($this->input('payment_method') ?: null),
+            'cash_category_id' => $kind?->movesMoney() === false ? null : ($this->input('cash_category_id') ?: null),
+            'payment_method' => $kind?->movesMoney() === false ? null : ($this->input('payment_method') ?: null),
             'document_no' => trim((string) $this->input('document_no')) ?: null,
             'cheque_no' => trim((string) $this->input('cheque_no')) ?: null,
             'description' => trim((string) $this->input('description')) ?: null,
+            'receiver_name' => $kind === CariEntryKind::VehiclePayment ? (trim((string) $this->input('receiver_name')) ?: null) : null,
+            'receiver_national_id' => $kind === CariEntryKind::VehiclePayment ? (trim((string) $this->input('receiver_national_id')) ?: null) : null,
         ]);
     }
 
@@ -75,6 +78,8 @@ class CariEntryRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:255'],
             'liters' => ['nullable', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999'],
             'unit_price' => ['nullable', 'numeric', 'decimal:0,4', 'gt:0', 'max:9999'],
+            'receiver_name' => ['nullable', 'string', 'max:120'],
+            'receiver_national_id' => ['nullable', 'digits:11'],
         ];
     }
 
@@ -131,10 +136,20 @@ class CariEntryRequest extends FormRequest
                 if (in_array($kind, [CariEntryKind::VehiclePayment, CariEntryKind::VehicleReceivable], true)) {
                     $vehicle = Vehicle::findByPlate((string) $this->input('plate'));
 
+                    $ownership = $vehicle?->ownershipOn(Carbon::parse($this->input('occurred_on')));
+
                     if (! $vehicle) {
                         $validator->errors()->add('plate', 'Kayıtlı bir plaka girin.');
-                    } elseif (! $vehicle->ownershipOn(Carbon::parse($this->input('occurred_on')))) {
+                    } elseif (! $ownership) {
                         $validator->errors()->add('plate', 'Bu tarihte aracın kayıtlı sahibi yok.');
+                    } elseif ($kind === CariEntryKind::VehiclePayment && $ownership->party?->isTemporary()) {
+                        if (! $this->input('receiver_name')) {
+                            $validator->errors()->add('receiver_name', 'Plaka Geçici Cari\'de; parayı teslim alanın adını girin.');
+                        }
+
+                        if (! $this->input('receiver_national_id')) {
+                            $validator->errors()->add('receiver_national_id', 'Plaka Geçici Cari\'de; teslim alanın TC kimlik numarasını girin.');
+                        }
                     }
                 }
 
@@ -144,8 +159,12 @@ class CariEntryRequest extends FormRequest
                     $validator->errors()->add('dump_site_id', 'Döküm yeri seçin.');
                 }
 
-                if ($kind === CariEntryKind::Site && ! $this->input('site_id')) {
+                if (in_array($kind, [CariEntryKind::Site, CariEntryKind::SiteBill], true) && ! $this->input('site_id')) {
                     $validator->errors()->add('site_id', 'Şantiye seçin.');
+                }
+
+                if ($kind === CariEntryKind::SiteBill && $this->input('site_id') && ! Site::query()->whereKey($this->input('site_id'))->whereNotNull('party_id')->exists()) {
+                    $validator->errors()->add('site_id', 'Bu şantiyenin carisi yok; önce şantiye kartından cari seçin.');
                 }
 
                 $category = CashCategory::query()->find($this->input('cash_category_id'));
@@ -188,6 +207,8 @@ class CariEntryRequest extends FormRequest
             'description' => 'açıklama',
             'liters' => 'litre',
             'unit_price' => 'birim fiyat',
+            'receiver_name' => 'teslim alan',
+            'receiver_national_id' => 'teslim alanın TC kimlik no',
         ];
     }
 
@@ -201,7 +222,7 @@ class CariEntryRequest extends FormRequest
             return true;
         }
 
-        if ($kind === null || $kind->takesAnyParty()) {
+        if ($kind === null || ! $kind->movesMoney()) {
             return false;
         }
 

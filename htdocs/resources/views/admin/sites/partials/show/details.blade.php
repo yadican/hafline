@@ -12,6 +12,18 @@
         <x-form.field label="Durum">
             <div><x-ui.active-badge :active="$site->active" /></div>
         </x-form.field>
+        <x-form.field label="Şantiye carisi">
+            <div>
+                @if ($site->party)
+                    <a href="{{ route('admin.parties.show', $site->party) }}">{{ $site->party->name }}</a>
+                @else
+                    —
+                @endif
+            </div>
+        </x-form.field>
+        <x-form.field label="Faturalama">
+            <div>{{ $site->billing_mode->label() }}</div>
+        </x-form.field>
     </x-form.group>
 
     <x-form.group legend="Firmalar" icon="fa-solid fa-handshake" description="Bu şantiyede çalışılan cari kartlar">

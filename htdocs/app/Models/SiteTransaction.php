@@ -2,15 +2,22 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\PaymentMethod;
+use App\Services\Ledger\LedgerSource;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Money in or out at a site. A collection (credit) from a site that has its own cari is posted to
+ * that cari (party_id); an expense (debit) is a site cost and stays off any cari.
+ */
 #[Fillable([
     'site_id',
+    'party_id',
     'payment_method',
     'bank_id',
     'debit',
@@ -19,9 +26,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'description',
     'created_by',
 ])]
-class SiteTransaction extends Model
+class SiteTransaction extends Model implements LedgerSource
 {
     use HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return Module::Excavation;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return $this->site_id;
+    }
 
     /**
      * @return BelongsTo<Site, $this>

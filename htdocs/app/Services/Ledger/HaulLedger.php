@@ -6,6 +6,7 @@ use App\Models\Haul;
 
 /**
  * A haul earns its price for the vehicle owner of the day and its dump fee for the dump operator.
+ * A site billed per trip owes the site price for it.
  */
 class HaulLedger
 {
@@ -23,10 +24,16 @@ class HaulLedger
             $haul->dumpSite?->name,
         );
 
-        $this->ledger->sync($haul, [
+        $lines = [
             LedgerLine::credit($haul->party_id, $date, $haul->price, $description, $haul->vehicle_id),
             LedgerLine::credit($haul->dump_party_id, $date, $haul->dump_price, $description, $haul->vehicle_id),
-        ]);
+        ];
+
+        if ($haul->site_party_id) {
+            $lines[] = LedgerLine::debit($haul->site_party_id, $date, $haul->site_price, $description, $haul->vehicle_id);
+        }
+
+        $this->ledger->sync($haul, $lines);
     }
 
     public function void(Haul $haul): void

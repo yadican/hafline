@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\TemporaryOwnershipRequest;
 use App\Http\Requests\Admin\VehicleOwnershipRequest;
 use App\Models\Vehicle;
 use App\Models\VehicleOwnership;
@@ -14,6 +15,7 @@ class VehicleOwnershipController extends AdminController
 
     protected array $permissionMap = [
         'store' => 'edit-vehicle',
+        'reassign' => 'edit-vehicle',
         'destroy' => 'edit-vehicle',
     ];
 
@@ -25,6 +27,16 @@ class VehicleOwnershipController extends AdminController
             fn () => $this->ownerships->transfer($vehicle, $request->party(), $request->startedOn(), $request->carriesBalance()),
             'admin.vehicles.edit',
             'Araç devredildi.',
+            [$vehicle],
+        );
+    }
+
+    public function reassign(TemporaryOwnershipRequest $request, Vehicle $vehicle): RedirectResponse
+    {
+        return $this->complete(
+            fn () => $this->ownerships->reassignTemporary($vehicle, $request->party()),
+            'admin.vehicles.edit',
+            'Plaka Geçici Cari\'den asıl sahibine aktarıldı.',
             [$vehicle],
         );
     }

@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'amount',
     'occurred_on',
     'description',
+    'receiver_name',
+    'receiver_national_id',
     'company_transaction_id',
     'created_by',
 ])]

@@ -16,6 +16,12 @@
             </x-form.class-prices>
         </x-form.group>
 
+        <x-form.group legend="Şantiye satış fiyatları" icon="fa-solid fa-person-digging" description="Sefer başına faturalanan şantiyenin ödediği tutar">
+            <x-form.class-prices :classes="$options['classes']" name="site_prices" :prices="$haulRoute->sitePrices->pluck('price', 'vehicle_class_id')->all()">
+                <p class="panel-hint">Şantiye kartında faturalama "Sefer başına" ise her taşıma fişi şantiye carisini bu fiyatla borçlandırır.</p>
+            </x-form.class-prices>
+        </x-form.group>
+
         <x-form.actions label="Güncelle" :cancel="route('admin.haul-routes.index')" />
     </x-form.grid>
 </form>

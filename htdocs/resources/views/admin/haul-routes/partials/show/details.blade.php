@@ -21,6 +21,9 @@
         <x-form.field label="Sınıf fiyatları">
             <div><x-ui.class-prices :prices="$haulRoute->classPrices" /></div>
         </x-form.field>
+        <x-form.field label="Şantiye satış fiyatları">
+            <div><x-ui.class-prices :prices="$haulRoute->sitePrices" /></div>
+        </x-form.field>
     </x-form.group>
 </div>
 

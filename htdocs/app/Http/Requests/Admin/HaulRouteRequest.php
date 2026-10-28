@@ -46,6 +46,8 @@ class HaulRouteRequest extends FormRequest
             'bonus' => self::PRICE_RULES,
             'class_prices' => ['array'],
             'class_prices.*' => self::PRICE_RULES,
+            'site_prices' => ['array'],
+            'site_prices.*' => self::PRICE_RULES,
             'active' => ['boolean'],
         ];
     }
@@ -71,6 +73,7 @@ class HaulRouteRequest extends FormRequest
             'price' => 'temel fiyat',
             'bonus' => 'prim',
             'class_prices.*' => 'sınıf fiyatı',
+            'site_prices.*' => 'şantiye satış fiyatı',
             'active' => 'aktif',
         ];
     }

@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:view-vehicle')->group(function () {
         Route::resource('vehicles', VehicleController::class);
+        Route::post('vehicles/{vehicle}/ownerships/reassign', [VehicleOwnershipController::class, 'reassign'])->name('vehicles.ownerships.reassign');
         Route::resource('vehicles.ownerships', VehicleOwnershipController::class)->only(['store', 'destroy'])->scoped();
         Route::resource('vehicles.rates', VehicleRateController::class)->only(['store', 'destroy'])->scoped();
     });

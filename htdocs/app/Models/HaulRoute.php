@@ -68,6 +68,14 @@ class HaulRoute extends Model
     }
 
     /**
+     * @return HasMany<RouteSitePrice, $this>
+     */
+    public function sitePrices(): HasMany
+    {
+        return $this->hasMany(RouteSitePrice::class, 'route_id');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

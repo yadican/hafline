@@ -1178,6 +1178,88 @@
                 ]
             }
         },
+        "/api/v1/hauls/temporary-vehicle": {
+            "post": {
+                "tags": [
+                    "3. Plaka ve fiş"
+                ],
+                "summary": "Kayıtlı olmayan plakayı Geçici Cari'ye ekle",
+                "description": "`check-plate` `can_register: true` döndüğünde kullanılır. Plaka seçilen araç sınıfıyla kaydedilir ve bugünden itibaren Geçici Cari'ye bağlanır; ofis gün sonunda gerçek cariye aktarır. `vehicle_class_id` için `GET /hauls/options` > `vehicle_classes[].id`.",
+                "operationId": "haulsTemporaryVehicle",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "plate",
+                                    "vehicle_class_id"
+                                ],
+                                "properties": {
+                                    "plate": {
+                                        "type": "string",
+                                        "example": "34 YB 123",
+                                        "maxLength": 20
+                                    },
+                                    "vehicle_class_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Yeni aracın plaka kontrolü",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HaulPlateCheck"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token yok veya süresi dolmuş",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "field-haul.operate yetkisi yok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Plaka zaten kayıtlı veya sınıf geçersiz",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/hauls/scan": {
             "post": {
                 "tags": [
@@ -2405,7 +2487,8 @@
             "HaulOptionsResponse": {
                 "required": [
                     "sites",
-                    "shifts"
+                    "shifts",
+                    "vehicle_classes"
                 ],
                 "properties": {
                     "sites": {
@@ -2418,6 +2501,13 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/ShiftOption"
+                        }
+                    },
+                    "vehicle_classes": {
+                        "description": "Kayıtsız plakayı Geçici Cari'ye eklerken seçilir",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedOption"
                         }
                     }
                 },
@@ -2595,6 +2685,7 @@
                     "owner_on_date",
                     "owner_name",
                     "can_create",
+                    "can_register",
                     "message"
                 ],
                 "properties": {
@@ -2637,6 +2728,11 @@
                         "description": "Bu plakayla taşıma fişi kesilebilir mi (makine plakalarında false)",
                         "type": "boolean",
                         "example": true
+                    },
+                    "can_register": {
+                        "description": "Plaka kayıtlı değil; POST /hauls/temporary-vehicle ile Geçici Cari'ye eklenebilir",
+                        "type": "boolean",
+                        "example": false
                     },
                     "message": {
                         "description": "can_create false ise sebebi",

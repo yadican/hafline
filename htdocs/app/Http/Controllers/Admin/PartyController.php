@@ -112,6 +112,7 @@ class PartyController extends AdminController
             'module' => $module,
             'withReversals' => $request->boolean('iptaller'),
             'hasReversals' => $this->parties->hasReversals($party),
+            'plateBalances' => $party->isTemporary() ? $this->parties->openPlateBalances($party) : [],
         ];
     }
 

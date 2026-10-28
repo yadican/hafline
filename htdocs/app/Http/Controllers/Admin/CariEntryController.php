@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\CariEntrySearchRequest;
 use App\Repositories\PartyRepository;
 use App\Services\CariEntryService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class CariEntryController extends AdminController
@@ -33,12 +34,19 @@ class CariEntryController extends AdminController
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $kind = CariEntryKind::tryFrom($request->string('kind')->toString()) ?? CariEntryKind::Supplier;
+
         return view('admin.cari-entries.create', [
             'title' => 'Yeni cari hareketi',
             'options' => $this->entries->formOptions(),
-            'form' => ['kind' => CariEntryKind::Supplier->value, 'direction' => 'debit', 'occurred_on' => today()->toDateString()],
+            'form' => [
+                'kind' => $kind->value,
+                'direction' => 'debit',
+                'occurred_on' => today()->toDateString(),
+                'plate' => $request->string('plate')->limit(20, '')->toString() ?: null,
+            ],
         ]);
     }
 

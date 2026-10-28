@@ -51,6 +51,7 @@ class HaulRouteTest extends TestCase
                 'price' => '',
                 'bonus' => '150',
                 'class_prices' => [$tir->id => '4200.50', $kamyon->id => ''],
+                'site_prices' => [$tir->id => '5000', $kamyon->id => ''],
                 'active' => '1',
             ])
             ->assertRedirect(route('admin.haul-routes.index'))
@@ -61,6 +62,7 @@ class HaulRouteTest extends TestCase
         $this->assertSame('0.00', $route->price);
         $this->assertSame('150.00', $route->bonus);
         $this->assertSame(['4200.50'], $route->classPrices()->pluck('price')->all());
+        $this->assertSame(['5000.00'], $route->sitePrices()->pluck('price')->all());
 
         $this->actingAs($this->admin)
             ->get(route('admin.haul-routes.index'))
@@ -197,7 +199,7 @@ class HaulRouteTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $pricing = app(HaulPricing::class);
-        $this->assertSame(['price' => '3000.00', 'dump_price' => '450.00'], $pricing->quote($vehicle, $route->fresh()));
+        $this->assertSame(['price' => '3000.00', 'dump_price' => '450.00', 'site_price' => '0'], $pricing->quote($vehicle, $route->fresh()));
 
         $this->actingAs($this->admin)->post(route('admin.haul-routes.vehicle-prices.store', $route), [
             'vehicle_plate' => $vehicle->plate,

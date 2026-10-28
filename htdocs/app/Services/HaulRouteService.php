@@ -58,7 +58,10 @@ class HaulRouteService extends Service
         return [
             'sites' => $this->sites->options(activeOnly: true, include: $route?->site_id),
             'dumpSites' => $this->dumpSites->options(activeOnly: true, include: $route?->dump_site_id),
-            'classes' => $this->classes->options(activeOnly: true, include: $route?->classPrices->pluck('vehicle_class_id')->all()),
+            'classes' => $this->classes->options(activeOnly: true, include: [
+                ...($route?->classPrices->pluck('vehicle_class_id')->all() ?? []),
+                ...($route?->sitePrices->pluck('vehicle_class_id')->all() ?? []),
+            ]),
         ];
     }
 
@@ -68,12 +71,14 @@ class HaulRouteService extends Service
     public function create(array $attributes): HaulRoute
     {
         $prices = Arr::pull($attributes, 'class_prices', []);
+        $sitePrices = Arr::pull($attributes, 'site_prices', []);
 
         /** @var HaulRoute */
-        return $this->transaction(function () use ($attributes, $prices): HaulRoute {
+        return $this->transaction(function () use ($attributes, $prices, $sitePrices): HaulRoute {
             /** @var HaulRoute $route */
             $route = $this->routes->create($attributes);
             $this->syncClassPrices($route, 'classPrices', $prices);
+            $this->syncClassPrices($route, 'sitePrices', $sitePrices);
             $this->flushCaches();
 
             return $route;
@@ -86,12 +91,14 @@ class HaulRouteService extends Service
     public function update(HaulRoute $route, array $attributes): HaulRoute
     {
         $prices = Arr::pull($attributes, 'class_prices', []);
+        $sitePrices = Arr::pull($attributes, 'site_prices', []);
 
         /** @var HaulRoute */
-        return $this->transaction(function () use ($route, $attributes, $prices): HaulRoute {
+        return $this->transaction(function () use ($route, $attributes, $prices, $sitePrices): HaulRoute {
             /** @var HaulRoute $updated */
             $updated = $this->routes->update($route, $attributes);
             $this->syncClassPrices($updated, 'classPrices', $prices);
+            $this->syncClassPrices($updated, 'sitePrices', $sitePrices);
             $this->flushCaches();
 
             return $updated;

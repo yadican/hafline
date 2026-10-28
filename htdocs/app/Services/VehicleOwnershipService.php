@@ -8,6 +8,7 @@ use App\Exceptions\OperationRejectedException;
 use App\Models\Party;
 use App\Models\Vehicle;
 use App\Models\VehicleOwnership;
+use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
 use App\Repositories\FuelReceiptRepository;
 use App\Repositories\HaulRepository;
@@ -54,6 +55,46 @@ class VehicleOwnershipService extends Service
             'party_id' => $party->id,
             'started_on' => $from->toDateString(),
         ]);
+    }
+
+    /**
+     * A plate opened under the temporary cari belongs to its real owner from the first day, so the
+     * period itself changes hands: every ticket, receivable and payment on it moves with the ledger.
+     */
+    public function reassignTemporary(Vehicle $vehicle, Party $party): VehicleOwnership
+    {
+        return $this->transaction(function () use ($vehicle, $party): VehicleOwnership {
+            /** @var VehicleOwnership|null $current */
+            $current = $vehicle->currentOwnership()->lockForUpdate()->first();
+
+            if (! $current?->party?->isTemporary()) {
+                throw new OperationRejectedException('Bu plaka Geçici Cari\'de değil.');
+            }
+
+            if ($party->isSystem()) {
+                throw new OperationRejectedException('Plaka gerçek bir cariye aktarılmalı.');
+            }
+
+            $party->assignRole(PartyRole::VehicleOwner);
+            FormOptionsCache::flush(FormOptionsCache::PARTIES);
+
+            $current->update(['party_id' => $party->id]);
+            $this->reassignHauls($vehicle, $current->started_on);
+
+            $payments = VehiclePayment::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->whereDate('occurred_on', '>=', $current->started_on->toDateString())
+                ->lazyById();
+
+            foreach ($payments as $payment) {
+                if ($payment->party_id !== $party->id) {
+                    $payment->update(['party_id' => $party->id]);
+                    $this->postings->moveTo($payment, $party->id);
+                }
+            }
+
+            return $current;
+        });
     }
 
     /**

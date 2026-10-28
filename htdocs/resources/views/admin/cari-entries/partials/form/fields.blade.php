@@ -15,16 +15,18 @@
     </div>
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
-    <div x-show="! ['cash', 'opening', 'party_transfer'].includes(kind)" x-cloak>
+    <div x-show="! ['cash', 'opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" />
     </div>
-    <div x-show="! ['opening', 'party_transfer'].includes(kind)" x-cloak>
+    <div x-show="! ['opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="bank_id" label="Hesap" placeholder="Hesap seçin" :options="$options['banks']" />
         <p class="panel-hint">Nakitte kasa, havalede banka, kartta POS veya kredi kartı hesabı zorunludur. Çek, senet ve mahsupta boş bırakılır.</p>
     </div>
-    <div x-show="! ['opening', 'party_transfer'].includes(kind)" x-cloak>
+    <div x-show="! ['opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
     </div>
+    <p class="panel-hint" x-show="kind === 'site_bill'" x-cloak>Şantiyenin dönem hakedişi: şantiye carisini bu tutarla borçlandırır. Ödeme değildir; tahsilat "Şantiye Gelir / Gider" ile alacak olarak girilir.</p>
+    <p class="panel-hint" x-show="kind === 'site'" x-cloak>Alacak: şantiyeden alınan ödeme; şantiyenin carisi varsa ona yazılır. Borç: şantiyede yapılan gider; hiçbir cariye yazılmaz.</p>
     <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Carinin sisteme geçmeden önceki bakiyesi. Her cari için bir kez girilir; para hareketi değildir, kasayı etkilemez.</p>
     <p class="panel-hint" x-show="kind === 'party_transfer'" x-cloak>Mahsup: borçlanan carinin bakiyesi artar, alacaklanan carinin bakiyesi aynı tutarda azalır. Kasa ve banka etkilenmez.</p>
     <x-form.input name="description" label="Açıklama" maxlength="255" />
@@ -70,11 +72,16 @@
     <div x-show="['vehicle_payment', 'vehicle_receivable'].includes(kind)" x-cloak>
         <div class="panel-cari-summary is-idle" data-cari-plate-status aria-live="polite">Plaka girilince araç sahibinin cari durumu gelir</div>
     </div>
+    <div x-show="kind === 'vehicle_payment'" x-cloak>
+        <x-form.input name="receiver_name" label="Teslim alan" maxlength="120" />
+        <x-form.input name="receiver_national_id" label="Teslim alanın TC kimlik no" maxlength="11" inputmode="numeric" />
+        <p class="panel-hint">Plaka Geçici Cari'deyse parayı teslim alanın adı ve TC kimlik numarası zorunludur.</p>
+    </div>
     <div x-show="kind === 'dump_payment'" x-cloak>
         <x-form.select searchable name="dump_site_id" label="Döküm yeri" placeholder="Döküm yeri seçin" :options="$options['dumpSites']" />
         <x-form.input name="cheque_no" label="Çek no" maxlength="20" />
     </div>
-    <div x-show="['supplier', 'customer', 'fuel', 'market', 'site'].includes(kind)" x-cloak>
+    <div x-show="['supplier', 'customer', 'fuel', 'market', 'site', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="site_id" label="Şantiye" placeholder="Şantiye yok" :options="$options['sites']" />
     </div>
     <div x-show="['supplier', 'customer', 'fuel'].includes(kind)" x-cloak>

@@ -11,6 +11,7 @@ use App\Exceptions\OperationRejectedException;
 use App\Models\Party;
 use App\Repositories\LocationRepository;
 use App\Repositories\PartyRepository;
+use App\Repositories\VehicleAccountRepository;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -24,6 +25,7 @@ class PartyService extends Service
         private PartyRepository $parties,
         private LocationRepository $locations,
         private EmployeeService $employees,
+        private VehicleAccountRepository $accounts,
     ) {}
 
     /**
@@ -76,6 +78,20 @@ class PartyService extends Service
     public function hasReversals(Party $party): bool
     {
         return $this->parties->hasReversals($party);
+    }
+
+    /**
+     * The party's balance on each plate it currently holds, keyed by vehicle id.
+     *
+     * @return array<string, float>
+     */
+    public function openPlateBalances(Party $party): array
+    {
+        return $party->ownerships()
+            ->whereNull('ended_on')
+            ->pluck('vehicle_id')
+            ->mapWithKeys(fn (string $vehicleId): array => [$vehicleId => $this->accounts->balance($vehicleId, $party->id)])
+            ->all();
     }
 
     /**

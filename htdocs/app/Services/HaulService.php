@@ -124,6 +124,7 @@ class HaulService extends Service
                 ...$this->attributes($data, $vehicle, $route),
                 ...$this->pricing->quote($vehicle, $route),
                 'dump_party_id' => $route->dumpSite->party_id,
+                'site_party_id' => $route->site->perTripPartyId(),
                 'driver_name' => $vehicle->driver_name,
                 'created_by' => $userId,
             ];
@@ -164,6 +165,7 @@ class HaulService extends Service
 
             if ($haul->route_id !== $route->id) {
                 $attributes['dump_party_id'] = $route->dumpSite->party_id;
+                $attributes['site_party_id'] = $route->site->perTripPartyId();
             }
 
             /** @var Haul $updated */

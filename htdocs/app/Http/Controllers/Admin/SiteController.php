@@ -31,6 +31,7 @@ class SiteController extends AdminController
         return view('admin.sites.create', [
             'title' => 'Yeni şantiye',
             'parties' => $this->sites->partyOptions(),
+            'siteParties' => $this->sites->siteCariOptions(),
         ]);
     }
 
@@ -61,6 +62,7 @@ class SiteController extends AdminController
             'title' => 'Şantiyeyi düzenle',
             'site' => $site,
             'parties' => $this->sites->partyOptions($site),
+            'siteParties' => $this->sites->siteCariOptions($site),
             'partyValues' => $this->sites->partyValues($site),
         ]);
     }

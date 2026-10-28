@@ -9,11 +9,14 @@ use App\Models\Haul;
 use App\Models\HaulScan;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleClass;
 use App\Repositories\HaulLookupRepository;
 use App\Services\Api\Ocr\PlateScanClient;
 use App\Services\HaulService;
+use App\Services\PartyService;
 use App\Services\Service;
 use App\Services\TicketNumbers;
+use App\Services\VehicleService;
 use Carbon\CarbonInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -28,10 +31,12 @@ class FieldHaulService extends Service
         private PlateScanClient $ocr,
         private TicketNumbers $ticketNumbers,
         private HaulLookupRepository $lookups,
+        private VehicleService $vehicles,
+        private PartyService $parties,
     ) {}
 
     /**
-     * @return array{sites: list<array{id: string, name: string}>, shifts: list<array{value: string, label: string}>}
+     * @return array{sites: list<array{id: string, name: string}>, shifts: list<array{value: string, label: string}>, vehicle_classes: list<array{id: string, name: string}>}
      */
     public function options(): array
     {
@@ -45,7 +50,38 @@ class FieldHaulService extends Service
             ->values()
             ->all();
 
-        return compact('sites', 'shifts');
+        $vehicle_classes = VehicleClass::query()
+            ->where('active', true)
+            ->where('hourly', false)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (VehicleClass $class): array => ['id' => $class->id, 'name' => $class->name])
+            ->all();
+
+        return compact('sites', 'shifts', 'vehicle_classes');
+    }
+
+    /**
+     * A plate seen in the field with no vehicle record is added under the temporary cari from today,
+     * so the work is not held up; the office moves it to its real cari later.
+     *
+     * @return array<string, mixed> the plate check for the new vehicle
+     */
+    public function registerTemporary(string $plate, string $vehicleClassId): array
+    {
+        if (Vehicle::findByPlate($plate)) {
+            throw ValidationException::withMessages(['plate' => 'Bu plaka zaten kayıtlı.']);
+        }
+
+        $this->vehicles->create([
+            'plate' => mb_strtoupper(trim($plate), 'UTF-8'),
+            'vehicle_class_id' => $vehicleClassId,
+            'active' => true,
+            'owner_party_id' => $this->parties->temporaryParty()->id,
+            'owned_from' => today()->toDateString(),
+        ]);
+
+        return $this->checkPlate($plate);
     }
 
     /**
@@ -88,6 +124,7 @@ class FieldHaulService extends Service
      *     owner_on_date: bool,
      *     owner_name: ?string,
      *     can_create: bool,
+     *     can_register: bool,
      *     message: ?string
      * }
      */
@@ -96,7 +133,9 @@ class FieldHaulService extends Service
         $date = $this->haulDate($haul);
         $vehicle = $plate ? Vehicle::findByPlate($plate) : null;
         $owner = $vehicle?->ownershipOn($date)?->party;
-        $problem = $vehicle ? $this->plateProblem($vehicle, $date, $haul) : 'Kayıtlı araç bulunamadı.';
+        $problem = $vehicle
+            ? $this->plateProblem($vehicle, $date, $haul)
+            : 'Kayıtlı araç bulunamadı. Araç sınıfını seçip Geçici Cari\'ye ekleyebilirsiniz.';
 
         return [
             'vehicle' => [
@@ -107,6 +146,7 @@ class FieldHaulService extends Service
             'owner_on_date' => $owner !== null,
             'owner_name' => $owner?->name,
             'can_create' => $problem === null,
+            'can_register' => $vehicle === null && filled($plate),
             'message' => $problem,
         ];
     }

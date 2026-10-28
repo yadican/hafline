@@ -18,6 +18,7 @@ use App\Models\Party;
 use App\Models\PartyPayment;
 use App\Models\PartyTransfer;
 use App\Models\Site;
+use App\Models\SiteBill;
 use App\Models\SiteTransaction;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
@@ -166,6 +167,8 @@ class CariEntryService extends Service
             'dump_site_id' => $entry->dump_site_id ?? null,
             'bank_id' => $entry->bank_id ?? null,
             'cheque_no' => $entry->cheque_no ?? null,
+            'receiver_name' => $entry->receiver_name ?? null,
+            'receiver_national_id' => $entry->receiver_national_id ?? null,
         ];
     }
 
@@ -191,6 +194,7 @@ class CariEntryService extends Service
             'Litre' => $form['liters'] !== null ? number_format((float) $form['liters'], 2, ',', '.') : null,
             'Birim fiyat' => $form['unit_price'] !== null ? number_format((float) $form['unit_price'], 4, ',', '.').' TL' : null,
             'Belge no' => $form['document_no'],
+            'Teslim alan' => $form['receiver_name'] ? trim($form['receiver_name'].' '.($form['receiver_national_id'] ?? '')) : null,
             'Hesap' => $name(Bank::class, $form['bank_id']),
         ], fn ($value) => $value !== null && $value !== '');
 
@@ -221,6 +225,7 @@ class CariEntryService extends Service
             CariEntryKind::Cash => CashEntry::query(),
             CariEntryKind::Opening => OpeningBalance::query(),
             CariEntryKind::PartyTransfer => PartyTransfer::query(),
+            CariEntryKind::SiteBill => SiteBill::query(),
         };
 
         return $query->find($id) ?? throw new OperationException('Kayıt bulunamadı.');
@@ -259,7 +264,15 @@ class CariEntryService extends Service
                 'vehicle_id' => $kind === CariEntryKind::Market ? $this->vehicle($data)?->id : null,
                 'owner_party_id' => $kind === CariEntryKind::Market ? $this->ownerFor($data, $existing, 'owner_party_id') : null,
             ],
-            CariEntryKind::VehiclePayment, CariEntryKind::VehicleReceivable => [
+            CariEntryKind::VehiclePayment => [
+                ...$shared,
+                'vehicle_id' => $this->vehicle($data)->id,
+                'party_id' => $this->ownerFor($data, $existing),
+                'amount' => $amount,
+                'receiver_name' => $data['receiver_name'] ?? null,
+                'receiver_national_id' => $data['receiver_national_id'] ?? null,
+            ],
+            CariEntryKind::VehicleReceivable => [
                 ...$shared,
                 'vehicle_id' => $this->vehicle($data)->id,
                 'party_id' => $this->ownerFor($data, $existing),
@@ -280,8 +293,17 @@ class CariEntryService extends Service
             CariEntryKind::Site => [
                 ...$shared,
                 'site_id' => $data['site_id'],
+                'party_id' => $direction === 'credit' ? Site::query()->find($data['site_id'])?->party_id : null,
                 'debit' => $direction === 'debit' ? $amount : 0,
                 'credit' => $direction === 'credit' ? $amount : 0,
+            ],
+            CariEntryKind::SiteBill => [
+                'site_id' => $data['site_id'],
+                'party_id' => Site::query()->findOrFail($data['site_id'])->party_id,
+                'amount' => $amount,
+                'occurred_on' => $date,
+                'description' => $data['description'] ?? null,
+                'created_by' => $existing?->created_by ?? $userId,
             ],
             CariEntryKind::Cash => [
                 'cash_category_id' => $data['cash_category_id'] ?? null,
@@ -326,6 +348,7 @@ class CariEntryService extends Service
             CariEntryKind::Cash => CashEntry::class,
             CariEntryKind::Opening => OpeningBalance::class,
             CariEntryKind::PartyTransfer => PartyTransfer::class,
+            CariEntryKind::SiteBill => SiteBill::class,
         };
 
         return $class::query()->create($attributes);
@@ -349,6 +372,12 @@ class CariEntryService extends Service
                 LedgerLine::debit($entry->debit_party_id, $entry->occurred_on, $entry->amount, $this->text($kind, $data)),
                 LedgerLine::credit($entry->credit_party_id, $entry->occurred_on, $entry->amount, $this->text($kind, $data)),
             ]);
+
+            return;
+        }
+
+        if ($kind === CariEntryKind::Site && $entry->party_id === null) {
+            $this->ledger->sync($entry, []);
 
             return;
         }

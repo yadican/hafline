@@ -54,6 +54,15 @@
             <p class="panel-hint">Bu aracın kayıtlı sahibi yok; taşıma fişi girilemez.</p>
         @endif
 
+        @if ($latest && ! $latest->ended_on && $latest->party?->isTemporary())
+            <form method="POST" action="{{ route('admin.vehicles.ownerships.reassign', $vehicle) }}" class="panel-inline-form">
+                @csrf
+                <x-form.select name="party_id" label="Asıl sahip" :options="collect($options['parties'])->except($latest->party_id)->all()" placeholder="Cari kart seçin" searchable required />
+                <x-ui.button type="submit" variant="create" icon="fa-solid fa-user-check">Asıl sahibine aktar</x-ui.button>
+            </form>
+            <p class="panel-hint">Plaka sahada Geçici Cari'ye açıldı. Aktarınca plaka ilk günden itibaren seçilen cariye ait olur; fişler, plaka alacakları ve plakaya yapılan ödemeler cari hesabıyla birlikte taşınır.</p>
+        @endif
+
         <form method="POST" action="{{ route('admin.vehicles.ownerships.store', $vehicle) }}" class="panel-inline-form">
             @csrf
             <x-form.select name="party_id" label="Yeni sahip" :options="$options['parties']" placeholder="Cari kart seçin" searchable required />

@@ -50,6 +50,7 @@ class HaulRouteController extends AdminController
             'site',
             'dumpSite',
             'classPrices.vehicleClass',
+            'sitePrices.vehicleClass',
             'vehiclePrices.vehicle.vehicleClass',
         ]);
 
@@ -61,7 +62,7 @@ class HaulRouteController extends AdminController
 
     public function edit(HaulRoute $haulRoute): View
     {
-        $haulRoute->load(['site', 'dumpSite', 'classPrices', 'vehiclePrices.vehicle.vehicleClass']);
+        $haulRoute->load(['site', 'dumpSite', 'classPrices', 'sitePrices', 'vehiclePrices.vehicle.vehicleClass']);
 
         return view('admin.haul-routes.edit', [
             'title' => 'Güzergahı düzenle',

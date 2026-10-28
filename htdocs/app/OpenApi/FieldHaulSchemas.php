@@ -25,10 +25,11 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'HaulOptionsResponse',
     type: 'object',
-    required: ['sites', 'shifts'],
+    required: ['sites', 'shifts', 'vehicle_classes'],
     properties: [
         new OA\Property(property: 'sites', type: 'array', items: new OA\Items(ref: '#/components/schemas/NamedOption')),
         new OA\Property(property: 'shifts', type: 'array', items: new OA\Items(ref: '#/components/schemas/ShiftOption')),
+        new OA\Property(property: 'vehicle_classes', type: 'array', description: 'Kayıtsız plakayı Geçici Cari\'ye eklerken seçilir', items: new OA\Items(ref: '#/components/schemas/NamedOption')),
     ]
 )]
 #[OA\Schema(
@@ -108,7 +109,7 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'HaulPlateCheck',
     type: 'object',
-    required: ['vehicle', 'owner_on_date', 'owner_name', 'can_create', 'message'],
+    required: ['vehicle', 'owner_on_date', 'owner_name', 'can_create', 'can_register', 'message'],
     properties: [
         new OA\Property(
             property: 'vehicle',
@@ -123,6 +124,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'owner_on_date', type: 'boolean', description: 'Aracın bugün kayıtlı sahibi var mı', example: true),
         new OA\Property(property: 'owner_name', type: 'string', nullable: true, example: 'ABC Hafriyat'),
         new OA\Property(property: 'can_create', type: 'boolean', description: 'Bu plakayla taşıma fişi kesilebilir mi (makine plakalarında false)', example: true),
+        new OA\Property(property: 'can_register', type: 'boolean', description: 'Plaka kayıtlı değil; POST /hauls/temporary-vehicle ile Geçici Cari\'ye eklenebilir', example: false),
         new OA\Property(property: 'message', type: 'string', nullable: true, description: 'can_create false ise sebebi', example: null),
     ]
 )]

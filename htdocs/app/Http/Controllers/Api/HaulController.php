@@ -14,6 +14,7 @@ use App\Services\Api\SecureImageIngest;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 use RuntimeException;
@@ -119,6 +120,40 @@ class HaulController extends Controller
         ]);
 
         return response()->json($this->fieldHauls->checkPlate($validated['plate']));
+    }
+
+    #[OA\Post(
+        path: '/api/v1/hauls/temporary-vehicle',
+        operationId: 'haulsTemporaryVehicle',
+        summary: 'Kayıtlı olmayan plakayı Geçici Cari\'ye ekle',
+        description: '`check-plate` `can_register: true` döndüğünde kullanılır. Plaka seçilen araç sınıfıyla kaydedilir ve bugünden itibaren Geçici Cari\'ye bağlanır; ofis gün sonunda gerçek cariye aktarır. `vehicle_class_id` için `GET /hauls/options` > `vehicle_classes[].id`.',
+        security: [['bearerAuth' => []]],
+        tags: ['3. Plaka ve fiş'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['plate', 'vehicle_class_id'],
+                properties: [
+                    new OA\Property(property: 'plate', type: 'string', maxLength: 20, example: '34 YB 123'),
+                    new OA\Property(property: 'vehicle_class_id', type: 'string', format: 'uuid'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Yeni aracın plaka kontrolü', content: new OA\JsonContent(ref: '#/components/schemas/HaulPlateCheck')),
+            new OA\Response(response: 401, description: 'Token yok veya süresi dolmuş', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedError')),
+            new OA\Response(response: 403, description: 'field-haul.operate yetkisi yok', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Plaka zaten kayıtlı veya sınıf geçersiz', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+        ]
+    )]
+    public function registerTemporaryVehicle(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'plate' => ['required', 'string', 'max:20'],
+            'vehicle_class_id' => ['required', 'uuid', Rule::exists('vehicle_classes', 'id')->where('active', true)->where('hourly', false)->withoutTrashed()],
+        ]);
+
+        return response()->json($this->fieldHauls->registerTemporary($validated['plate'], $validated['vehicle_class_id']));
     }
 
     #[OA\Post(

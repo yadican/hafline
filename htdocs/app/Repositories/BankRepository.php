@@ -95,12 +95,16 @@ class BankRepository extends Repository
             return [];
         }
 
+        // A site collection is read from site_transactions; its cari line is not counted again.
         $sum = fn (string $table, string $in, string $out, bool $live = false) => DB::table($table)
             ->whereIn('bank_id', $ids)
             ->when(! $live, fn ($query) => $query->whereNull('deleted_at'))
-            ->when($live, fn ($query) => $query->whereNull('reversal_of')->whereNotExists(fn ($reversal) => $reversal
-                ->from('ledger_entries as reversals')
-                ->whereColumn('reversals.reversal_of', 'ledger_entries.id')))
+            ->when($live, fn ($query) => $query
+                ->where('source_type', '<>', 'site_transaction')
+                ->whereNull('reversal_of')
+                ->whereNotExists(fn ($reversal) => $reversal
+                    ->from('ledger_entries as reversals')
+                    ->whereColumn('reversals.reversal_of', 'ledger_entries.id')))
             ->groupBy('bank_id')
             ->selectRaw("bank_id, COALESCE(SUM({$in} - {$out}), 0) as total")
             ->pluck('total', 'bank_id');
