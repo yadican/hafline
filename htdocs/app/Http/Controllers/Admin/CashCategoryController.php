@@ -23,6 +23,7 @@ class CashCategoryController extends AdminController
             'title' => 'Kasa kategorileri',
             'cashCategories' => $this->cashCategories->paginate($filters, $request->sort()),
             'filters' => $filters,
+            'groups' => $this->cashCategories->groupOptions(),
         ]);
     }
 
@@ -30,6 +31,7 @@ class CashCategoryController extends AdminController
     {
         return view('admin.cash-categories.create', [
             'title' => 'Yeni kasa kategorisi',
+            'groups' => $this->cashCategories->groupOptions(),
         ]);
     }
 
@@ -55,6 +57,7 @@ class CashCategoryController extends AdminController
         return view('admin.cash-categories.edit', [
             'title' => 'Kasa kategorisini düzenle',
             'cashCategory' => $cashCategory,
+            'groups' => $this->cashCategories->groupOptions($cashCategory),
         ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AccountType;
 use App\Models\Bank;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,6 +19,7 @@ class BankFactory extends Factory
     public function definition(): array
     {
         return [
+            'type' => AccountType::Bank,
             'name' => fake()->unique()->company().' Bankası',
             'representative' => fake()->optional()->name(),
             'phone' => fake()->optional()->numerify('0212#######'),

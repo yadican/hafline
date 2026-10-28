@@ -16,11 +16,12 @@ class BankRepository extends Repository
     }
 
     /**
-     * @param  array{q?: string, active?: string}  $filters
+     * @param  array{q?: string, type?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
-        $query = $this->whereTerm($this->query(), $filters['q'] ?? null, ['name', 'representative', 'phone', 'account_no'])
+        $query = $this->whereTerm($this->query(), $filters['q'] ?? null, ['name', 'branch', 'representative', 'phone', 'account_no', 'iban'])
+            ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         return $this->applySort($query, $sort)
@@ -59,6 +60,7 @@ class BankRepository extends Repository
     protected function sortColumns(): array
     {
         return [
+            'type' => 'type',
             'name' => 'name',
             'representative' => 'representative',
         ];

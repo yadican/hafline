@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\AccountType;
 use App\Models\Bank;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,6 +33,7 @@ class BankTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('admin.banks.store'), [
+                'type' => 'bank',
                 'name' => 'Ziraat Bankası',
                 'representative' => 'Ayşe Yılmaz',
                 'phone' => '0212 555 00 00',
@@ -50,6 +52,7 @@ class BankTest extends TestCase
 
         $this->actingAs($this->admin)
             ->put(route('admin.banks.update', $bank), [
+                'type' => 'bank',
                 'name' => 'Ziraat Bankası',
                 'representative' => '',
                 'account_no' => 'TR12 0001 0000 0000 0000 0000 01',
@@ -74,9 +77,45 @@ class BankTest extends TestCase
             ->from(route('admin.banks.create'))
             ->post(route('admin.banks.store'), ['name' => '', 'phone' => str_repeat('1', 21)])
             ->assertRedirect(route('admin.banks.create'))
-            ->assertSessionHasErrors(['name', 'phone']);
+            ->assertSessionHasErrors(['type', 'name', 'phone']);
 
         $this->assertDatabaseCount('banks', 0);
+    }
+
+    public function test_cash_box_keeps_no_bank_details_and_iban_is_checked(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.banks.store'), [
+                'type' => 'cash',
+                'name' => 'Merkez Kasa',
+                'branch' => 'Gebze',
+                'iban' => 'TR12 0001 0000 0000 0000 0000 01',
+                'opening_balance' => '15000,50',
+                'opened_on' => '2026-01-01',
+                'active' => '1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $cash = Bank::query()->sole();
+        $this->assertSame(AccountType::Cash, $cash->type);
+        $this->assertNull($cash->branch);
+        $this->assertNull($cash->iban);
+        $this->assertSame('15000.50', $cash->opening_balance);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.banks.store'), ['type' => 'bank', 'name' => 'Garanti', 'iban' => 'TR12 34'])
+            ->assertSessionHasErrors(['iban' => 'IBAN, TR ile başlayan 26 karakter olmalı.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.banks.store'), ['type' => 'bank', 'name' => 'Garanti', 'iban' => 'tr12 0001 0000 0000 0000 0000 01'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('TR120001000000000000000001', Bank::query()->where('name', 'Garanti')->value('iban'));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.banks.index', ['type' => 'cash']))
+            ->assertSee('Merkez Kasa')
+            ->assertDontSee('Garanti');
     }
 
     public function test_list_searches_across_contact_fields_and_sorts(): void
@@ -92,7 +131,7 @@ class BankTest extends TestCase
 
         $this->actingAs($this->admin)
             ->get(route('admin.banks.index', ['sort' => 'representative', 'dir' => 'desc']))
-            ->assertSeeInOrder(['Zeynep Ak', 'Mehmet Kaya']);
+            ->assertSeeInOrder(['Vakıfbank', 'Akbank']);
 
         $this->actingAs($this->admin)
             ->get(route('admin.banks.index', ['sort' => 'phone']))

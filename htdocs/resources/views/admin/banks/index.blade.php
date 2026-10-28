@@ -2,10 +2,10 @@
 
 @section('content')
     <x-panel.page
-        heading="Bankalar"
-        icon="fa-solid fa-building-columns"
-        description="Çek, senet ve kredi kayıtlarında kullanılan bankaları yönetin."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Bankalar' => null]"
+        heading="Kasa / Banka / POS"
+        icon="fa-solid fa-wallet"
+        description="Şirketin para tuttuğu hesaplar: kasalar, banka hesapları, POS cihazları ve kredi kartları."
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa / Banka / POS' => null]"
     >
         @include('admin.banks.partials.index.toolbar')
         <x-table.list>

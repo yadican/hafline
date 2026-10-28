@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Cache\CashCategoryCache;
 use App\Cache\FormOptionsCache;
+use App\Exceptions\OperationRejectedException;
 use App\Models\CashCategory;
 use App\Repositories\CashCategoryRepository;
 use App\Support\Sort;
@@ -55,8 +56,20 @@ class CashCategoryService extends Service
         });
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function groupOptions(?CashCategory $except = null): array
+    {
+        return $this->cashCategories->groupOptions($except?->id);
+    }
+
     public function delete(CashCategory $cashCategory): void
     {
+        if ($cashCategory->children()->exists()) {
+            throw new OperationRejectedException('Bu grubun altında kategori var; silinemez. Önce alt kategorileri başka gruba taşıyın veya silin.');
+        }
+
         $this->transaction(function () use ($cashCategory): void {
             $this->cashCategories->delete($cashCategory);
             $this->flushCaches();

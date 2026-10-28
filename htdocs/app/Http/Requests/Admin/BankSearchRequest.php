@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\AccountType;
 use App\Http\Requests\Concerns\SortsResults;
 use App\Repositories\BankRepository;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -29,18 +30,19 @@ class BankSearchRequest extends FormRequest
     {
         return [
             'q' => ['nullable', 'string', 'max:100'],
+            'type' => ['nullable', Rule::enum(AccountType::class)],
             'active' => ['nullable', Rule::in(['1', '0'])],
             ...$this->sortRules(),
         ];
     }
 
     /**
-     * @return array{q?: string, active?: string}
+     * @return array{q?: string, type?: string, active?: string}
      */
     public function filters(): array
     {
         return array_filter(
-            $this->safe()->only(['q', 'active']),
+            $this->safe()->only(['q', 'type', 'active']),
             fn ($value) => $value !== null && $value !== '',
         );
     }

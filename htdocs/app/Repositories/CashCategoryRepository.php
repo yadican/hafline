@@ -17,11 +17,14 @@ class CashCategoryRepository extends Repository
     }
 
     /**
-     * @param  array{q?: string, direction?: string, active?: string}  $filters
+     * @param  array{q?: string, direction?: string, group?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->whereTerm($this->query(), $filters['q'] ?? null, ['name'])
+            ->with('parent')
+            ->withCount('children')
+            ->when($filters['group'] ?? null, fn (Builder $query, string $group) => $query->where(fn (Builder $query) => $query->whereKey($group)->orWhere('parent_id', $group)))
             ->when($filters['direction'] ?? null, fn (Builder $query, string $direction) => $query->where('direction', $direction))
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
@@ -41,18 +44,38 @@ class CashCategoryRepository extends Repository
             FormOptionsCache::CASH_CATEGORIES,
             $direction?->value ?? 'all',
             fn (): array => $this->query()
+                ->with('parent')
                 ->where('active', true)
                 ->when($direction, fn (Builder $query, CashDirection $direction) => $query->for($direction))
-                ->orderBy('name')
-                ->pluck('name', 'id')
+                ->get()
+                ->mapWithKeys(fn (CashCategory $category) => [$category->id => $category->fullName()])
+                ->sort(SORT_NATURAL | SORT_FLAG_CASE)
                 ->all(),
         );
 
         return FormOptionsCache::withIncludes(
             $options,
             $include,
-            fn (array $ids): array => CashCategory::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
+            fn (array $ids): array => CashCategory::withTrashed()->with('parent')->whereIn('id', $ids)->get()
+                ->mapWithKeys(fn (CashCategory $category) => [$category->id => $category->fullName()])
+                ->all(),
         );
+    }
+
+    /**
+     * Categories that can hold others: active ones that are not in a group themselves.
+     *
+     * @return array<string, string>
+     */
+    public function groupOptions(?string $except = null): array
+    {
+        return $this->query()
+            ->whereNull('parent_id')
+            ->where('active', true)
+            ->when($except, fn (Builder $query, string $except) => $query->whereKeyNot($except))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
     }
 
     protected function defaultSort(Builder $query): void

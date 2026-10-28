@@ -2,10 +2,10 @@
 
 @section('content')
     <x-panel.page
-        heading="Yeni banka"
+        heading="Yeni hesap"
         icon="fa-solid fa-plus"
-        description="Çek, senet ve kredi kayıtlarında seçilecek yeni bir banka ekleyin."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Bankalar' => route('admin.banks.index'), 'Yeni' => null]"
+        description="Yeni bir kasa, banka hesabı, POS veya kredi kartı ekleyin."
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa / Banka / POS' => route('admin.banks.index'), 'Yeni' => null]"
         :back="route('admin.banks.index')"
     >
         @include('admin.banks.partials.create.form')

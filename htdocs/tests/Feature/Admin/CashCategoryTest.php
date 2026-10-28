@@ -108,6 +108,40 @@ class CashCategoryTest extends TestCase
             ->assertDontSee('<td>Maaş</td>', false);
     }
 
+    public function test_categories_sit_under_one_level_of_groups(): void
+    {
+        $fuel = CashCategory::factory()->create(['name' => 'Mazot', 'direction' => CashDirection::Expense]);
+        $office = CashCategory::factory()->create(['name' => 'Ofis', 'direction' => CashDirection::Expense]);
+        CashCategory::factory()->create(['name' => 'Kırtasiye', 'direction' => CashDirection::Expense, 'parent_id' => $office->id]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cash-categories.store'), ['name' => 'Yakıt alımı', 'direction' => 'expense', 'parent_id' => $fuel->id, 'active' => '1'])
+            ->assertSessionHasNoErrors();
+
+        $item = CashCategory::query()->where('name', 'Yakıt alımı')->sole();
+        $this->assertSame($fuel->id, $item->parent_id);
+        $this->assertSame('Mazot › Yakıt alımı', app(CashCategoryRepository::class)->options()[$item->id]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cash-categories.store'), ['name' => 'Alt alt', 'direction' => 'expense', 'parent_id' => $item->id])
+            ->assertSessionHasErrors('parent_id');
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.cash-categories.update', $fuel), ['name' => 'Mazot', 'direction' => 'expense', 'parent_id' => $fuel->id])
+            ->assertSessionHasErrors('parent_id');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cash-categories.index', ['group' => $fuel->id]))
+            ->assertSee('Yakıt alımı')
+            ->assertDontSee('Kırtasiye');
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cash-categories.destroy', $fuel))
+            ->assertSessionHas('error');
+
+        $this->assertNotSoftDeleted($fuel);
+    }
+
     public function test_options_offer_matching_and_shared_categories(): void
     {
         $expense = CashCategory::factory()->create(['name' => 'Lastik']);

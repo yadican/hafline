@@ -31,18 +31,19 @@ class CashCategorySearchRequest extends FormRequest
         return [
             'q' => ['nullable', 'string', 'max:100'],
             'direction' => ['nullable', Rule::enum(CashDirection::class)],
+            'group' => ['nullable', 'uuid'],
             'active' => ['nullable', Rule::in(['1', '0'])],
             ...$this->sortRules(),
         ];
     }
 
     /**
-     * @return array{q?: string, direction?: string, active?: string}
+     * @return array{q?: string, direction?: string, group?: string, active?: string}
      */
     public function filters(): array
     {
         return array_filter(
-            $this->safe()->only(['q', 'direction', 'active']),
+            $this->safe()->only(['q', 'direction', 'group', 'active']),
             fn ($value) => $value !== null && $value !== '',
         );
     }

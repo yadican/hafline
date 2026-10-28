@@ -2,10 +2,10 @@
 
 @section('content')
     <x-panel.page
-        heading="Banka detayı"
-        icon="fa-solid fa-building-columns"
-        :description="$bank->name"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Bankalar' => route('admin.banks.index'), 'Detay' => null]"
+        heading="Hesap detayı"
+        :icon="$bank->type->icon()"
+        :description="$bank->name.' · '.$bank->type->label()"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa / Banka / POS' => route('admin.banks.index'), 'Detay' => null]"
         :back="route('admin.banks.index')"
     >
         <x-slot:actions>

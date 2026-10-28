@@ -173,7 +173,7 @@ class RolePermissionTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($user)
-            ->post(route('admin.banks.store'), ['name' => 'Hack Bank', 'active' => '1'])
+            ->post(route('admin.banks.store'), ['type' => 'bank', 'name' => 'Hack Bank', 'active' => '1'])
             ->assertForbidden();
     }
 

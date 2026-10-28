@@ -3,6 +3,9 @@
         <x-form.field label="Ad">
             <div>{{ $cashCategory->name }}</div>
         </x-form.field>
+        <x-form.field label="Grup">
+            <div>{{ $cashCategory->parent?->name ?? '—' }}</div>
+        </x-form.field>
         <x-form.field label="Yön">
             <div><x-ui.enum-badge :value="$cashCategory->direction" text /></div>
         </x-form.field>

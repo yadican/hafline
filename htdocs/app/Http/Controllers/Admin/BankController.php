@@ -20,7 +20,7 @@ class BankController extends AdminController
         $filters = $request->filters();
 
         return view('admin.banks.index', [
-            'title' => 'Bankalar',
+            'title' => 'Kasa / Banka / POS',
             'banks' => $this->banks->paginate($filters, $request->sort()),
             'filters' => $filters,
         ]);
@@ -29,7 +29,7 @@ class BankController extends AdminController
     public function create(): View
     {
         return view('admin.banks.create', [
-            'title' => 'Yeni banka',
+            'title' => 'Yeni hesap',
         ]);
     }
 
@@ -38,14 +38,14 @@ class BankController extends AdminController
         return $this->complete(
             fn () => $this->banks->create($request->validated()),
             'admin.banks.index',
-            'Banka oluşturuldu.',
+            'Hesap oluşturuldu.',
         );
     }
 
     public function show(Bank $bank): View
     {
         return view('admin.banks.show', [
-            'title' => 'Banka detayı',
+            'title' => 'Hesap detayı',
             'bank' => $bank,
         ]);
     }
@@ -53,7 +53,7 @@ class BankController extends AdminController
     public function edit(Bank $bank): View
     {
         return view('admin.banks.edit', [
-            'title' => 'Bankayı düzenle',
+            'title' => 'Hesabı düzenle',
             'bank' => $bank,
         ]);
     }
@@ -63,7 +63,7 @@ class BankController extends AdminController
         return $this->complete(
             fn () => $this->banks->update($bank, $request->validated()),
             'admin.banks.index',
-            'Banka güncellendi.',
+            'Hesap güncellendi.',
         );
     }
 
@@ -72,7 +72,7 @@ class BankController extends AdminController
         return $this->complete(
             fn () => $this->banks->delete($bank),
             'admin.banks.index',
-            'Banka silindi.',
+            'Hesap silindi.',
         );
     }
 }
