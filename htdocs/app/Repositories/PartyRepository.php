@@ -213,7 +213,7 @@ class PartyRepository extends Repository
             || DB::table('fuel_receipts')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('fuel_party_id', $party->id))->exists()
             || DB::table('fuel_tank_fills')->where('party_id', $party->id)->exists()
             || DB::table('shipments')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('customer_party_id', $party->id)
-                ->orWhere('commission_party_id', $party->id))->exists()
+                ->orWhere('driver_party_id', $party->id)->orWhere('commission_party_id', $party->id))->exists()
             || DB::table('company_transactions')->where('party_id', $party->id)->exists();
     }
 

@@ -22,7 +22,10 @@
         <div class="panel-form-grid">
             <x-form.group legend="1. Nakliyeci" icon="fa-solid fa-truck-moving" description="Nakliyeciye yazılan alacak">
                 <x-form.field label="Nakliyeci"><div>{{ $shipment->party?->name }}</div></x-form.field>
-                <x-form.field label="Plaka / şoför"><div><span class="panel-plate-text">{{ $shipment->vehicle?->plate }}</span> · {{ $shipment->driver_name ?: '—' }}</div></x-form.field>
+                <x-form.field label="Plaka"><div class="panel-plate-text">{{ $shipment->vehicle?->plate }}</div></x-form.field>
+                <x-form.field label="Şoför / sefer parası">
+                    <div>{{ $shipment->driver?->name ?? '—' }}{{ (float) $shipment->driver_amount > 0 ? ' · '.$money($shipment->driver_amount).' alacak' : '' }}</div>
+                </x-form.field>
                 <x-form.field label="İrsaliye no"><div>{{ $shipment->waybill_no ?: '—' }}</div></x-form.field>
                 <x-form.field label="Fiyat"><div>{{ $price($shipment->carrier_price) }} · matrah {{ $money($shipment->carrier_amount) }}</div></x-form.field>
                 <x-form.field label="KDV / tevkifat"><div>%{{ (int) $shipment->carrier_vat_rate }} · {{ $money($shipment->carrier_vat_amount) }} / {{ $withholding($shipment->carrier_withholding_rate) }} · {{ $money($shipment->carrier_withholding_amount) }}</div></x-form.field>

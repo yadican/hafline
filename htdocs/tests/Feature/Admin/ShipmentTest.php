@@ -34,38 +34,48 @@ class ShipmentTest extends TestCase
         $this->truck = Vehicle::factory()->ownedBy($this->carrier, '2026-01-01')->create(['plate' => '34 NK 100']);
     }
 
-    public function test_a_trip_debits_the_customer_and_credits_the_carrier_and_referrer_with_vat_and_withholding(): void
+    public function test_a_trip_posts_both_sides_with_vat_and_withholding_plus_driver_and_referrer(): void
     {
         $referrer = Party::factory()->create();
+        $driver = Party::factory()->person()->create();
 
         $this->actingAs($this->admin)->get(route('admin.shipments.create'))->assertOk();
 
         $this->actingAs($this->admin)
             ->post(route('admin.shipments.store'), $this->payload([
+                'net_kg' => '70.000',
+                'carrier_price' => '40000',
                 'carrier_vat_rate' => '20',
                 'carrier_withholding_rate' => '0.20',
+                'sale_price' => '50000',
+                'driver_party_id' => $driver->id,
+                'driver_amount' => '7000',
                 'commission_party_id' => $referrer->id,
-                'commission_amount' => '500',
+                'commission_amount' => '7000',
             ]))
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('admin.shipments.index'));
 
         $shipment = Shipment::query()->sole();
-        $this->assertSame('5000.00', $shipment->carrier_amount);
-        $this->assertSame('5800.00', $shipment->carrier_net_amount);
-        $this->assertSame('15000.00', $shipment->sale_amount);
-        $this->assertSame('17400.00', $shipment->customer_amount);
-        $this->assertSame(9500.0, $shipment->profit());
+        $this->assertSame('2800000.00', $shipment->carrier_amount);
+        $this->assertSame('560000.00', $shipment->carrier_vat_amount);
+        $this->assertSame('112000.00', $shipment->carrier_withholding_amount);
+        $this->assertSame('3248000.00', $shipment->carrier_net_amount);
+        $this->assertSame('3500000.00', $shipment->sale_amount);
+        $this->assertSame('4060000.00', $shipment->customer_amount);
+        $this->assertSame(686000.0, $shipment->profit());
         $this->assertSame('Kartal şantiyesi', $shipment->deliveryAddress->name);
 
-        $this->assertSame(17400.0, $this->balance($this->customer));
-        $this->assertSame(-5800.0, $this->balance($this->carrier));
-        $this->assertSame(-500.0, $this->balance($referrer));
+        $this->assertSame(4060000.0, $this->balance($this->customer));
+        $this->assertSame(-3248000.0, $this->balance($this->carrier));
+        $this->assertSame(-7000.0, $this->balance($driver));
+        $this->assertSame(-7000.0, $this->balance($referrer));
+        $this->assertSame($this->truck->id, LedgerEntry::query()->where('party_id', $driver->id)->sole()->vehicle_id);
         $this->assertTrue($this->customer->fresh()->hasRole(PartyRole::Customer));
         $this->assertTrue($referrer->fresh()->hasRole(PartyRole::Commission));
 
         $this->actingAs($this->admin)->get(route('admin.shipments.index', ['f' => ['from' => '2026-03-01']]))->assertOk()->assertSee('34 NK 100');
-        $this->actingAs($this->admin)->get(route('admin.shipments.show', $shipment))->assertOk()->assertSee('17.400,00 TL');
+        $this->actingAs($this->admin)->get(route('admin.shipments.show', $shipment))->assertOk()->assertSee('4.060.000,00 TL');
         $this->actingAs($this->admin)->get(route('admin.shipments.edit', $shipment))->assertOk()->assertSee('Kartal şantiyesi');
         $this->actingAs($this->admin)
             ->getJson(route('admin.shipments.lookups.addresses', ['party' => $this->customer->id]))
@@ -76,6 +86,7 @@ class ShipmentTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame(0.0, $this->balance($referrer));
+        $this->assertSame(0.0, $this->balance($driver));
         $this->assertSame(-5000.0, $this->balance($this->carrier));
         $this->assertSame(1, DeliveryAddress::query()->count());
 
@@ -147,7 +158,6 @@ class ShipmentTest extends TestCase
             'carrier_price' => '200',
             'carrier_vat_rate' => '0',
             'carrier_withholding_rate' => '0.00',
-            'driver_name' => 'Hasan Çelik',
             'shipped_on' => '2026-03-10',
             'net_kg' => '25.000',
             'loading_place' => 'Şile kum ocağı',

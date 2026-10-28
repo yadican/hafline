@@ -49,7 +49,7 @@ class ShipmentController extends AdminController
     {
         return view('admin.shipments.show', [
             'title' => 'Sefer detayı',
-            'shipment' => $shipment->load(['vehicle', 'party', 'deliveryAddress', 'customer', 'commissionParty', 'creator']),
+            'shipment' => $shipment->load(['vehicle', 'party', 'deliveryAddress', 'customer', 'driver', 'commissionParty', 'creator']),
         ]);
     }
 

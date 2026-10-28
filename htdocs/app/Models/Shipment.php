@@ -19,7 +19,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'shipped_on',
     'party_id',
     'vehicle_id',
-    'driver_name',
+    'driver_party_id',
+    'driver_amount',
     'waybill_no',
     'loading_place',
     'scale_ticket_no',
@@ -67,11 +68,11 @@ class Shipment extends Model implements LedgerSource
     }
 
     /**
-     * Customer base less the carrier base and the referrer, VAT excluded.
+     * Customer base less the carrier base, the driver's trip fee and the referrer, VAT excluded.
      */
     public function profit(): float
     {
-        return round((float) $this->sale_amount - (float) $this->carrier_amount - (float) $this->commission_amount, 2);
+        return round((float) $this->sale_amount - (float) $this->carrier_amount - (float) $this->driver_amount - (float) $this->commission_amount, 2);
     }
 
     public static function formatKg(int|string|null $kg): string
@@ -95,6 +96,14 @@ class Shipment extends Model implements LedgerSource
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class)->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<Party, $this>
+     */
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(Party::class, 'driver_party_id')->withTrashed();
     }
 
     /**
@@ -159,6 +168,7 @@ class Shipment extends Model implements LedgerSource
             'vat_amount' => 'decimal:2',
             'withholding_amount' => 'decimal:2',
             'customer_amount' => 'decimal:2',
+            'driver_amount' => 'decimal:2',
             'commission_amount' => 'decimal:2',
         ];
     }

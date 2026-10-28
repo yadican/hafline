@@ -23,7 +23,10 @@
     <x-form.money name="carrier_price" label="Fiyat (TL / ton)" step="0.0001" required data-shipment-amount />
     <x-form.select name="carrier_vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->carrier_vat_rate : '0'" data-shipment-tax />
     <x-form.select name="carrier_withholding_rate" label="Tevkifat" :options="$options['withholding']" data-shipment-tax />
-    <x-form.input name="driver_name" label="Şoför" maxlength="80" />
+    <x-form.select name="driver_party_id" label="Şoför" :options="$options['parties']" placeholder="Şoför seçin" searchable />
+    <x-form.money name="driver_amount" label="Sefer parası (TL)" step="0.01" data-shipment-amount>
+        <x-form.status>Girilirse şoförün carisine alacak yazılır, plakaya bağlanır ve kârdan düşer</x-form.status>
+    </x-form.money>
     <x-form.input name="carrier_note" label="Nakliye açıklaması" maxlength="255" placeholder="Nakliye notu..." />
     <x-form.status data-shipment-carrier-total>Nakliyeci net toplamı hesaplanır</x-form.status>
 </x-form.group>
@@ -48,7 +51,9 @@
 
 <x-form.group legend="4. Referans / hakediş bilgileri (isteğe bağlı)" icon="fa-solid fa-handshake" description="Referans varsa hakedişi carisine alacak yazılır">
     <x-form.select name="commission_party_id" label="Referans cari" :options="$options['parties']" placeholder="Yönlendiren cari seçin..." searchable />
-    <x-form.money name="commission_amount" label="Referans hakedişi (TL)" step="0.01" data-shipment-amount />
+    <x-form.money name="commission_amount" label="Referans hakedişi (TL)" step="0.01" data-shipment-amount>
+        <x-form.status>Bu tutar referans carisine alacak olarak yazılır ve kârdan düşer</x-form.status>
+    </x-form.money>
     <x-form.input name="commission_note" label="Referans açıklaması" maxlength="255" placeholder="Referans notu..." />
     <x-form.status data-shipment-total>Sefer kârı hesaplanır</x-form.status>
 </x-form.group>

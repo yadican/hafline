@@ -62,7 +62,7 @@ class ShipmentService extends Service
     {
         return [
             'carriers' => $this->parties->options(PartyRole::VehicleOwner, $shipment?->party_id),
-            'parties' => $this->parties->options(include: array_filter([$shipment?->customer_party_id, $shipment?->commission_party_id])),
+            'parties' => $this->parties->options(include: array_filter([$shipment?->customer_party_id, $shipment?->driver_party_id, $shipment?->commission_party_id])),
             'vat' => Shipment::VAT_RATES,
             'withholding' => Withholding::options(),
         ];
@@ -155,7 +155,8 @@ class ShipmentService extends Service
             'shipped_on' => $date->toDateString(),
             'party_id' => $data['party_id'],
             'vehicle_id' => $vehicle->id,
-            'driver_name' => $data['driver_name'] ?? null,
+            'driver_party_id' => $data['driver_party_id'] ?? null,
+            'driver_amount' => ($data['driver_party_id'] ?? null) ? LedgerLine::money($data['driver_amount'] ?? 0) : 0,
             'waybill_no' => $data['waybill_no'] ?? null,
             'loading_place' => $data['loading_place'],
             'scale_ticket_no' => $data['scale_ticket_no'] ?? null,

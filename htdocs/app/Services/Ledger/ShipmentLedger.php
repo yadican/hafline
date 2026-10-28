@@ -6,7 +6,7 @@ use App\Models\Shipment;
 
 /**
  * A trip debits the customer (base + VAT − withholding) and credits the carrier on the plate
- * (base + VAT − withholding) and the referrer.
+ * (base + VAT − withholding), the driver's trip fee on the plate, and the referrer.
  */
 class ShipmentLedger
 {
@@ -29,6 +29,10 @@ class ShipmentLedger
             LedgerLine::debit($shipment->customer_party_id, $shipment->shipped_on, $shipment->customer_amount, $withPlate),
             LedgerLine::credit($shipment->party_id, $shipment->shipped_on, $shipment->carrier_net_amount, $description, $shipment->vehicle_id),
         ];
+
+        if ($shipment->driver_party_id) {
+            $lines[] = LedgerLine::credit($shipment->driver_party_id, $shipment->shipped_on, $shipment->driver_amount, 'Sefer parası · '.$withPlate, $shipment->vehicle_id);
+        }
 
         if ($shipment->commission_party_id) {
             $lines[] = LedgerLine::credit($shipment->commission_party_id, $shipment->shipped_on, $shipment->commission_amount, $withPlate);

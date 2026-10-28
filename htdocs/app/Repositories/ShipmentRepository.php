@@ -43,7 +43,7 @@ class ShipmentRepository extends Repository
         $row = $this->filtered($filters)
             ->toBase()
             ->selectRaw('count(*) as count, COALESCE(SUM(net_kg), 0) AS net_kg, COALESCE(SUM(sale_amount), 0) AS sale, COALESCE(SUM(customer_amount), 0) AS customer,
-                COALESCE(SUM(carrier_amount), 0) AS carrier_base, COALESCE(SUM(carrier_net_amount), 0) AS carrier, COALESCE(SUM(commission_amount), 0) AS commission')
+                COALESCE(SUM(carrier_amount), 0) AS carrier_base, COALESCE(SUM(carrier_net_amount), 0) AS carrier, COALESCE(SUM(driver_amount), 0) AS driver, COALESCE(SUM(commission_amount), 0) AS commission')
             ->first();
 
         return [
@@ -51,7 +51,7 @@ class ShipmentRepository extends Repository
             'net_kg' => (int) $row->net_kg,
             'customer' => (float) $row->customer,
             'carrier' => (float) $row->carrier,
-            'profit' => round((float) $row->sale - (float) $row->carrier_base - (float) $row->commission, 2),
+            'profit' => round((float) $row->sale - (float) $row->carrier_base - (float) $row->driver - (float) $row->commission, 2),
         ];
     }
 

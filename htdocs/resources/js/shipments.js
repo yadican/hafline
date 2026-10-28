@@ -53,11 +53,11 @@ function bindShipment(form) {
 
         const carrierSide = side('carrier_price', 'carrier_vat_rate', 'carrier_withholding_rate');
         const customerSide = side('sale_price', 'vat_rate', 'withholding_rate');
-        const referral = value('commission_amount');
+        const fees = value('driver_amount') + value('commission_amount');
 
         setStatus(carrierTotal, 'ok', describe(carrierSide, 'nakliyeci net'));
         setStatus(customerTotal, 'ok', describe(customerSide, 'müşteri net'));
-        setStatus(total, 'ok', `Sefer kârı (KDV hariç) ${money.format(customerSide.base - carrierSide.base - referral)} TL`);
+        setStatus(total, 'ok', `Sefer kârı (KDV hariç) ${money.format(customerSide.base - carrierSide.base - fees)} TL`);
     };
 
     const loadAddresses = async () => {
