@@ -56,7 +56,7 @@ class Shipment extends Model implements LedgerSource
     /**
      * VAT rates offered on a trip.
      */
-    public const VAT_RATES = ['0' => 'KDV yok', '1' => '%1', '10' => '%10', '20' => '%20'];
+    public const VAT_RATES = ['0' => 'KDV Yok', '20' => '%20 KDV', '10' => '%10 KDV', '8' => '%8 KDV', '1' => '%1 KDV'];
 
     public function ledgerModule(): Module
     {
