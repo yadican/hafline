@@ -23,8 +23,6 @@ class PartyRequest extends FormRequest
         $this->merge([
             'active' => $this->boolean('active'),
             'roles' => $this->input('roles', []),
-            'tag_ids' => array_values(array_filter((array) $this->input('tag_ids', []))),
-            'company_group_id' => $this->input('company_group_id') ?: null,
         ]);
     }
 
@@ -44,9 +42,6 @@ class PartyRequest extends FormRequest
             'tax_office' => [Rule::excludeIf($person), 'nullable', 'string', 'max:100'],
             'tax_number' => [Rule::excludeIf($person), 'nullable', 'digits_between:10,11', $this->uniqueAmongActive('companies', 'tax_number', 'Bu vergi numarası başka bir cari kartta kayıtlı.')],
             'fax' => [Rule::excludeIf($person), 'nullable', 'string', 'max:20'],
-            'company_group_id' => [Rule::excludeIf($person), 'nullable', 'uuid', Rule::exists('company_groups', 'id')->withoutTrashed()],
-            'tag_ids' => ['array'],
-            'tag_ids.*' => ['distinct', 'uuid', Rule::exists('tags', 'id')->withoutTrashed()],
             'phone' => ['nullable', 'string', 'max:20'],
             'mobile' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:120'],
@@ -88,8 +83,6 @@ class PartyRequest extends FormRequest
             'tax_office' => 'vergi dairesi',
             'tax_number' => 'vergi no',
             'fax' => 'faks',
-            'company_group_id' => 'şirket grubu',
-            'tag_ids.*' => 'etiket',
             'phone' => 'telefon',
             'mobile' => 'cep telefonu',
             'email' => 'e-posta',

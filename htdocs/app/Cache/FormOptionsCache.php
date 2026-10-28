@@ -35,10 +35,6 @@ final class FormOptionsCache
 
     public const HAUL_ROUTE_DUMPS = 'haul_route_dumps';
 
-    public const COMPANY_GROUPS = 'company_groups';
-
-    public const TAGS = 'tags';
-
     /**
      * Known static variants per object. Objects listed in DYNAMIC use an epoch
      * so site-scoped (or other unbounded) variants invalidate without enumeration.
@@ -71,8 +67,6 @@ final class FormOptionsCache
         self::HAUL_ROUTES => ['site_dump', 'dump_site'],
         self::HAUL_ROUTE_SITES => ['open'],
         self::HAUL_ROUTE_DUMPS => [],
-        self::COMPANY_GROUPS => ['all'],
-        self::TAGS => ['all'],
     ];
 
     /** @var list<string> */

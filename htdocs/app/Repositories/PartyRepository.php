@@ -5,7 +5,6 @@ namespace App\Repositories;
 use App\Cache\FormOptionsCache;
 use App\Enums\Module;
 use App\Enums\PartyRole;
-use App\Enums\PartySide;
 use App\Enums\PartyType;
 use App\Models\LedgerEntry;
 use App\Models\Party;
@@ -25,22 +24,16 @@ class PartyRepository extends Repository
     /**
      * Every word must match somewhere, so "ali yılmaz" finds the party across name and contact fields.
      *
-     * @param  array{q?: string, type?: string, role?: string, side?: string, tag?: string, group?: string, active?: string}  $filters
+     * @param  array{q?: string, type?: string, role?: string, active?: string}  $filters
      */
     public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
-            ->with(['roleAssignments', 'person', 'company', 'tags'])
-            ->when($filters['tag'] ?? null, fn (Builder $query, string $tag) => $query->whereHas('tags', fn (Builder $query) => $query->whereKey($tag)))
-            ->when($filters['group'] ?? null, fn (Builder $query, string $group) => $query->whereHas('company', fn (Builder $query) => $query->where('company_group_id', $group)))
+            ->with(['roleAssignments', 'person', 'company'])
             ->withCount(['ownerships as vehicles_count' => fn (Builder $query) => $query->whereNull('ended_on')])
             ->addSelect(['balance' => $this->balanceQuery()])
             ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))
             ->when($filters['role'] ?? null, fn (Builder $query, string $role) => $query->withRole(PartyRole::from($role)))
-            ->when($filters['side'] ?? null, fn (Builder $query, string $side) => $query->whereHas(
-                'roleAssignments',
-                fn (Builder $query) => $query->whereIn('role', PartySide::from($side)->roles()),
-            ))
             ->when(isset($filters['active']), fn (Builder $query) => $query->where('active', $filters['active'] === '1'));
 
         foreach (preg_split('/\s+/u', trim($filters['q'] ?? ''), flags: PREG_SPLIT_NO_EMPTY) as $word) {

@@ -66,21 +66,6 @@ enum PartyRole: string
     }
 
     /**
-     * Whether a party in this role usually owes the company (receivable) or is owed by it (payable).
-     * Market works both ways.
-     *
-     * @return list<PartySide>
-     */
-    public function sides(): array
-    {
-        return match ($this) {
-            self::Site, self::Customer => [PartySide::Receivable],
-            self::Market => [PartySide::Receivable, PartySide::Payable],
-            default => [PartySide::Payable],
-        };
-    }
-
-    /**
      * @return list<self>
      */
     public static function forType(PartyType $type): array

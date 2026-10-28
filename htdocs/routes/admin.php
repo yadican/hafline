@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\BankController;
 use App\Http\Controllers\Admin\CariEntryController;
 use App\Http\Controllers\Admin\CariEntryLookupController;
 use App\Http\Controllers\Admin\CashCategoryController;
-use App\Http\Controllers\Admin\CompanyGroupController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DumpSiteController;
 use App\Http\Controllers\Admin\EmployeeBonusController;
@@ -52,7 +51,6 @@ use App\Http\Controllers\Admin\Reports\VehicleSiteMonthlyReportController;
 use App\Http\Controllers\Admin\Role\RoleController;
 use App\Http\Controllers\Admin\RouteVehiclePriceController;
 use App\Http\Controllers\Admin\SiteController;
-use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\User\UserController;
 use App\Http\Controllers\Admin\VehicleClassController;
 use App\Http\Controllers\Admin\VehicleController;
@@ -93,14 +91,6 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:view-bank')->group(function () {
         Route::resource('banks', BankController::class);
-    });
-
-    Route::middleware('can:view-company-group')->group(function () {
-        Route::resource('company-groups', CompanyGroupController::class);
-    });
-
-    Route::middleware('can:view-tag')->group(function () {
-        Route::resource('tags', TagController::class);
     });
 
     Route::middleware('can:view-party')->group(function () {

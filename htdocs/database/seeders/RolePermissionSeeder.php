@@ -22,8 +22,6 @@ class RolePermissionSeeder extends Seeder
             'machine-work',
             'fuel-receipt',
             'party',
-            'company-group',
-            'tag',
             'cari-entry',
             'cash-category',
             'bank',

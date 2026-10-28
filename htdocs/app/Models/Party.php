@@ -134,14 +134,6 @@ class Party extends Model
     }
 
     /**
-     * @return BelongsToMany<Tag, $this>
-     */
-    public function tags(): BelongsToMany
-    {
-        return $this->belongsToMany(Tag::class)->orderBy('name');
-    }
-
-    /**
      * @return HasMany<FuelStation, $this>
      */
     public function fuelStations(): HasMany

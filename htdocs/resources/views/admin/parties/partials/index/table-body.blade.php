@@ -7,11 +7,7 @@
                 {{ $party->name }}
                 @if ($party->isSystem())
                     <x-ui.badge icon="fa-solid fa-lock">Sistem</x-ui.badge>
-                @endif
-                @foreach ($party->tags as $tag)
-                    <x-ui.tag :tag="$tag" />
-                @endforeach
-            </td>
+                @endif            </td>
             <td>{{ ($isPerson ? $party->person?->national_id : $party->company?->tax_number) ?: '—' }}</td>
             <td>
                 @if ($party->roles)

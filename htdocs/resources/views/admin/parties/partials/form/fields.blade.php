@@ -26,7 +26,6 @@
         @endif
         <x-form.input name="tax_office" label="Vergi dairesi" maxlength="100" />
         <x-form.input name="tax_number" label="Vergi no" maxlength="11" inputmode="numeric" />
-        <x-form.select searchable name="company_group_id" label="Şirket grubu" placeholder="Grup yok" :options="$groups ?? []" />
         @if ($isSystem)
             <input type="hidden" name="active" value="1">
             <p class="panel-hint">Sistem carisidir: sahada kayıtlı olmayan plakalar buraya bağlanır. Adı değiştirilemez, pasife alınamaz ve silinemez.</p>
@@ -68,9 +67,6 @@
             @endforeach
         </div>
     </x-form.field>
-    @if (! empty($tags))
-        <x-form.checkboxes name="tag_ids" label="Etiketler" :options="$tags" />
-    @endif
     <p class="panel-hint">
         Roller Cari’den verilir; araç, döküm, istasyon veya şantiye bağında kendiliğinden de eklenir.
         @if ($isPerson)

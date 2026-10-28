@@ -101,14 +101,13 @@ class PartyService extends Service
      */
     public function formValues(Party $party): array
     {
-        $party->loadMissing(['person', 'company', 'roleAssignments', 'tags']);
+        $party->loadMissing(['person', 'company', 'roleAssignments']);
 
         return [
             ...$party->only(self::PARTY_FIELDS),
             ...($party->person?->only(['first_name', 'last_name', 'national_id']) ?? []),
-            ...($party->company?->only(['title', 'tax_office', 'tax_number', 'fax', 'company_group_id']) ?? []),
+            ...($party->company?->only(['title', 'tax_office', 'tax_number', 'fax']) ?? []),
             'roles' => $party->roles,
-            'tag_ids' => $party->tags->pluck('id')->all(),
         ];
     }
 
@@ -129,7 +128,6 @@ class PartyService extends Service
                 : $party->company()->create($this->companyAttributes($data));
 
             $this->syncRoles($party, $data['roles'] ?? []);
-            $party->tags()->sync($data['tag_ids'] ?? []);
             $this->employees->ensureForParty($party->fresh(['roleAssignments']));
 
             $this->flushCaches();
@@ -179,7 +177,6 @@ class PartyService extends Service
                 : $party->company()->updateOrCreate([], $this->companyAttributes($data));
 
             $this->syncRoles($updated, $data['roles'] ?? []);
-            $updated->tags()->sync($data['tag_ids'] ?? []);
             $this->employees->ensureForParty($updated->fresh(['roleAssignments']));
 
             $this->flushCaches();
@@ -264,6 +261,6 @@ class PartyService extends Service
      */
     private function companyAttributes(array $data): array
     {
-        return array_intersect_key($data, array_flip(['title', 'tax_office', 'tax_number', 'fax', 'company_group_id']));
+        return array_intersect_key($data, array_flip(['title', 'tax_office', 'tax_number', 'fax']));
     }
 }

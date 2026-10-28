@@ -39,8 +39,8 @@
             : \App\Enums\PartyType::tryFrom((string) request('type'));
         $onParty = request()->routeIs('admin.parties.*');
     @endphp
-    @canany(['view-party', 'view-cari-entry', 'view-company-group', 'view-tag'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*', 'admin.cari-entries.*', 'admin.company-groups.*', 'admin.tags.*')]) id="um-sec-accounts">
+    @canany(['view-party', 'view-cari-entry'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*', 'admin.cari-entries.*')]) id="um-sec-accounts">
             <button type="button" class="um-title" data-um-toggle="um-sec-accounts">
                 <span class="um-title-text">
                     <i class="fa-solid fa-address-card um-title-icon" aria-hidden="true"></i>
@@ -55,12 +55,6 @@
                 @can('view-party')
                     <a href="{{ route('admin.persons.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.persons.*') || ($onParty && $partyType === \App\Enums\PartyType::Person)])>Kişiler</a>
                     <a href="{{ route('admin.companies.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.companies.*') || ($onParty && $partyType === \App\Enums\PartyType::Company)])>Şirketler</a>
-                @endcan
-                @can('view-company-group')
-                    <a href="{{ route('admin.company-groups.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.company-groups.*')])>Şirket grupları</a>
-                @endcan
-                @can('view-tag')
-                    <a href="{{ route('admin.tags.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.tags.*')])>Etiketler</a>
                 @endcan
             </div>
         </div>
