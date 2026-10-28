@@ -1,6 +1,7 @@
 {{-- $type: PartyType, $lockedRoles: list<PartyRole> (kayıtlar bağlı olduğu için kaldırılamayan roller) --}}
 @php
     $isPerson = $type === \App\Enums\PartyType::Person;
+    $isSystem = isset($party) && $party->isSystem();
     $locked = collect($lockedRoles ?? [])->map->value->all();
     $selectedRoles = collect(old('roles', data_get($values ?? [], 'roles', [])))
         ->map(fn ($role) => $role instanceof \BackedEnum ? $role->value : $role)
@@ -18,10 +19,19 @@
     </x-form.group>
 @else
     <x-form.group legend="Şirket" icon="fa-solid fa-building" description="Unvan ve vergi bilgisi">
-        <x-form.input name="title" label="Unvan" maxlength="200" required autofocus />
+        @if ($isSystem)
+            <x-form.input name="title" label="Unvan" maxlength="200" required readonly />
+        @else
+            <x-form.input name="title" label="Unvan" maxlength="200" required autofocus />
+        @endif
         <x-form.input name="tax_office" label="Vergi dairesi" maxlength="100" />
         <x-form.input name="tax_number" label="Vergi no" maxlength="11" inputmode="numeric" />
-        <x-form.checkbox name="active" label="Durum" text="Seçim listelerinde görünsün" :checked="true" />
+        @if ($isSystem)
+            <input type="hidden" name="active" value="1">
+            <p class="panel-hint">Sistem carisidir: sahada kayıtlı olmayan plakalar buraya bağlanır. Adı değiştirilemez, pasife alınamaz ve silinemez.</p>
+        @else
+            <x-form.checkbox name="active" label="Durum" text="Seçim listelerinde görünsün" :checked="true" />
+        @endif
         <x-form.textarea name="notes" label="Not" rows="2" maxlength="2000" />
     </x-form.group>
 @endif

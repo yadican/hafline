@@ -17,6 +17,8 @@ class PartyService extends Service
 {
     private const PARTY_FIELDS = ['phone', 'mobile', 'email', 'city_id', 'district_id', 'neighborhood_id', 'address', 'notes', 'active'];
 
+    private const TEMPORARY_NAME = 'GEÇİCİ CARİ';
+
     public function __construct(
         private PartyRepository $parties,
         private LocationRepository $locations,
@@ -126,10 +128,37 @@ class PartyService extends Service
     }
 
     /**
+     * The system's own cari for unregistered plates; created on first use.
+     */
+    public function temporaryParty(): Party
+    {
+        $existing = Party::query()->where('system_key', Party::TEMPORARY)->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $this->transaction(function (): Party {
+            $party = new Party(['name' => self::TEMPORARY_NAME, 'active' => true]);
+            $party->forceFill(['type' => PartyType::Company, 'system_key' => Party::TEMPORARY])->save();
+            $party->company()->create(['title' => self::TEMPORARY_NAME]);
+            $party->assignRole(PartyRole::VehicleOwner);
+
+            $this->flushCaches();
+
+            return $party;
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function update(Party $party, array $data): Party
     {
+        if ($party->isSystem() && ($this->partyAttributes($party->type, $data)['name'] !== $party->name || ! ($data['active'] ?? false))) {
+            throw new OperationRejectedException("{$party->name} sistem carisidir; adı değiştirilemez ve pasife alınamaz.");
+        }
+
         return $this->transaction(function () use ($party, $data): Party {
             /** @var Party $updated */
             $updated = $this->parties->update($party, $this->partyAttributes($party->type, $data));
@@ -149,6 +178,10 @@ class PartyService extends Service
 
     public function delete(Party $party): void
     {
+        if ($party->isSystem()) {
+            throw new OperationRejectedException("{$party->name} sistem carisidir; silinemez.");
+        }
+
         if ($this->parties->isReferenced($party)) {
             throw new OperationRejectedException('Bu cari kartın araç, döküm yeri veya cari hareket kaydı var; silinemez. Kullanılmayacaksa pasife alın.');
         }

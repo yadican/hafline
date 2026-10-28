@@ -37,6 +37,11 @@ class Party extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     /**
+     * Holds plates seen in the field that have no cari yet, until the office moves them to a real one.
+     */
+    public const TEMPORARY = 'temporary';
+
+    /**
      * @return HasOne<Person, $this>
      */
     public function person(): HasOne
@@ -134,6 +139,16 @@ class Party extends Model
     public function fuelStations(): HasMany
     {
         return $this->hasMany(FuelStation::class);
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->system_key !== null;
+    }
+
+    public function isTemporary(): bool
+    {
+        return $this->system_key === self::TEMPORARY;
     }
 
     public function hasRole(PartyRole $role): bool

@@ -11,6 +11,7 @@ use App\Models\Party;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\Ledger\HaulLedger;
+use App\Services\PartyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -355,6 +356,58 @@ class PartyTest extends TestCase
         $this->expectException(OperationRejectedException::class);
 
         $person->assignRole(PartyRole::Site);
+    }
+
+    public function test_temporary_party_is_created_once_as_a_company_vehicle_owner(): void
+    {
+        $parties = app(PartyService::class);
+
+        $temporary = $parties->temporaryParty();
+
+        $this->assertTrue($temporary->isTemporary());
+        $this->assertSame(PartyType::Company, $temporary->type);
+        $this->assertSame('GEÇİCİ CARİ', $temporary->company->title);
+        $this->assertTrue($temporary->hasRole(PartyRole::VehicleOwner));
+        $this->assertSame($temporary->id, $parties->temporaryParty()->id);
+        $this->assertDatabaseCount('parties', 1);
+    }
+
+    public function test_temporary_party_cannot_be_renamed_deactivated_or_deleted(): void
+    {
+        $temporary = app(PartyService::class)->temporaryParty();
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.edit', $temporary))
+            ->assertOk()
+            ->assertSee('Sistem carisidir');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.companies.index'))
+            ->assertSee('Sistem')
+            ->assertDontSee('Cari kart silinsin mi?');
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.parties.update', $temporary), ['title' => 'BAŞKA AD', 'active' => '1'])
+            ->assertSessionHas('error');
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.parties.update', $temporary), ['title' => 'GEÇİCİ CARİ'])
+            ->assertSessionHas('error');
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.parties.destroy', $temporary))
+            ->assertSessionHas('error');
+
+        $temporary->refresh();
+        $this->assertSame('GEÇİCİ CARİ', $temporary->name);
+        $this->assertTrue($temporary->active);
+        $this->assertNotSoftDeleted($temporary);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.parties.update', $temporary), ['title' => 'GEÇİCİ CARİ', 'active' => '1', 'mobile' => '05321234567'])
+            ->assertSessionHas('success');
+
+        $this->assertSame('05321234567', $temporary->fresh()->mobile);
     }
 
     public function test_list_filters_by_side(): void

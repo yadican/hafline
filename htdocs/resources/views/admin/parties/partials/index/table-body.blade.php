@@ -3,7 +3,12 @@
 <tbody>
     @forelse ($parties as $party)
         <tr>
-            <td>{{ $party->name }}</td>
+            <td>
+                {{ $party->name }}
+                @if ($party->isSystem())
+                    <x-ui.badge icon="fa-solid fa-lock">Sistem</x-ui.badge>
+                @endif
+            </td>
             <td>{{ ($isPerson ? $party->person?->national_id : $party->company?->tax_number) ?: '—' }}</td>
             <td>
                 @if ($party->roles)
@@ -29,7 +34,7 @@
             <x-table.actions
                 :show="route('admin.parties.show', $party)"
                 :edit="auth()->user()->can('edit-party') ? route('admin.parties.edit', $party) : null"
-                :delete="auth()->user()->can('delete-party') ? route('admin.parties.destroy', $party) : null"
+                :delete="auth()->user()->can('delete-party') && ! $party->isSystem() ? route('admin.parties.destroy', $party) : null"
                 confirm="Cari kart silinsin mi?"
                 :confirm-text="$party->name.' listeden kaldırılacak. Aracı, döküm yeri veya cari hareketi varsa silme engellenir.'"
             />

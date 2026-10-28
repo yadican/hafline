@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(RolePermissionSeeder::class);
+        $this->call(SystemPartySeeder::class);
         $this->call(LoadTestSeeder::class);
     }
 }
