@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Services\Ledger\LedgerSource;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -29,9 +31,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'owner_party_id',
     'created_by',
 ])]
-class CompanyTransaction extends Model
+class CompanyTransaction extends Model implements LedgerSource
 {
     use HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return $this->role === PartyRole::Fuel ? Module::Fuel : Module::General;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return $this->site_id;
+    }
 
     /**
      * @return BelongsTo<Party, $this>

@@ -58,6 +58,7 @@ class LedgerAudit
     {
         return [
             $this->postingsMatchDocuments(),
+            $this->postingsCarryTheirModuleAndSite(),
             $this->workSitsWithTheOwnerOfItsDate(),
             $this->transfersCloseThePreviousOwner(),
             $this->ownerBalanceReportMatchesCari(),
@@ -94,6 +95,42 @@ class LedgerAudit
         ), $rows);
 
         return $this->result('Cari satırları kaynak belgelerle birebir', (int) DB::scalar('select count(*) from ledger_entries'), $failures);
+    }
+
+    /**
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function postingsCarryTheirModuleAndSite(): array
+    {
+        $rows = DB::select(<<<'SQL'
+            select le.source_type st, cast(le.source_id as text) sid, le.module, cast(le.site_id as text) site, x.module expected_module, x.site expected_site
+            from ledger_entries le
+            join (
+                select 'haul' st, cast(id as text) sid, 'excavation' module, cast(site_id as text) site from hauls
+                union all select 'machine_work', cast(id as text), 'excavation', cast(site_id as text) from machine_works
+                union all select 'fuel_receipt', cast(id as text), 'fuel', cast(site_id as text) from fuel_receipts
+                union all select 'company_transaction', cast(id as text), case when role = 'fuel' then 'fuel' else 'general' end, cast(site_id as text) from company_transactions
+                union all select 'dump_site_payment', cast(id as text), 'excavation', null from dump_site_payments
+                union all select 'vehicle_payment', cast(id as text), 'general', null from vehicle_payments
+                union all select 'vehicle_receivable', cast(id as text), 'general', null from vehicle_receivables
+                union all select 'party_payment', cast(id as text), 'general', null from party_payments
+                union all select 'vehicle_ownership', cast(id as text), 'general', null from vehicle_ownerships
+            ) x on x.st = le.source_type and x.sid = cast(le.source_id as text)
+            where le.reversal_of is null and not exists (select 1 from ledger_entries r where r.reversal_of = le.id)
+              and (le.module <> x.module or coalesce(cast(le.site_id as text), '') <> coalesce(x.site, ''))
+        SQL);
+
+        $failures = array_map(fn (object $row): string => sprintf(
+            '%s %s: cari %s/%s, belge %s/%s',
+            $row->st,
+            $row->sid,
+            $row->module,
+            $row->site ?? '—',
+            $row->expected_module,
+            $row->expected_site ?? '—',
+        ), $rows);
+
+        return $this->result('Cari satırlarının modülü ve şantiyesi belgeyle aynı', (int) DB::scalar('select count(*) from ledger_entries'), $failures);
     }
 
     /**

@@ -58,6 +58,7 @@ class LedgerAuditCommandTest extends TestCase
     public function test_audit_passes_when_cari_documents_and_reports_agree(): void
     {
         $this->artisan('ledger:audit')
+            ->expectsOutputToContain('Cari satırlarının modülü ve şantiyesi belgeyle aynı · kontrol')
             ->expectsOutputToContain('Devirde eski sahibin plaka bakiyesi kapalı · kontrol 1 · uyumsuz 0')
             ->expectsOutputToContain('Plaka Aylık: devir, satırlar, bakiye')
             ->expectsOutputToContain('Plaka Sahibi Aylık: devir, satırlar, bakiye')
@@ -98,6 +99,16 @@ class LedgerAuditCommandTest extends TestCase
 
         $this->artisan('ledger:audit')
             ->expectsOutputToContain('Cari satırları kaynak belgelerle birebir · kontrol')
+            ->expectsOutputToContain('Cari ile kaynaklar arasında uyumsuzluk var.')
+            ->assertFailed();
+    }
+
+    public function test_audit_fails_when_a_posting_is_on_another_site_than_its_document(): void
+    {
+        LedgerEntry::query()->where('source_type', 'haul')->where('party_id', $this->seller->id)->first()->update(['site_id' => Site::factory()->create()->id]);
+
+        $this->artisan('ledger:audit')
+            ->expectsOutputToContain('Cari satırlarının modülü ve şantiyesi belgeyle aynı · kontrol')
             ->expectsOutputToContain('Cari ile kaynaklar arasında uyumsuzluk var.')
             ->assertFailed();
     }

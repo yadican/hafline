@@ -2,6 +2,7 @@
 
 namespace App\Services\Ledger;
 
+use App\Enums\Module;
 use App\Enums\PaymentMethod;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -26,6 +27,8 @@ final readonly class LedgerLine
         public ?string $vehicleId = null,
         public ?PaymentMethod $paymentMethod = null,
         public ?string $cashCategoryId = null,
+        public ?Module $module = null,
+        public ?string $siteId = null,
     ) {
         $this->occurredOn = $occurredOn->toDateString();
         $this->debit = self::money($debit);
@@ -61,6 +64,27 @@ final readonly class LedgerLine
             $this->vehicleId,
             $method,
             $cashCategoryId,
+            $this->module,
+            $this->siteId,
+        );
+    }
+
+    /**
+     * The line as posted by its source document, which decides its module and site.
+     */
+    public function postedBy(LedgerSource $source): self
+    {
+        return new self(
+            $this->partyId,
+            Carbon::parse($this->occurredOn),
+            $this->debit,
+            $this->credit,
+            $this->description,
+            $this->vehicleId,
+            $this->paymentMethod,
+            $this->cashCategoryId,
+            $source->ledgerModule(),
+            $source->ledgerSiteId(),
         );
     }
 
@@ -82,6 +106,8 @@ final readonly class LedgerLine
             $this->vehicleId,
             $this->paymentMethod?->value,
             $this->cashCategoryId,
+            $this->module?->value,
+            $this->siteId,
         ]);
     }
 }

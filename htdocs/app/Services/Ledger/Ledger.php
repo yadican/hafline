@@ -19,9 +19,12 @@ class Ledger
      *
      * @param  list<LedgerLine>  $lines
      */
-    public function sync(Model $source, array $lines): void
+    public function sync(LedgerSource&Model $source, array $lines): void
     {
-        $wanted = collect($lines)->reject(fn (LedgerLine $line) => $line->isZero())->values();
+        $wanted = collect($lines)
+            ->reject(fn (LedgerLine $line) => $line->isZero())
+            ->map(fn (LedgerLine $line) => $line->postedBy($source))
+            ->values();
         $stale = [];
 
         foreach ($this->live($source) as $entry) {
@@ -49,6 +52,8 @@ class Ledger
                 'vehicle_id' => $line->vehicleId,
                 'payment_method' => $line->paymentMethod,
                 'cash_category_id' => $line->cashCategoryId,
+                'module' => $line->module,
+                'site_id' => $line->siteId,
                 'created_by' => auth()->id(),
             ]);
         }
@@ -62,7 +67,7 @@ class Ledger
     /**
      * Re-posts the source's live lines unchanged on another party's account.
      */
-    public function moveTo(Model $source, string $partyId): void
+    public function moveTo(LedgerSource&Model $source, string $partyId): void
     {
         $this->sync($source, $this->live($source)->map(fn (LedgerEntry $entry) => new LedgerLine(
             $partyId,
@@ -109,6 +114,8 @@ class Ledger
                 'vehicle_id' => $entry->vehicle_id,
                 'payment_method' => $entry->payment_method,
                 'cash_category_id' => $entry->cash_category_id,
+                'module' => $entry->module,
+                'site_id' => $entry->site_id,
                 'reversal_of' => $entry->id,
                 'created_by' => auth()->id(),
             ]);
@@ -125,6 +132,8 @@ class Ledger
             vehicleId: $entry->vehicle_id,
             paymentMethod: $entry->payment_method,
             cashCategoryId: $entry->cash_category_id,
+            module: $entry->module,
+            siteId: $entry->site_id,
         );
     }
 }

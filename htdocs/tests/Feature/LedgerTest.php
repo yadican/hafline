@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Module;
 use App\Enums\PaymentMethod;
 use App\Models\CashCategory;
 use App\Models\Haul;
 use App\Models\LedgerEntry;
 use App\Models\Party;
+use App\Models\Site;
 use App\Services\Ledger\Ledger;
 use App\Services\Ledger\LedgerLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,6 +36,28 @@ class LedgerTest extends TestCase
         $this->assertSame('haul', $entry->source_type);
         $this->assertSame('1200.00', $entry->credit);
         $this->assertSame('0.00', $entry->debit);
+    }
+
+    public function test_lines_carry_the_module_and_site_of_their_document_and_follow_a_site_change(): void
+    {
+        $haul = Haul::factory()->create();
+        $party = Party::factory()->create();
+        $ledger = app(Ledger::class);
+        $line = LedgerLine::credit($party->id, Carbon::parse('2026-05-01'), 1000, 'Sefer');
+
+        $ledger->sync($haul, [$line]);
+
+        $posted = LedgerEntry::query()->sole();
+        $this->assertSame(Module::Excavation, $posted->module);
+        $this->assertSame($haul->site_id, $posted->site_id);
+
+        $haul->update(['site_id' => Site::factory()->create()->id]);
+        $ledger->sync($haul->refresh(), [$line]);
+
+        $reversal = LedgerEntry::query()->whereNotNull('reversal_of')->sole();
+        $this->assertSame($posted->site_id, $reversal->site_id);
+        $this->assertSame(Module::Excavation, $reversal->module);
+        $this->assertSame($haul->site_id, $ledger->live($haul)->sole()->site_id);
     }
 
     public function test_changed_lines_reverse_the_live_ones_and_keep_history(): void

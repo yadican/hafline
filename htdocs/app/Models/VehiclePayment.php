@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\PaymentMethod;
+use App\Services\Ledger\LedgerSource;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,9 +22,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'company_transaction_id',
     'created_by',
 ])]
-class VehiclePayment extends Model
+class VehiclePayment extends Model implements LedgerSource
 {
     use HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return Module::General;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return null;
+    }
 
     /**
      * @return BelongsTo<Vehicle, $this>

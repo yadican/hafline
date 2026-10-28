@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\Shift;
+use App\Services\Ledger\LedgerSource;
 use Database\Factories\FuelReceiptFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -28,10 +30,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'haul_ticket_count',
     'created_by',
 ])]
-class FuelReceipt extends Model
+class FuelReceipt extends Model implements LedgerSource
 {
     /** @use HasFactory<FuelReceiptFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return Module::Fuel;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return $this->site_id;
+    }
 
     public static function formatQuantity(float|string|null $quantity): string
     {

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\Shift;
+use App\Services\Ledger\LedgerSource;
 use Database\Factories\MachineWorkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -25,10 +27,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'worked_on',
     'created_by',
 ])]
-class MachineWork extends Model
+class MachineWork extends Model implements LedgerSource
 {
     /** @use HasFactory<MachineWorkFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return Module::Excavation;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return $this->site_id;
+    }
 
     /**
      * "4,5" rather than "4,50"; whole hours drop the decimals.

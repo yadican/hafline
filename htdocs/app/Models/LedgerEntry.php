@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'vehicle_id',
     'payment_method',
     'cash_category_id',
+    'module',
+    'site_id',
     'reversal_of',
     'created_by',
 ])]
@@ -44,6 +47,14 @@ class LedgerEntry extends Model
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class)->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<Site, $this>
+     */
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class)->withTrashed();
     }
 
     /**
@@ -88,6 +99,7 @@ class LedgerEntry extends Model
             'debit' => 'decimal:2',
             'credit' => 'decimal:2',
             'payment_method' => PaymentMethod::class,
+            'module' => Module::class,
             'created_at' => 'datetime',
         ];
     }

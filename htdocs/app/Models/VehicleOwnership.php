@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
+use App\Services\Ledger\LedgerSource;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,9 +12,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['vehicle_id', 'party_id', 'started_on', 'ended_on', 'carried_from_party_id', 'carried_balance'])]
-class VehicleOwnership extends Model
+class VehicleOwnership extends Model implements LedgerSource
 {
     use HasUuids;
+
+    public function ledgerModule(): Module
+    {
+        return Module::General;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return null;
+    }
 
     /**
      * @return BelongsTo<Vehicle, $this>

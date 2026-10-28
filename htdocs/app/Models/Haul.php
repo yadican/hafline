@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\Shift;
+use App\Services\Ledger\LedgerSource;
 use Database\Factories\HaulFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -29,10 +31,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'created_by',
     'field_haul_session_id',
 ])]
-class Haul extends Model
+class Haul extends Model implements LedgerSource
 {
     /** @use HasFactory<HaulFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return Module::Excavation;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return $this->site_id;
+    }
 
     /**
      * @return BelongsTo<Vehicle, $this>
