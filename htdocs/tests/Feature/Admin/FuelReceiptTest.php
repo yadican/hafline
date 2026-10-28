@@ -34,7 +34,7 @@ class FuelReceiptTest extends TestCase
         $this->owner = Party::factory()->create();
         $this->vehicle = Vehicle::factory()->ownedBy($this->owner, '2026-01-01')->create(['plate' => '34 YK 100']);
         $this->site = Site::factory()->create();
-        $this->station = FuelStation::factory()->create(['unit_price' => 47.25]);
+        $this->station = FuelStation::factory()->create(['purchase_price' => 42, 'unit_price' => 47.25]);
         $this->station->sites()->attach($this->site);
     }
 
@@ -44,7 +44,7 @@ class FuelReceiptTest extends TestCase
             ->assertRedirect(route('admin.login'));
     }
 
-    public function test_receipt_debits_the_owner_with_quantity_times_price(): void
+    public function test_receipt_debits_the_owner_at_sale_price_and_credits_the_station_at_purchase_price(): void
     {
         $this->actingAs($this->admin)->get(route('admin.fuel-receipts.create'))->assertOk();
 
@@ -57,16 +57,22 @@ class FuelReceiptTest extends TestCase
 
         $this->assertSame('80.50', $receipt->quantity);
         $this->assertSame('47.2500', $receipt->unit_price);
+        $this->assertSame('42.0000', $receipt->purchase_price);
         $this->assertSame('3803.63', $receipt->amount);
+        $this->assertSame('3381.00', $receipt->purchase_amount);
         $this->assertSame($this->owner->id, $receipt->party_id);
         $this->assertSame($this->station->party_id, $receipt->fuel_party_id);
         $this->assertSame($this->site->id, $receipt->site_id);
 
-        $entry = LedgerEntry::query()->sole();
-        $this->assertSame('fuel_receipt', $entry->source_type);
-        $this->assertSame($this->owner->id, $entry->party_id);
-        $this->assertSame('3803.63', $entry->debit);
-        $this->assertSame('0.00', $entry->credit);
+        $owner = LedgerEntry::query()->where('party_id', $this->owner->id)->sole();
+        $this->assertSame('fuel_receipt', $owner->source_type);
+        $this->assertSame('3803.63', $owner->debit);
+        $this->assertSame('0.00', $owner->credit);
+
+        $station = LedgerEntry::query()->where('party_id', $this->station->party_id)->sole();
+        $this->assertSame('0.00', $station->debit);
+        $this->assertSame('3381.00', $station->credit);
+        $this->assertNull($station->vehicle_id);
     }
 
     public function test_a_typed_price_overrides_the_station_price(): void
@@ -75,7 +81,7 @@ class FuelReceiptTest extends TestCase
             ->post(route('admin.fuel-receipts.store'), $this->payload(['unit_price' => '50', 'quantity' => '10']));
 
         $this->assertSame('50.0000', FuelReceipt::query()->sole()->unit_price);
-        $this->assertSame('500.00', LedgerEntry::query()->sole()->debit);
+        $this->assertSame('500.00', LedgerEntry::query()->where('party_id', $this->owner->id)->sole()->debit);
     }
 
     public function test_a_site_outside_the_station_is_rejected(): void

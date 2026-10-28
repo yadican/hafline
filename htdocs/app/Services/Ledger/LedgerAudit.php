@@ -26,6 +26,8 @@ class LedgerAudit
         union all select 'site_bill', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), amount, 0 from site_bills where deleted_at is null
         union all select 'site_transaction', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), 0, credit from site_transactions where deleted_at is null and party_id is not null and credit <> 0
         union all select 'fuel_receipt', cast(id as text), cast(party_id as text), substr(cast(issued_on as text), 1, 10), amount, 0 from fuel_receipts where deleted_at is null and amount <> 0
+        union all select 'fuel_receipt', cast(id as text), cast(fuel_party_id as text), substr(cast(issued_on as text), 1, 10), 0, purchase_amount from fuel_receipts where deleted_at is null and fuel_party_id is not null and purchase_amount <> 0
+        union all select 'fuel_tank_fill', cast(id as text), cast(party_id as text), substr(cast(filled_on as text), 1, 10), 0, amount from fuel_tank_fills where deleted_at is null
         union all select 'machine_work', cast(id as text), cast(party_id as text), substr(cast(worked_on as text), 1, 10), 0, amount from machine_works where deleted_at is null and amount <> 0
         union all select 'machine_work', cast(id as text), cast(operator_id as text), substr(cast(worked_on as text), 1, 10), 0, operator_amount from machine_works where deleted_at is null and operator_amount is not null and operator_amount <> 0
         union all select 'vehicle_payment', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), amount, 0 from vehicle_payments where deleted_at is null
@@ -119,6 +121,7 @@ class LedgerAudit
                 select 'haul' st, cast(id as text) sid, 'excavation' module, cast(site_id as text) site, null bank from hauls
                 union all select 'machine_work', cast(id as text), 'excavation', cast(site_id as text), null from machine_works
                 union all select 'fuel_receipt', cast(id as text), 'fuel', cast(site_id as text), null from fuel_receipts
+                union all select 'fuel_tank_fill', cast(id as text), 'fuel', null, null from fuel_tank_fills
                 union all select 'company_transaction', cast(id as text), case when role = 'fuel' then 'fuel' else 'general' end, cast(site_id as text), cast(bank_id as text) from company_transactions
                 union all select 'dump_site_payment', cast(id as text), 'excavation', null, cast(bank_id as text) from dump_site_payments
                 union all select 'vehicle_payment', cast(id as text), 'general', null, cast(bank_id as text) from vehicle_payments
@@ -206,8 +209,9 @@ class LedgerAudit
         $cari = collect(DB::select(<<<'SQL'
             select le.party_id, sum(le.credit - le.debit) net from ledger_entries le
             where le.party_id in (select party_id from vehicle_ownerships)
-              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction')
+              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction', 'fuel_tank_fill')
               and not (le.source_type = 'haul' and not exists (select 1 from hauls h where h.id = le.source_id and h.party_id = le.party_id))
+              and not (le.source_type = 'fuel_receipt' and le.vehicle_id is null)
             group by le.party_id
         SQL))->mapWithKeys(fn (object $row) => [$row->party_id => round((float) $row->net, 2)]);
 

@@ -69,7 +69,7 @@ class FuelStationService extends Service
             /** @var FuelStation $station */
             $station = $this->stations->create($attributes);
             $station->sites()->sync($siteIds);
-            $station->party->assignRole(PartyRole::Fuel);
+            $station->party?->assignRole(PartyRole::Fuel);
             $this->flushCaches();
 
             return $station;
@@ -91,7 +91,7 @@ class FuelStationService extends Service
             $updated = $this->stations->update($station, $attributes);
             $trashed = $updated->sites()->onlyTrashed()->pluck('sites.id')->all();
             $updated->sites()->sync([...$siteIds, ...$trashed]);
-            $updated->party->assignRole(PartyRole::Fuel);
+            $updated->party?->assignRole(PartyRole::Fuel);
             $this->flushCaches();
 
             return $updated;

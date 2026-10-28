@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\ExampleController;
 use App\Http\Controllers\Admin\FuelReceiptController;
 use App\Http\Controllers\Admin\FuelReceiptLookupController;
 use App\Http\Controllers\Admin\FuelStationController;
+use App\Http\Controllers\Admin\FuelTankController;
 use App\Http\Controllers\Admin\HaulController;
 use App\Http\Controllers\Admin\HaulLookupController;
 use App\Http\Controllers\Admin\HaulRouteController;
@@ -141,6 +142,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:view-fuel-station')->group(function () {
         Route::resource('fuel-stations', FuelStationController::class);
+        Route::post('fuel-stations/{fuelStation}/fills', [FuelTankController::class, 'storeFill'])->name('fuel-stations.fills.store');
+        Route::delete('fuel-stations/{fuelStation}/fills/{fill}', [FuelTankController::class, 'destroyFill'])->scopeBindings()->name('fuel-stations.fills.destroy');
+        Route::post('fuel-stations/{fuelStation}/counts', [FuelTankController::class, 'storeCount'])->name('fuel-stations.counts.store');
+        Route::delete('fuel-stations/{fuelStation}/counts/{count}', [FuelTankController::class, 'destroyCount'])->scopeBindings()->name('fuel-stations.counts.destroy');
     });
 
     Route::middleware('can:view-employee')->group(function () {

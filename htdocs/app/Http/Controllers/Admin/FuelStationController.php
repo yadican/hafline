@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\Admin\FuelStationRequest;
 use App\Http\Requests\Admin\FuelStationSearchRequest;
 use App\Models\FuelStation;
+use App\Repositories\FuelTankRepository;
 use App\Services\FuelStationService;
+use App\Services\FuelTankService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class FuelStationController extends AdminController
@@ -20,7 +23,7 @@ class FuelStationController extends AdminController
         $filters = $request->filters();
 
         return view('admin.fuel-stations.index', [
-            'title' => 'Akaryakıt istasyonları',
+            'title' => 'Yakıt kaynakları',
             'fuelStations' => $this->stations->paginate($filters, $request->sort()),
             'filters' => $filters,
             'sites' => $this->stations->siteOptions(activeOnly: false),
@@ -31,7 +34,7 @@ class FuelStationController extends AdminController
     public function create(): View
     {
         return view('admin.fuel-stations.create', [
-            'title' => 'Yeni akaryakıt istasyonu',
+            'title' => 'Yeni yakıt kaynağı',
             'sites' => $this->stations->siteOptions(),
             'parties' => $this->stations->partyOptions(),
         ]);
@@ -42,24 +45,31 @@ class FuelStationController extends AdminController
         return $this->complete(
             fn () => $this->stations->create($request->validated()),
             'admin.fuel-stations.index',
-            'Akaryakıt istasyonu oluşturuldu.',
+            'Yakıt kaynağı oluşturuldu.',
         );
     }
 
-    public function show(FuelStation $fuelStation): View
+    public function show(Request $request, FuelStation $fuelStation, FuelTankService $tanks, FuelTankRepository $movements): View
     {
         $fuelStation->load(['party', 'sites']);
+        $showTank = $fuelStation->isTank() && $request->user()?->can('view-fuel-tank');
 
         return view('admin.fuel-stations.show', [
-            'title' => 'Akaryakıt istasyonu detayı',
+            'title' => 'Yakıt kaynağı detayı',
             'fuelStation' => $fuelStation,
+            'tank' => $showTank ? [
+                'stock' => $tanks->stock($fuelStation),
+                'fills' => $movements->fills($fuelStation),
+                'counts' => $movements->counts($fuelStation),
+                'suppliers' => $tanks->supplierOptions(),
+            ] : null,
         ]);
     }
 
     public function edit(FuelStation $fuelStation): View
     {
         return view('admin.fuel-stations.edit', [
-            'title' => 'Akaryakıt istasyonunu düzenle',
+            'title' => 'Yakıt kaynağını düzenle',
             'fuelStation' => $fuelStation,
             'sites' => $this->stations->siteOptions($fuelStation),
             'parties' => $this->stations->partyOptions($fuelStation),
@@ -71,7 +81,7 @@ class FuelStationController extends AdminController
         return $this->complete(
             fn () => $this->stations->update($fuelStation, $request->validated()),
             'admin.fuel-stations.index',
-            'Akaryakıt istasyonu güncellendi.',
+            'Yakıt kaynağı güncellendi.',
         );
     }
 
@@ -80,7 +90,7 @@ class FuelStationController extends AdminController
         return $this->complete(
             fn () => $this->stations->delete($fuelStation),
             'admin.fuel-stations.index',
-            'Akaryakıt istasyonu silindi.',
+            'Yakıt kaynağı silindi.',
         );
     }
 }

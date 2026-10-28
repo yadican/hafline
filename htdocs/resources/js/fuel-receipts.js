@@ -50,14 +50,16 @@ function setSelect(select, value) {
     }
 }
 
-// Yakıt yeri değişince birim fiyat istasyonun fiyatından gelir ve tek şantiyesi varsa o seçilir.
-// Düzenlemede kayıtlı fiyat, yer değişmedikçe korunur.
+// Yakıt kaynağı değişince fiyatlar kaynağın kartından gelir ve tek şantiyesi varsa o seçilir.
+// Kendi depomuzda alış fiyatı yoktur (dolumda tedarikçiye yazıldı). Düzenlemede kayıtlı fiyatlar,
+// kaynak değişmedikçe korunur.
 function bindStation(form) {
     const station = form.querySelector('[data-fuel-station]');
     const hint = form.querySelector('[data-fuel-station-hint]');
     const site = form.querySelector('[data-fuel-site]');
     const quantity = form.querySelector('[data-fuel-quantity]');
     const price = form.querySelector('[data-fuel-price]');
+    const purchase = form.querySelector('[data-fuel-purchase-price]');
     const total = form.querySelector('[data-fuel-total]');
 
     if (! station || ! hint || ! price || ! total || ! quantity || ! form.dataset.stationUrl) {
@@ -65,25 +67,33 @@ function bindStation(form) {
     }
 
     let request = 0;
+    let tank = false;
 
     const renderTotal = () => {
         if (price.value === '' || quantity.value === '') {
-            setStatus(total, 'idle', 'Litre × birim fiyat araç sahibine borç yazılır');
+            setStatus(total, 'idle', 'Litre × satış fiyatı araç sahibine borç yazılır');
 
             return;
         }
 
         const litres = parseNumber(quantity.value);
-        const rate = parseNumber(price.value);
+        const sale = litres * parseNumber(price.value);
+        let text = `${formatQuantity(litres)} lt × ${money.format(parseNumber(price.value))} TL = ${money.format(sale)} TL borç`;
 
-        setStatus(total, 'ok', `${formatQuantity(litres)} lt × ${money.format(rate)} TL = ${money.format(litres * rate)} TL borç`);
+        if (! tank && purchase && purchase.value !== '') {
+            const cost = litres * parseNumber(purchase.value);
+
+            text += ` · istasyona ${money.format(cost)} TL alacak · fark ${money.format(sale - cost)} TL`;
+        }
+
+        setStatus(total, 'ok', text);
     };
 
     const refresh = async (keepPrice) => {
         const current = ++request;
 
         if (! station.value) {
-            setStatus(hint, 'idle', 'Seçilince istasyonun birim fiyatı gelir');
+            setStatus(hint, 'idle', 'Seçilince kaynağın fiyatları gelir');
             renderTotal();
 
             return;
@@ -96,12 +106,25 @@ function bindStation(form) {
                 return;
             }
 
-            setStatus(hint, 'ok', info.party ? `Akaryakıt firması: ${info.party}` : 'Yakıt yeri seçildi');
+            tank = Boolean(info.tank);
+            setStatus(hint, 'ok', tank ? 'Kendi depomuz; stoktan düşer' : `Akaryakıt firması: ${info.party ?? ''}`);
 
             if (! keepPrice || price.value === '') {
                 const rate = Number(info.unit_price);
 
                 price.value = rate > 0 ? rate.toFixed(4) : '';
+            }
+
+            if (purchase) {
+                purchase.disabled = tank;
+
+                if (tank) {
+                    purchase.value = '';
+                } else if (! keepPrice || purchase.value === '') {
+                    const cost = Number(info.purchase_price);
+
+                    purchase.value = cost > 0 ? cost.toFixed(4) : '';
+                }
             }
 
             const sites = info.sites ?? [];
@@ -124,6 +147,7 @@ function bindStation(form) {
     station.addEventListener('change', () => refresh(false));
     quantity.addEventListener('input', renderTotal);
     price.addEventListener('input', renderTotal);
+    purchase?.addEventListener('input', renderTotal);
 
     refresh(form.hasAttribute('data-keep-price'));
 }

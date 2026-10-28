@@ -42,7 +42,9 @@ class FuelReceiptLookupController extends AdminController
 
         return response()->json([
             'party' => $fuelStation->party?->name,
+            'tank' => $fuelStation->isTank(),
             'unit_price' => $fuelStation->unit_price,
+            'purchase_price' => $fuelStation->purchase_price,
             'sites' => $fuelStation->sites->map(fn ($site) => ['id' => $site->id, 'name' => $site->name])->values(),
         ]);
     }

@@ -423,6 +423,7 @@ class LedgerConsistencyTest extends TestCase
             select 'haul' st, id sid, party_id p, date(hauled_at) d, 0 dr, price cr from hauls where deleted_at is null and price <> 0
             union all select 'haul', id, dump_party_id, date(hauled_at), 0, dump_price from hauls where deleted_at is null and dump_price <> 0
             union all select 'fuel_receipt', id, party_id, issued_on, amount, 0 from fuel_receipts where deleted_at is null and amount <> 0
+            union all select 'fuel_receipt', id, fuel_party_id, issued_on, 0, purchase_amount from fuel_receipts where deleted_at is null and fuel_party_id is not null and purchase_amount <> 0
             union all select 'machine_work', id, party_id, worked_on, 0, amount from machine_works where deleted_at is null and amount <> 0
             union all select 'machine_work', id, operator_id, worked_on, 0, operator_amount from machine_works where deleted_at is null and operator_amount is not null and operator_amount <> 0
             union all select 'vehicle_payment', id, party_id, occurred_on, amount, 0 from vehicle_payments where deleted_at is null

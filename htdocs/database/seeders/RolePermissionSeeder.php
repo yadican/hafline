@@ -31,6 +31,7 @@ class RolePermissionSeeder extends Seeder
             'dump-site',
             'haul-route',
             'fuel-station',
+            'fuel-tank',
             'employee',
             'employee-salary',
             'employee-payment',

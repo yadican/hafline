@@ -23,8 +23,8 @@
         </x-form.field>
     </x-form.group>
 
-    <x-form.group legend="Yakıt" icon="fa-solid fa-gas-pump" description="Yakıt yeri, litre ve birim fiyat">
-        <x-form.field label="Yakıt yeri">
+    <x-form.group legend="Yakıt" icon="fa-solid fa-gas-pump" description="Yakıt kaynağı, litre, alış ve satış">
+        <x-form.field label="Yakıt kaynağı">
             <div>{{ $receipt->fuelStation?->name ?: '—' }}</div>
         </x-form.field>
         <x-form.field label="Şantiye">
@@ -33,12 +33,24 @@
         <x-form.field label="Litre">
             <div>{{ \App\Models\FuelReceipt::formatQuantity($receipt->quantity) }}</div>
         </x-form.field>
-        <x-form.field label="Birim fiyat">
+        <x-form.field label="Satış fiyatı">
             <div><x-ui.money :value="$receipt->unit_price" :decimals="4" suffix="TL/lt" /></div>
         </x-form.field>
-        <x-form.field label="Tutar">
+        <x-form.field label="Araç sahibine borç">
             <div><x-ui.money :value="$receipt->amount" /></div>
         </x-form.field>
+        @if ($receipt->fuel_party_id)
+            <x-form.field label="Alış fiyatı">
+                <div><x-ui.money :value="$receipt->purchase_price" :decimals="4" suffix="TL/lt" /></div>
+            </x-form.field>
+            <x-form.field label="İstasyona alacak">
+                <div><x-ui.money :value="$receipt->purchase_amount" /> · {{ $receipt->fuelParty?->name }}</div>
+            </x-form.field>
+        @else
+            <x-form.field label="Alış">
+                <div>Kendi depomuzdan; stoktan düşer</div>
+            </x-form.field>
+        @endif
     </x-form.group>
 
     <x-form.group legend="Ek bilgi" icon="fa-solid fa-circle-info" description="Kilometre, alan kişi ve taşıma fiş adedi">

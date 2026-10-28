@@ -203,6 +203,7 @@ class PartyRepository extends Repository
             || DB::table('employees')->where('party_id', $party->id)->exists()
             || DB::table('machine_works')->where('operator_id', $party->id)->exists()
             || DB::table('fuel_receipts')->where(fn ($query) => $query->where('party_id', $party->id)->orWhere('fuel_party_id', $party->id))->exists()
+            || DB::table('fuel_tank_fills')->where('party_id', $party->id)->exists()
             || DB::table('company_transactions')->where('party_id', $party->id)->exists();
     }
 

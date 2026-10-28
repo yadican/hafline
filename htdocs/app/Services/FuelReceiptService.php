@@ -138,8 +138,9 @@ class FuelReceiptService extends Service
     }
 
     /**
-     * A blank unit price falls back to the station's current price; an edit at the same station
-     * keeps the receipt's own price so a later tariff change does not reprice an old receipt.
+     * Blank prices fall back to the source's current prices; an edit at the same source keeps the
+     * receipt's own prices so a later tariff change does not reprice an old receipt. Fuel from our
+     * own tank has no purchase side here: its supplier was credited when the tank was filled.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -149,8 +150,9 @@ class FuelReceiptService extends Service
         $issuedOn = Carbon::parse($data['issued_on'])->startOfDay();
         $party = $this->ownerOn($vehicle, $issuedOn);
         $station = FuelStation::query()->find($data['fuel_station_id']);
-        $keptPrice = $existing?->fuel_station_id === $station?->id ? $existing?->unit_price : null;
-        $price = $data['unit_price'] ?? $keptPrice ?? $station?->unit_price;
+        $sameSource = $existing?->fuel_station_id === $station?->id;
+        $price = $data['unit_price'] ?? ($sameSource ? $existing?->unit_price : null) ?? $station?->unit_price;
+        $purchasePrice = $data['purchase_price'] ?? ($sameSource ? $existing?->purchase_price : null) ?? $station?->purchase_price;
 
         if (! $party) {
             throw new OperationRejectedException(sprintf('%s aracının %s tarihinde kayıtlı sahibi yok.', $vehicle->plate, $issuedOn->format('d.m.Y')));
@@ -161,7 +163,11 @@ class FuelReceiptService extends Service
         }
 
         if ($price === null || (float) $price <= 0) {
-            throw new OperationRejectedException(sprintf('%s için birim fiyat tanımlı değil.', $station->name));
+            throw new OperationRejectedException(sprintf('%s için satış fiyatı tanımlı değil.', $station->name));
+        }
+
+        if (! $station->isTank() && ($purchasePrice === null || (float) $purchasePrice <= 0)) {
+            throw new OperationRejectedException(sprintf('%s için alış fiyatı tanımlı değil.', $station->name));
         }
 
         return [
@@ -169,10 +175,11 @@ class FuelReceiptService extends Service
             'vehicle_id' => $vehicle->id,
             'party_id' => $party,
             'fuel_station_id' => $station->id,
-            'fuel_party_id' => $station->party_id,
+            'fuel_party_id' => $station->isTank() ? null : $station->party_id,
             'site_id' => $data['site_id'] ?? null,
             'quantity' => $data['quantity'],
             'unit_price' => $price,
+            'purchase_price' => $station->isTank() ? 0 : $purchasePrice,
             'issued_on' => $issuedOn->toDateString(),
             'km' => $data['km'] ?? null,
             'received_by' => $data['received_by'] ?? null,

@@ -2,10 +2,10 @@
 
 @section('content')
     <x-panel.page
-        heading="Akaryakıt istasyonu detayı"
+        heading="Yakıt kaynağı detayı"
         icon="fa-solid fa-gas-pump"
         :description="$fuelStation->name"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Saha' => null, 'Akaryakıt istasyonları' => route('admin.fuel-stations.index'), 'Detay' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt' => null, 'Yakıt kaynakları' => route('admin.fuel-stations.index'), 'Detay' => null]"
         :back="route('admin.fuel-stations.index')"
     >
         <x-slot:actions>

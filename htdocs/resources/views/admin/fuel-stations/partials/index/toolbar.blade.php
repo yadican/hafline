@@ -10,7 +10,7 @@
             @if (! empty($filters))
                 <x-ui.button icon="fa-solid fa-xmark" :href="route('admin.fuel-stations.index')" class="w-full justify-center sm:w-auto">Temizle</x-ui.button>
             @endif
-            <x-ui.button variant="create" icon="fa-solid fa-gas-pump" :href="route('admin.fuel-stations.create')" class="w-full justify-center sm:w-auto">Yeni istasyon</x-ui.button>        
+            <x-ui.button variant="create" icon="fa-solid fa-gas-pump" :href="route('admin.fuel-stations.create')" class="w-full justify-center sm:w-auto">Yeni kaynak</x-ui.button>        
         </div>
 
     </x-search.form>

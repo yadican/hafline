@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'site_id',
     'quantity',
     'unit_price',
+    'purchase_price',
     'issued_on',
     'km',
     'received_by',
@@ -59,6 +60,14 @@ class FuelReceipt extends Model implements LedgerSource
     }
 
     /**
+     * What the station's firm is owed for these litres; same as the stored `purchase_amount` column.
+     */
+    public function purchaseTotal(): string
+    {
+        return number_format(round((float) $this->quantity * (float) $this->purchase_price, 2), 2, '.', '');
+    }
+
+    /**
      * @return BelongsTo<Vehicle, $this>
      */
     public function vehicle(): BelongsTo
@@ -85,7 +94,8 @@ class FuelReceipt extends Model implements LedgerSource
     }
 
     /**
-     * The station's firm, copied from the station so later station edits do not rewrite history.
+     * The station's firm, copied from the station so later station edits do not rewrite history;
+     * empty when the fuel came from our own tank.
      *
      * @return BelongsTo<Party, $this>
      */
@@ -126,7 +136,9 @@ class FuelReceipt extends Model implements LedgerSource
         return [
             'quantity' => 'decimal:2',
             'unit_price' => 'decimal:4',
+            'purchase_price' => 'decimal:4',
             'amount' => 'decimal:2',
+            'purchase_amount' => 'decimal:2',
             'issued_on' => 'date',
             'shift' => Shift::class,
             'km' => 'integer',

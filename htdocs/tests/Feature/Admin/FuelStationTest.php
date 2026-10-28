@@ -42,6 +42,7 @@ class FuelStationTest extends TestCase
             ->post(route('admin.fuel-stations.store'), [
                 'name' => 'OPET TUZLA',
                 'party_id' => $operator->id,
+                'purchase_price' => '42',
                 'unit_price' => '47.1234',
                 'site_ids' => [$site->id, $second->id],
                 'active' => '1',
@@ -67,6 +68,7 @@ class FuelStationTest extends TestCase
             ->put(route('admin.fuel-stations.update', $station), [
                 'name' => 'OPET TUZLA',
                 'party_id' => $other->id,
+                'purchase_price' => '43',
                 'unit_price' => '48',
                 'site_ids' => [$second->id],
                 'active' => '1',
@@ -97,7 +99,7 @@ class FuelStationTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('admin.fuel-stations.store'), ['name' => 'OPET', 'party_id' => $person->id, 'unit_price' => '47'])
-            ->assertSessionHasErrors(['party_id' => 'İşletmeci, silinmemiş bir şirket cari kartı olmalı.']);
+            ->assertSessionHasErrors(['party_id' => 'Akaryakıt firması, silinmemiş bir şirket cari kartı olmalı.']);
 
         $this->assertDatabaseCount('fuel_stations', 0);
     }
@@ -175,6 +177,7 @@ class FuelStationTest extends TestCase
             ->put(route('admin.fuel-stations.update', $first), [
                 'name' => $first->name,
                 'party_id' => $first->party_id,
+                'purchase_price' => '40',
                 'unit_price' => '45',
                 'site_ids' => [],
                 'active' => '1',
