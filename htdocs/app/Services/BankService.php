@@ -26,6 +26,15 @@ class BankService extends Service
     }
 
     /**
+     * @param  list<string>  $ids
+     * @return array<string, float>
+     */
+    public function balances(array $ids): array
+    {
+        return $this->banks->balances($ids);
+    }
+
+    /**
      * @param  array<string, mixed>  $attributes
      */
     public function create(array $attributes): Bank

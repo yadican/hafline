@@ -57,7 +57,7 @@ class EmployeePaymentController extends AdminController
         return view('admin.employee-payments.edit', [
             'title' => 'Personel ödemesini düzenle',
             'payment' => $employeePayment->load('employee.party'),
-            'options' => $this->payments->formOptions($employeePayment->employee_id),
+            'options' => $this->payments->formOptions($employeePayment->employee_id, $employeePayment->bank_id),
         ]);
     }
 

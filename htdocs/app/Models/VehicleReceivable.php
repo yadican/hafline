@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'vehicle_id',
     'party_id',
     'payment_method',
+    'bank_id',
     'amount',
     'occurred_on',
     'description',

@@ -79,7 +79,7 @@ class CariEntryService extends Service
             'sites' => $this->sites->options(activeOnly: true, include: $current['site_id'] ?? null),
             'stations' => $this->stations->options(activeOnly: true, include: $current['fuel_station_id'] ?? null),
             'dumpSites' => $this->dumpSites->options(activeOnly: true, include: $current['dump_site_id'] ?? null),
-            'banks' => $this->banks->options(activeOnly: true, include: $current['bank_id'] ?? null),
+            'banks' => $this->banks->accountOptions($current['bank_id'] ?? null),
             'categories' => $this->categories->options(include: $current['cash_category_id'] ?? null),
             'methods' => PaymentMethod::options(),
         ];
@@ -191,7 +191,7 @@ class CariEntryService extends Service
             'Litre' => $form['liters'] !== null ? number_format((float) $form['liters'], 2, ',', '.') : null,
             'Birim fiyat' => $form['unit_price'] !== null ? number_format((float) $form['unit_price'], 4, ',', '.').' TL' : null,
             'Belge no' => $form['document_no'],
-            'Banka' => $name(Bank::class, $form['bank_id']),
+            'Hesap' => $name(Bank::class, $form['bank_id']),
         ], fn ($value) => $value !== null && $value !== '');
 
         return [
@@ -238,6 +238,7 @@ class CariEntryService extends Service
         $shared = [
             'occurred_on' => $date,
             'payment_method' => $method,
+            'bank_id' => $data['bank_id'] ?? null,
             'description' => $data['description'] ?? null,
             'created_by' => $existing?->created_by ?? $userId,
         ];
@@ -365,7 +366,7 @@ class CariEntryService extends Service
 
         $method = isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null;
 
-        $this->ledger->sync($entry, [$line->paidBy($method, $data['cash_category_id'] ?? null)]);
+        $this->ledger->sync($entry, [$line->paidBy($method, $data['cash_category_id'] ?? null, $entry->bank_id ?? null)]);
     }
 
     /**

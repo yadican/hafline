@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountType;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\Bank;
 use App\Models\DumpSiteClassPrice;
 use App\Models\Employee;
 use App\Models\HaulRoute;
@@ -60,7 +62,7 @@ class LedgerAuditCommandTest extends TestCase
     public function test_audit_passes_when_cari_documents_and_reports_agree(): void
     {
         $this->artisan('ledger:audit')
-            ->expectsOutputToContain('Cari satırlarının modülü ve şantiyesi belgeyle aynı · kontrol')
+            ->expectsOutputToContain('Cari satırlarının modülü, şantiyesi ve hesabı belgeyle aynı · kontrol')
             ->expectsOutputToContain('Devirde eski sahibin plaka bakiyesi kapalı · kontrol 1 · uyumsuz 0')
             ->expectsOutputToContain('Plaka Aylık: devir, satırlar, bakiye')
             ->expectsOutputToContain('Plaka Sahibi Aylık: devir, satırlar, bakiye')
@@ -77,6 +79,7 @@ class LedgerAuditCommandTest extends TestCase
                 'employee_id' => $employee->id,
                 'amount' => '4000',
                 'payment_method' => PaymentMethod::Cash->value,
+                'bank_id' => Bank::factory()->create(['type' => AccountType::Cash])->id,
                 'year' => 2026,
                 'month' => 2,
                 'occurred_on' => '2026-02-10',
@@ -149,7 +152,7 @@ class LedgerAuditCommandTest extends TestCase
         LedgerEntry::query()->where('source_type', 'haul')->where('party_id', $this->seller->id)->first()->update(['site_id' => Site::factory()->create()->id]);
 
         $this->artisan('ledger:audit')
-            ->expectsOutputToContain('Cari satırlarının modülü ve şantiyesi belgeyle aynı · kontrol')
+            ->expectsOutputToContain('Cari satırlarının modülü, şantiyesi ve hesabı belgeyle aynı · kontrol')
             ->expectsOutputToContain('Cari ile kaynaklar arasında uyumsuzluk var.')
             ->assertFailed();
     }

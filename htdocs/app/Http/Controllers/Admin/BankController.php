@@ -18,10 +18,12 @@ class BankController extends AdminController
     public function index(BankSearchRequest $request): View
     {
         $filters = $request->filters();
+        $banks = $this->banks->paginate($filters, $request->sort());
 
         return view('admin.banks.index', [
             'title' => 'Kasa / Banka / POS',
-            'banks' => $this->banks->paginate($filters, $request->sort()),
+            'banks' => $banks,
+            'balances' => $this->banks->balances($banks->pluck('id')->all()),
             'filters' => $filters,
         ]);
     }
@@ -47,6 +49,7 @@ class BankController extends AdminController
         return view('admin.banks.show', [
             'title' => 'Hesap detayı',
             'bank' => $bank,
+            'balance' => $this->banks->balances([$bank->id])[$bank->id],
         ]);
     }
 

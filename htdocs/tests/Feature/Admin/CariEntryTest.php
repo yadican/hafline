@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\AccountType;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\Bank;
 use App\Models\CashCategory;
 use App\Models\CashEntry;
 use App\Models\CompanyTransaction;
@@ -15,6 +17,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
+use App\Repositories\BankRepository;
 use App\Repositories\PartyRepository;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,11 +29,14 @@ class CariEntryTest extends TestCase
 
     private User $admin;
 
+    private Bank $cashBox;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->admin = User::factory()->yonetici()->create();
+        $this->cashBox = Bank::factory()->create(['type' => AccountType::Cash, 'name' => 'Merkez Kasa']);
     }
 
     public function test_guest_is_redirected(): void
@@ -56,6 +62,7 @@ class CariEntryTest extends TestCase
                 'amount' => '1500',
                 'occurred_on' => '2026-06-01',
                 'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
                 'description' => 'Malzeme',
             ])
             ->assertRedirect(route('admin.cari-entries.index'))
@@ -101,6 +108,7 @@ class CariEntryTest extends TestCase
                 'amount' => '750',
                 'occurred_on' => '2026-06-02',
                 'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
             ])
             ->assertSessionHas('success');
 
@@ -189,6 +197,7 @@ class CariEntryTest extends TestCase
                 'amount' => '12500',
                 'occurred_on' => '2026-01-01',
                 'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
                 'cash_category_id' => CashCategory::factory()->create()->id,
             ])
             ->assertSessionHasNoErrors();
@@ -242,6 +251,7 @@ class CariEntryTest extends TestCase
                 'amount' => '3000',
                 'occurred_on' => '2026-06-05',
                 'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
                 'description' => 'Mahsup',
             ])
             ->assertSessionHasNoErrors();
@@ -277,6 +287,39 @@ class CariEntryTest extends TestCase
         $this->assertSame(0.0, app(PartyRepository::class)->totals($customer)['balance']);
     }
 
+    public function test_payment_names_an_account_of_its_method_and_moves_that_balance(): void
+    {
+        $customer = Party::factory()->company()->withRole(PartyRole::Customer)->create();
+        $bank = Bank::factory()->create(['type' => AccountType::Bank, 'opening_balance' => 1000]);
+        $payload = ['kind' => 'customer', 'direction' => 'credit', 'party_id' => $customer->id, 'amount' => '2500', 'occurred_on' => '2026-06-04'];
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [...$payload, 'payment_method' => 'bank_transfer'])
+            ->assertSessionHasErrors(['bank_id' => 'Paranın geçtiği hesabı seçin.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [...$payload, 'payment_method' => 'bank_transfer', 'bank_id' => $this->cashBox->id])
+            ->assertSessionHasErrors(['bank_id' => 'Bu ödeme tipi için banka hesabı seçin.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [...$payload, 'payment_method' => 'bank_transfer', 'bank_id' => $bank->id])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($bank->id, LedgerEntry::query()->sole()->bank_id);
+        $this->assertSame(3500.0, app(BankRepository::class)->balances([$bank->id])[$bank->id]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.banks.show', $bank))
+            ->assertSee('3.500,00 TL');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [...$payload, 'payment_method' => 'cheque', 'bank_id' => $bank->id])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(CompanyTransaction::query()->where('payment_method', 'cheque')->sole()->bank_id);
+        $this->assertSame(3500.0, app(BankRepository::class)->balances([$bank->id])[$bank->id]);
+    }
+
     public function test_vehicle_payment_debits_the_owner_and_delete_reverses_it(): void
     {
         $owner = Party::factory()->create();
@@ -310,6 +353,7 @@ class CariEntryTest extends TestCase
             ->post(route('admin.cari-entries.store'), [
                 'kind' => 'cash',
                 'direction' => 'debit',
+                'bank_id' => $this->cashBox->id,
                 'amount' => '250',
                 'occurred_on' => '2026-06-03',
                 'description' => 'Bankadan çekilen',

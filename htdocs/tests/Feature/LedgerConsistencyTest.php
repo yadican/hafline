@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountType;
 use App\Enums\PartyRole;
+use App\Models\Bank;
 use App\Models\DumpSite;
 use App\Models\DumpSiteClassPrice;
 use App\Models\FuelReceipt;
@@ -39,6 +41,10 @@ class LedgerConsistencyTest extends TestCase
 
     private User $admin;
 
+    private Bank $cashBox;
+
+    private Bank $bankAccount;
+
     private Party $seller;
 
     private Party $buyer;
@@ -60,6 +66,8 @@ class LedgerConsistencyTest extends TestCase
         parent::setUp();
 
         $this->admin = User::factory()->yonetici()->create();
+        $this->cashBox = Bank::factory()->create(['type' => AccountType::Cash]);
+        $this->bankAccount = Bank::factory()->create(['type' => AccountType::Bank]);
         $this->seller = Party::factory()->person()->create(['name' => 'Satıcı Sahip']);
         $this->buyer = Party::factory()->create(['name' => 'Alıcı Sahip']);
 
@@ -363,7 +371,7 @@ class LedgerConsistencyTest extends TestCase
             ->post(route('admin.cari-entries.store'), $this->vehiclePaymentPayload(['occurred_on' => '2026-03-16']))
             ->assertSessionHasNoErrors();
         $this->actingAs($this->admin)
-            ->post(route('admin.cari-entries.store'), ['kind' => 'owner_payment', 'party_id' => $this->seller->id, 'amount' => '500', 'occurred_on' => '2026-03-25', 'payment_method' => 'cash'])
+            ->post(route('admin.cari-entries.store'), ['kind' => 'owner_payment', 'party_id' => $this->seller->id, 'amount' => '500', 'occurred_on' => '2026-03-25', 'payment_method' => 'cash', 'bank_id' => $this->cashBox->id])
             ->assertSessionHasNoErrors();
 
         $otherMachine = Vehicle::factory()
@@ -558,6 +566,7 @@ class LedgerConsistencyTest extends TestCase
             'amount' => '1000',
             'occurred_on' => '2026-03-16',
             'payment_method' => 'cash',
+            'bank_id' => $this->cashBox->id,
             ...$overrides,
         ];
     }
@@ -573,6 +582,7 @@ class LedgerConsistencyTest extends TestCase
             'amount' => $amount,
             'occurred_on' => '2026-03-18',
             'payment_method' => 'bank_transfer',
+            'bank_id' => $this->bankAccount->id,
         ];
     }
 }

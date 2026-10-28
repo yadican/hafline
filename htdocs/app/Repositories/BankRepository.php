@@ -7,6 +7,7 @@ use App\Models\Bank;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class BankRepository extends Repository
 {
@@ -50,6 +51,75 @@ class BankRepository extends Repository
             $include,
             fn (array $ids): array => Bank::withTrashed()->whereIn('id', $ids)->pluck('name', 'id')->all(),
         );
+    }
+
+    /**
+     * Active accounts labelled with their kind ("Kasa · Merkez Kasa"), plus any already on a record.
+     *
+     * @param  string|array<int, string>|null  $include
+     * @return array<string, string>
+     */
+    public function accountOptions(string|array|null $include = null): array
+    {
+        $label = fn (Bank $bank): string => $bank->type->label().' · '.$bank->name;
+
+        $options = FormOptionsCache::remember(
+            FormOptionsCache::BANKS,
+            'accounts',
+            fn (): array => $this->query()
+                ->where('active', true)
+                ->orderBy('type')
+                ->orderBy('name')
+                ->get()
+                ->mapWithKeys(fn (Bank $bank) => [$bank->id => $label($bank)])
+                ->all(),
+        );
+
+        return FormOptionsCache::withIncludes(
+            $options,
+            $include,
+            fn (array $ids): array => Bank::withTrashed()->whereIn('id', $ids)->get()->mapWithKeys(fn (Bank $bank) => [$bank->id => $label($bank)])->all(),
+        );
+    }
+
+    /**
+     * Balance of each account: opening balance plus the money that went in and out through it.
+     * Cari lines are read from the party's side (credit = the party paid us = money in).
+     *
+     * @param  list<string>  $ids
+     * @return array<string, float>
+     */
+    public function balances(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $sum = fn (string $table, string $in, string $out, bool $live = false) => DB::table($table)
+            ->whereIn('bank_id', $ids)
+            ->when(! $live, fn ($query) => $query->whereNull('deleted_at'))
+            ->when($live, fn ($query) => $query->whereNull('reversal_of')->whereNotExists(fn ($reversal) => $reversal
+                ->from('ledger_entries as reversals')
+                ->whereColumn('reversals.reversal_of', 'ledger_entries.id')))
+            ->groupBy('bank_id')
+            ->selectRaw("bank_id, COALESCE(SUM({$in} - {$out}), 0) as total")
+            ->pluck('total', 'bank_id');
+
+        $ledger = $sum('ledger_entries', 'credit', 'debit', live: true);
+        $cash = $sum('cash_entries', 'debit', 'credit');
+        $sites = $sum('site_transactions', 'credit', 'debit');
+        $openings = Bank::withTrashed()->whereIn('id', $ids)->pluck('opening_balance', 'id');
+
+        $balances = [];
+
+        foreach ($ids as $id) {
+            $balances[$id] = round(
+                (float) ($openings[$id] ?? 0) + (float) ($ledger[$id] ?? 0) + (float) ($cash[$id] ?? 0) + (float) ($sites[$id] ?? 0),
+                2,
+            );
+        }
+
+        return $balances;
     }
 
     protected function defaultSort(Builder $query): void

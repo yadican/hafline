@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'debit',
     'credit',
     'payment_method',
+    'bank_id',
     'cash_category_id',
     'document_no',
     'description',

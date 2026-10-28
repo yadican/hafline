@@ -65,7 +65,7 @@ final class FormOptionsCache
             'all:company',
         ],
         self::FUEL_STATIONS => ['all', 'active'],
-        self::BANKS => ['all', 'active'],
+        self::BANKS => ['all', 'active', 'accounts'],
         self::CASH_CATEGORIES => ['all', 'income', 'expense', 'both'],
         self::EMPLOYEES => ['all', 'with_period'],
         self::HAUL_ROUTES => ['site_dump', 'dump_site'],

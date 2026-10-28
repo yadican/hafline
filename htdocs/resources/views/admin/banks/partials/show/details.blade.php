@@ -11,7 +11,10 @@
         </x-form.field>
     </x-form.group>
 
-    <x-form.group legend="Açılış" icon="fa-solid fa-flag-checkered" description="Hesap sisteme girildiği günkü bakiye">
+    <x-form.group legend="Bakiye" icon="fa-solid fa-scale-balanced" description="Açılış bakiyesi ve bu hesaptan geçen hareketlerle bugünkü bakiye">
+        <x-form.field label="Güncel bakiye">
+            <div><strong><x-ui.money :value="$balance" /></strong></div>
+        </x-form.field>
         <x-form.field label="Açılış bakiyesi">
             <div><x-ui.money :value="$bank->opening_balance" /></div>
         </x-form.field>

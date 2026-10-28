@@ -29,6 +29,7 @@ final readonly class LedgerLine
         public ?string $cashCategoryId = null,
         public ?Module $module = null,
         public ?string $siteId = null,
+        public ?string $bankId = null,
     ) {
         $this->occurredOn = $occurredOn->toDateString();
         $this->debit = self::money($debit);
@@ -51,9 +52,10 @@ final readonly class LedgerLine
     }
 
     /**
-     * Marks the line as a payment so it shows up in per-method reports (cash, cheque, ...).
+     * Marks the line as a payment so it shows up in per-method reports (cash, cheque, ...) and on the
+     * account the money went through.
      */
-    public function paidBy(?PaymentMethod $method, ?string $cashCategoryId = null): self
+    public function paidBy(?PaymentMethod $method, ?string $cashCategoryId = null, ?string $bankId = null): self
     {
         return new self(
             $this->partyId,
@@ -66,6 +68,7 @@ final readonly class LedgerLine
             $cashCategoryId,
             $this->module,
             $this->siteId,
+            $bankId,
         );
     }
 
@@ -85,6 +88,7 @@ final readonly class LedgerLine
             $this->cashCategoryId,
             $source->ledgerModule(),
             $source->ledgerSiteId(),
+            $this->bankId,
         );
     }
 
@@ -108,6 +112,7 @@ final readonly class LedgerLine
             $this->cashCategoryId,
             $this->module?->value,
             $this->siteId,
+            $this->bankId,
         ]);
     }
 }

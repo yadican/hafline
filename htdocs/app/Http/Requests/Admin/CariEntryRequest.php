@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\AccountType;
 use App\Enums\CariEntryKind;
 use App\Enums\CashDirection;
 use App\Enums\PaymentMethod;
+use App\Http\Requests\Concerns\ChecksPaymentAccount;
 use App\Models\CashCategory;
 use App\Models\OpeningBalance;
 use App\Models\Party;
@@ -18,6 +20,8 @@ use Illuminate\Validation\Validator;
 
 class CariEntryRequest extends FormRequest
 {
+    use ChecksPaymentAccount;
+
     public function authorize(): bool
     {
         return true;
@@ -38,7 +42,7 @@ class CariEntryRequest extends FormRequest
             'site_id' => $this->input('site_id') ?: null,
             'fuel_station_id' => $this->input('fuel_station_id') ?: null,
             'dump_site_id' => $this->input('dump_site_id') ?: null,
-            'bank_id' => $this->input('bank_id') ?: null,
+            'bank_id' => $this->accountApplies($kind) ? ($this->input('bank_id') ?: null) : null,
             'cash_category_id' => $kind?->takesAnyParty() ? null : ($this->input('cash_category_id') ?: null),
             'payment_method' => $kind?->takesAnyParty() ? null : ($this->input('payment_method') ?: null),
             'document_no' => trim((string) $this->input('document_no')) ?: null,
@@ -134,6 +138,8 @@ class CariEntryRequest extends FormRequest
                     }
                 }
 
+                $this->checkAccount($validator, $kind);
+
                 if ($kind === CariEntryKind::DumpPayment && ! $this->input('dump_site_id')) {
                     $validator->errors()->add('dump_site_id', 'Döküm yeri seçin.');
                 }
@@ -175,7 +181,7 @@ class CariEntryRequest extends FormRequest
             'site_id' => 'şantiye',
             'fuel_station_id' => 'yakıt yeri',
             'dump_site_id' => 'döküm yeri',
-            'bank_id' => 'banka',
+            'bank_id' => 'hesap',
             'cash_category_id' => 'kasa kategorisi',
             'payment_method' => 'ödeme tipi',
             'document_no' => 'belge no',
@@ -183,6 +189,32 @@ class CariEntryRequest extends FormRequest
             'liters' => 'litre',
             'unit_price' => 'birim fiyat',
         ];
+    }
+
+    /**
+     * A cash-box movement always names its account; a payment names one when its method moves
+     * money through an account (cash, transfer, card). Cheque, note and offset leave it empty.
+     */
+    private function accountApplies(?CariEntryKind $kind): bool
+    {
+        if ($kind === CariEntryKind::Cash) {
+            return true;
+        }
+
+        if ($kind === null || $kind->takesAnyParty()) {
+            return false;
+        }
+
+        return (PaymentMethod::tryFrom((string) $this->input('payment_method'))?->accountTypes() ?? []) !== [];
+    }
+
+    private function checkAccount(Validator $validator, CariEntryKind $kind): void
+    {
+        if ($this->accountApplies($kind)) {
+            $this->checkPaymentAccount($validator, $kind === CariEntryKind::Cash
+                ? AccountType::cases()
+                : PaymentMethod::from($this->input('payment_method'))->accountTypes());
+        }
     }
 
     private function decimal(string $key): ?string

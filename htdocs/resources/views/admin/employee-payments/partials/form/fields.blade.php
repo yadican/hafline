@@ -9,6 +9,8 @@
     <div class="panel-cari-summary is-idle" data-employee-balance-status aria-live="polite">Personel seçilince maaş / prim / ödeme bakiyesi gelir</div>
     <x-form.input name="amount" label="Tutar" type="number" step="0.01" min="0.01" required />
     <x-form.select searchable hide-search name="payment_method" label="Ödeme tipi" :options="$options['payment_methods']" placeholder="Seçiniz" />
+    <x-form.select searchable name="bank_id" label="Hesap" :options="$options['accounts']" placeholder="Hesap seçin" />
+    <p class="panel-hint">Nakitte kasa, havalede banka, kartta POS veya kredi kartı hesabı zorunludur.</p>
     <x-form.select searchable hide-search name="month" label="Ay" :options="$options['months']" :value="$defaultMonth" required />
     <x-form.select searchable hide-search name="year" label="Yıl" :options="$options['years']" :value="$defaultYear" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" :value="old('occurred_on', isset($payment) ? $payment->occurred_on?->toDateString() : now()->toDateString())" required />

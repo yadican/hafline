@@ -67,4 +67,20 @@ enum PaymentMethod: string
     {
         return in_array($this, [self::BankTransfer, self::CreditCard], true);
     }
+
+    /**
+     * Account kinds the money of this method goes through; empty when no account moves
+     * (cheque and note wait in the portfolio, offset moves no money).
+     *
+     * @return list<AccountType>
+     */
+    public function accountTypes(): array
+    {
+        return match ($this) {
+            self::Cash => [AccountType::Cash],
+            self::BankTransfer => [AccountType::Bank],
+            self::CreditCard => [AccountType::Pos, AccountType::CreditCard],
+            default => [],
+        };
+    }
 }

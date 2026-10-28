@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'dump_site_id',
     'payment_method',
+    'bank_id',
     'amount',
     'occurred_on',
     'cheque_no',

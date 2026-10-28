@@ -56,7 +56,7 @@ class PayrollLedger
                 $payment->occurred_on,
                 $payment->amount,
                 sprintf('Personel ödemesi · %s %d dönemi', SiteExitReportService::MONTHS[$period->month], $period->year),
-            )->paidBy($payment->payment_method),
+            )->paidBy($payment->payment_method, bankId: $payment->bank_id),
         ]);
     }
 

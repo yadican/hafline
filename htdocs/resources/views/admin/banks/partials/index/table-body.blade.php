@@ -5,7 +5,7 @@
             <td>{{ $bank->name }}</td>
             <td>{{ $bank->branch ?: '—' }}</td>
             <td>{{ $bank->iban ?: ($bank->account_no ?: '—') }}</td>
-            <td class="is-end"><x-ui.money :value="$bank->opening_balance" /></td>
+            <td class="is-end"><x-ui.money :value="$balances[$bank->id] ?? (float) $bank->opening_balance" /></td>
             <td><x-ui.active-badge :active="$bank->active" /></td>
             <x-table.actions
                 :show="route('admin.banks.show', $bank)"

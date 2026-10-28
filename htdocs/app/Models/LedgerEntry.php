@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'cash_category_id',
     'module',
     'site_id',
+    'bank_id',
     'reversal_of',
     'created_by',
 ])]
@@ -47,6 +48,16 @@ class LedgerEntry extends Model
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class)->withTrashed();
+    }
+
+    /**
+     * The account (cash box, bank, POS, card) a payment went through.
+     *
+     * @return BelongsTo<Bank, $this>
+     */
+    public function bank(): BelongsTo
+    {
+        return $this->belongsTo(Bank::class)->withTrashed();
     }
 
     /**

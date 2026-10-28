@@ -19,6 +19,10 @@
         <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" />
     </div>
     <div x-show="! ['opening', 'party_transfer'].includes(kind)" x-cloak>
+        <x-form.select searchable name="bank_id" label="Hesap" placeholder="Hesap seçin" :options="$options['banks']" />
+        <p class="panel-hint">Nakitte kasa, havalede banka, kartta POS veya kredi kartı hesabı zorunludur. Çek, senet ve mahsupta boş bırakılır.</p>
+    </div>
+    <div x-show="! ['opening', 'party_transfer'].includes(kind)" x-cloak>
         <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
     </div>
     <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Carinin sisteme geçmeden önceki bakiyesi. Her cari için bir kez girilir; para hareketi değildir, kasayı etkilemez.</p>
@@ -82,9 +86,6 @@
     </div>
     <div x-show="['supplier', 'customer', 'fuel', 'market'].includes(kind)" x-cloak>
         <x-form.input name="document_no" label="Belge no" maxlength="40" />
-    </div>
-    <div x-show="kind === 'cash'" x-cloak>
-        <x-form.select searchable hide-search name="bank_id" label="Banka" placeholder="Banka yok" :options="$options['banks']" />
     </div>
     <p class="panel-hint">Fiş teslimi, yakıt kontrolü, döküm kontrolü, plaka cezası ve personel maaş/pirim bu ekranda yok; kendi kayıtlarıdır. Çek ve senet, ödeme tipi olarak seçilir.</p>
 </x-form.group>

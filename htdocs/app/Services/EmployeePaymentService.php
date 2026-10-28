@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\PaymentMethod;
 use App\Models\EmployeePayment;
+use App\Repositories\BankRepository;
 use App\Repositories\EmployeePaymentRepository;
 use App\Repositories\EmployeeSalaryRepository;
 use App\Services\Ledger\PayrollLedger;
@@ -20,12 +21,13 @@ class EmployeePaymentService extends Service
         private EmployeeSalaryRepository $salaries,
         private EmployeeService $employees,
         private PayrollLedger $payroll,
+        private BankRepository $banks,
     ) {}
 
     /**
-     * @return array{employees: array<string, string>, years: array<int, string>, months: array<int, string>, payment_methods: array<string, string>}
+     * @return array{employees: array<string, string>, years: array<int, string>, months: array<int, string>, payment_methods: array<string, string>, accounts: array<string, string>}
      */
-    public function formOptions(?string $includeEmployee = null): array
+    public function formOptions(?string $includeEmployee = null, ?string $includeAccount = null): array
     {
         $year = (int) now()->year;
         $years = [];
@@ -39,6 +41,7 @@ class EmployeePaymentService extends Service
             'years' => $years,
             'months' => SiteExitReportService::MONTHS,
             'payment_methods' => PaymentMethod::options(),
+            'accounts' => $this->banks->accountOptions($includeAccount),
         ];
     }
 
@@ -66,6 +69,7 @@ class EmployeePaymentService extends Service
             $payment = $this->payments->create([
                 'employee_id' => $data['employee_id'],
                 'payment_method' => $data['payment_method'] ?? null,
+                'bank_id' => $data['bank_id'] ?? null,
                 'amount' => $data['amount'],
                 'period' => $period,
                 'occurred_on' => $data['occurred_on'] ?? now()->toDateString(),
@@ -90,6 +94,7 @@ class EmployeePaymentService extends Service
             $updated = $this->payments->update($payment, [
                 'employee_id' => $data['employee_id'],
                 'payment_method' => $data['payment_method'] ?? null,
+                'bank_id' => $data['bank_id'] ?? null,
                 'amount' => $data['amount'],
                 'period' => $period,
                 'occurred_on' => $data['occurred_on'] ?? $payment->occurred_on?->toDateString(),

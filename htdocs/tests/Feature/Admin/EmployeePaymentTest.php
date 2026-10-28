@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\AccountType;
 use App\Enums\PaymentMethod;
+use App\Models\Bank;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
 use App\Models\EmployeeSalary;
@@ -18,11 +20,17 @@ class EmployeePaymentTest extends TestCase
 
     private User $admin;
 
+    private Bank $cashBox;
+
+    private Bank $bankAccount;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->admin = User::factory()->yonetici()->create();
+        $this->cashBox = Bank::factory()->create(['type' => AccountType::Cash]);
+        $this->bankAccount = Bank::factory()->create(['type' => AccountType::Bank]);
     }
 
     public function test_admin_can_create_update_and_delete_a_payment(): void
@@ -40,6 +48,7 @@ class EmployeePaymentTest extends TestCase
                 'employee_id' => $employee->id,
                 'amount' => '5000',
                 'payment_method' => PaymentMethod::Cash->value,
+                'bank_id' => $this->cashBox->id,
                 'year' => 2026,
                 'month' => 9,
                 'occurred_on' => '2026-09-15',
@@ -66,6 +75,7 @@ class EmployeePaymentTest extends TestCase
                 'employee_id' => $employee->id,
                 'amount' => '6000',
                 'payment_method' => PaymentMethod::BankTransfer->value,
+                'bank_id' => $this->bankAccount->id,
                 'year' => 2026,
                 'month' => 9,
                 'occurred_on' => '2026-09-16',
@@ -92,6 +102,7 @@ class EmployeePaymentTest extends TestCase
                 'employee_id' => $employee->id,
                 'amount' => '5000',
                 'payment_method' => PaymentMethod::Cash->value,
+                'bank_id' => $this->cashBox->id,
                 'year' => 2026,
                 'month' => 9,
                 'occurred_on' => '2026-09-15',
@@ -114,6 +125,7 @@ class EmployeePaymentTest extends TestCase
                 'employee_id' => $employee->id,
                 'amount' => '6000',
                 'payment_method' => PaymentMethod::BankTransfer->value,
+                'bank_id' => $this->bankAccount->id,
                 'year' => 2026,
                 'month' => 9,
                 'occurred_on' => '2026-09-16',
@@ -123,6 +135,7 @@ class EmployeePaymentTest extends TestCase
         $paid = $ledger->live($payment)->sole();
         $this->assertSame('6000.00', $paid->debit);
         $this->assertSame(PaymentMethod::BankTransfer, $paid->payment_method);
+        $this->assertSame($this->bankAccount->id, $paid->bank_id);
 
         $this->actingAs($this->admin)->delete(route('admin.employee-payments.destroy', $payment));
 

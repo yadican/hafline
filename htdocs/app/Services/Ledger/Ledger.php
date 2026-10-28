@@ -54,6 +54,7 @@ class Ledger
                 'cash_category_id' => $line->cashCategoryId,
                 'module' => $line->module,
                 'site_id' => $line->siteId,
+                'bank_id' => $line->bankId,
                 'created_by' => auth()->id(),
             ]);
         }
@@ -78,6 +79,7 @@ class Ledger
             $entry->vehicle_id,
             $entry->payment_method,
             $entry->cash_category_id,
+            bankId: $entry->bank_id,
         ))->all());
     }
 
@@ -116,6 +118,7 @@ class Ledger
                 'cash_category_id' => $entry->cash_category_id,
                 'module' => $entry->module,
                 'site_id' => $entry->site_id,
+                'bank_id' => $entry->bank_id,
                 'reversal_of' => $entry->id,
                 'created_by' => auth()->id(),
             ]);
@@ -134,6 +137,7 @@ class Ledger
             cashCategoryId: $entry->cash_category_id,
             module: $entry->module,
             siteId: $entry->site_id,
+            bankId: $entry->bank_id,
         );
     }
 }
