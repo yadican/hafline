@@ -31,6 +31,7 @@ class VehicleAccountRepository
 
         $earned = $sum(Haul::query(), 'price')
             + $sum(Shipment::query(), 'carrier_net_amount')
+            + $sum(Shipment::query(), 'driver_amount')
             + $sum(MachineWork::query(), 'amount')
             + $sum(VehicleReceivable::query(), 'amount');
 

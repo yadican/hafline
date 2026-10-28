@@ -9,7 +9,7 @@
         :back="route('admin.shipments.index')"
     >
         <form method="POST" action="{{ route('admin.shipments.update', $shipment) }}" data-shipment-entry
-              data-vehicles-url="{{ route('admin.shipments.lookups.vehicles') }}" data-addresses-url="{{ route('admin.shipments.lookups.addresses') }}">
+              data-addresses-url="{{ route('admin.shipments.lookups.addresses') }}">
             @csrf
             @method('PUT')
             <x-form.grid :model="$shipment">

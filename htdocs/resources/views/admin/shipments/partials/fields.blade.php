@@ -1,13 +1,13 @@
 @php
     $current = $shipment ?? null;
+    $withholdingLabel = fn ($rate): string => \App\Enums\Withholding::tryFrom((string) $rate)?->label() ?? 'Yok';
 @endphp
 
-<x-form.group legend="1. Nakliyeci bilgileri" icon="fa-solid fa-truck-moving" description="Nakliyeci cari seçilince plakalar o cariye ait olanlarla sınırlanır">
-    <x-form.select name="party_id" label="Nakliyeci cari" :options="$options['carriers']" placeholder="Seçin" searchable required data-shipment-carrier />
+<x-form.group legend="1. Nakliyeci bilgileri" icon="fa-solid fa-truck-moving" description="Plaka aranır; nakliyeci aracın o günkü sahibidir">
     <x-form.autocomplete
         name="plate"
         label="Araç plakası"
-        :url="route('admin.shipments.lookups.vehicles', ['party' => old('party_id', $current?->party_id)])"
+        :url="route('admin.shipments.lookups.vehicles')"
         :value="$current?->vehicle?->plate"
         placeholder="34 ABC 123"
         maxlength="20"
@@ -15,6 +15,7 @@
         class="panel-plate"
         data-shipment-plate
     >
+        <x-form.status data-shipment-carrier>{{ $current ? 'Nakliyeci: '.$current->party?->name : 'Plaka seçilince nakliyeci (araç sahibi) görünür' }}</x-form.status>
         @can('create-vehicle')
             <a href="{{ route('admin.vehicles.create') }}" target="_blank" rel="noopener" class="panel-hint">+ Plaka</a>
         @endcan
@@ -23,12 +24,20 @@
     <x-form.money name="carrier_price" label="Fiyat (TL / ton)" step="0.0001" required data-shipment-amount />
     <x-form.select name="carrier_vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->carrier_vat_rate : '0'" data-shipment-tax />
     <x-form.select name="carrier_withholding_rate" label="Tevkifat" :options="$options['withholding']" data-shipment-tax />
-    <x-form.select name="driver_party_id" label="Şoför" :options="$options['parties']" placeholder="Şoför seçin" searchable />
-    <x-form.money name="driver_amount" label="Sefer parası (TL)" step="0.01" data-shipment-amount>
-        <x-form.status>Girilirse şoförün carisine alacak yazılır, plakaya bağlanır ve kârdan düşer</x-form.status>
+    <x-form.input name="driver_name" label="Şoför" maxlength="80" placeholder="Şoför adı" />
+    <x-form.money name="driver_amount" label="Şoför ücreti (TL)" step="0.01" data-shipment-amount>
+        <x-form.status>Girilirse araç sahibine plakada ayrı kalem olarak alacak yazılır</x-form.status>
     </x-form.money>
     <x-form.input name="carrier_note" label="Nakliye açıklaması" maxlength="255" placeholder="Nakliye notu..." />
-    <x-form.status data-shipment-carrier-total>Nakliyeci net toplamı hesaplanır</x-form.status>
+    @include('admin.shipments.partials.totals', [
+        'side' => 'carrier',
+        'base' => $current?->carrier_amount,
+        'vat' => $current?->carrier_vat_amount,
+        'vatRate' => $current?->carrier_vat_rate,
+        'withheld' => $current?->carrier_withholding_amount,
+        'withholdingLabel' => $withholdingLabel($current?->carrier_withholding_rate),
+        'net' => $current?->carrier_net_amount,
+    ])
 </x-form.group>
 
 <x-form.group legend="2. Kum ocağı bilgileri" icon="fa-solid fa-mountain" description="Tarih, kantardaki net miktar ve yükleme yeri">
@@ -46,7 +55,15 @@
     <x-form.select name="vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->vat_rate : '20'" data-shipment-tax />
     <x-form.select name="withholding_rate" label="Tevkifat" :options="$options['withholding']" data-shipment-tax />
     <x-form.input name="customer_note" label="Müşteri satış açıklaması" maxlength="255" placeholder="Müşteri notu..." />
-    <x-form.status data-shipment-customer-total>Müşteri satış net toplamı hesaplanır</x-form.status>
+    @include('admin.shipments.partials.totals', [
+        'side' => 'customer',
+        'base' => $current?->sale_amount,
+        'vat' => $current?->vat_amount,
+        'vatRate' => $current?->vat_rate ?? 20,
+        'withheld' => $current?->withholding_amount,
+        'withholdingLabel' => $withholdingLabel($current?->withholding_rate),
+        'net' => $current?->customer_amount,
+    ])
 </x-form.group>
 
 <x-form.group legend="4. Referans / hakediş bilgileri (isteğe bağlı)" icon="fa-solid fa-handshake" description="Referans varsa hakedişi carisine alacak yazılır">

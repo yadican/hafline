@@ -38,7 +38,7 @@ class ShipmentRequest extends FormRequest
             'commission_amount' => $this->input('commission_party_id') ? $this->decimal('commission_amount') : null,
             'loading_place' => $text('loading_place'),
             'delivery_address' => $text('delivery_address'),
-            'driver_party_id' => $this->input('driver_party_id') ?: null,
+            'driver_name' => $text('driver_name'),
             'driver_amount' => $this->decimal('driver_amount'),
             'waybill_no' => $text('waybill_no'),
             'scale_ticket_no' => $text('scale_ticket_no'),
@@ -56,7 +56,6 @@ class ShipmentRequest extends FormRequest
         $party = fn () => Rule::exists(Party::class, 'id')->withoutTrashed();
 
         return [
-            'party_id' => ['required', 'uuid', $party()],
             'plate' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, Closure $fail): void {
                 if (! Vehicle::findByPlate((string) $value)) {
                     $fail('Kayıtlı bir plaka girin; yeni plakayı "+ Plaka" ile ekleyin.');
@@ -66,7 +65,7 @@ class ShipmentRequest extends FormRequest
             'carrier_price' => ['required', 'numeric', 'decimal:0,4', 'min:0', 'max:9999999'],
             'carrier_vat_rate' => ['required', Rule::in(array_keys(Shipment::VAT_RATES))],
             'carrier_withholding_rate' => ['required', Rule::enum(Withholding::class)],
-            'driver_party_id' => ['nullable', 'required_with:driver_amount', 'uuid', $party()->whereNull('system_key')],
+            'driver_name' => ['nullable', 'string', 'max:80'],
             'driver_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999'],
             'carrier_note' => ['nullable', 'string', 'max:255'],
             'shipped_on' => ['required', 'date', 'before_or_equal:today'],
@@ -92,15 +91,14 @@ class ShipmentRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                if ($validator->errors()->hasAny(['plate', 'party_id', 'shipped_on'])) {
+                if ($validator->errors()->hasAny(['plate', 'shipped_on'])) {
                     return;
                 }
 
                 $date = Carbon::parse($this->input('shipped_on'));
-                $owner = Vehicle::findByPlate($this->string('plate')->value())?->ownershipOn($date)?->party_id;
 
-                if ($owner !== $this->input('party_id')) {
-                    $validator->errors()->add('plate', sprintf('Bu plaka %s tarihinde seçilen nakliyeciye ait değil.', $date->format('d.m.Y')));
+                if (! Vehicle::findByPlate($this->string('plate')->value())?->ownershipOn($date)) {
+                    $validator->errors()->add('plate', sprintf('Bu aracın %s tarihinde kayıtlı sahibi (nakliyecisi) yok.', $date->format('d.m.Y')));
                 }
             },
         ];
@@ -112,14 +110,13 @@ class ShipmentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'party_id' => 'nakliyeci cari',
             'plate' => 'araç plakası',
             'waybill_no' => 'irsaliye no',
             'carrier_price' => 'nakliyeci fiyatı',
             'carrier_vat_rate' => 'nakliyeci KDV oranı',
             'carrier_withholding_rate' => 'nakliyeci tevkifatı',
-            'driver_party_id' => 'şoför',
-            'driver_amount' => 'sefer parası',
+            'driver_name' => 'şoför',
+            'driver_amount' => 'şoför ücreti',
             'carrier_note' => 'nakliye açıklaması',
             'shipped_on' => 'sefer tarihi',
             'net_kg' => 'net miktar (kg)',

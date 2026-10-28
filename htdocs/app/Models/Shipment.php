@@ -12,14 +12,15 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * One transport trip. party_id is the carrier, who must own the plate on the trip date. Prices are
- * per ton and the weight is the scale's net kg, so each side's base is net_kg / 1000 × price.
+ * One transport trip. party_id is the carrier: the plate's owner on the trip date. Prices are per
+ * ton and the weight is the scale's net kg, so each side's base is net_kg / 1000 × price. The
+ * driver's fee is paid to the carrier as a separate item on the plate.
  */
 #[Fillable([
     'shipped_on',
     'party_id',
     'vehicle_id',
-    'driver_party_id',
+    'driver_name',
     'driver_amount',
     'waybill_no',
     'loading_place',
@@ -96,14 +97,6 @@ class Shipment extends Model implements LedgerSource
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class)->withTrashed();
-    }
-
-    /**
-     * @return BelongsTo<Party, $this>
-     */
-    public function driver(): BelongsTo
-    {
-        return $this->belongsTo(Party::class, 'driver_party_id')->withTrashed();
     }
 
     /**

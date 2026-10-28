@@ -23,8 +23,8 @@
             <x-form.group legend="1. Nakliyeci" icon="fa-solid fa-truck-moving" description="Nakliyeciye yazılan alacak">
                 <x-form.field label="Nakliyeci"><div>{{ $shipment->party?->name }}</div></x-form.field>
                 <x-form.field label="Plaka"><div class="panel-plate-text">{{ $shipment->vehicle?->plate }}</div></x-form.field>
-                <x-form.field label="Şoför / sefer parası">
-                    <div>{{ $shipment->driver?->name ?? '—' }}{{ (float) $shipment->driver_amount > 0 ? ' · '.$money($shipment->driver_amount).' alacak' : '' }}</div>
+                <x-form.field label="Şoför / şoför ücreti">
+                    <div>{{ $shipment->driver_name ?: '—' }}{{ (float) $shipment->driver_amount > 0 ? ' · '.$money($shipment->driver_amount).' (araç sahibine ayrı kalem alacak)' : '' }}</div>
                 </x-form.field>
                 <x-form.field label="İrsaliye no"><div>{{ $shipment->waybill_no ?: '—' }}</div></x-form.field>
                 <x-form.field label="Fiyat"><div>{{ $price($shipment->carrier_price) }} · matrah {{ $money($shipment->carrier_amount) }}</div></x-form.field>

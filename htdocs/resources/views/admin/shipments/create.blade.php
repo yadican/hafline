@@ -9,7 +9,7 @@
         :back="route('admin.shipments.index')"
     >
         <form method="POST" action="{{ route('admin.shipments.store') }}" data-shipment-entry
-              data-vehicles-url="{{ route('admin.shipments.lookups.vehicles') }}" data-addresses-url="{{ route('admin.shipments.lookups.addresses') }}">
+              data-addresses-url="{{ route('admin.shipments.lookups.addresses') }}">
             @csrf
             <x-form.grid :model="['shipped_on' => today()->toDateString(), 'withholding_rate' => '0.00', 'carrier_withholding_rate' => '0.00']">
                 @include('admin.shipments.partials.fields', ['shipment' => null])

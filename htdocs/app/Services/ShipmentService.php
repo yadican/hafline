@@ -61,8 +61,7 @@ class ShipmentService extends Service
     public function formOptions(?Shipment $shipment = null): array
     {
         return [
-            'carriers' => $this->parties->options(PartyRole::VehicleOwner, $shipment?->party_id),
-            'parties' => $this->parties->options(include: array_filter([$shipment?->customer_party_id, $shipment?->driver_party_id, $shipment?->commission_party_id])),
+            'parties' => $this->parties->options(include: array_filter([$shipment?->customer_party_id, $shipment?->commission_party_id])),
             'vat' => Shipment::VAT_RATES,
             'withholding' => Withholding::options(),
         ];
@@ -121,8 +120,9 @@ class ShipmentService extends Service
     }
 
     /**
-     * Each side's base is net kg / 1000 × its price per ton; VAT is on the base and withholding is
-     * the given share of that VAT. A new delivery address is saved under the customer.
+     * The carrier is the plate's owner that day. Each side's base is net kg / 1000 × its price per
+     * ton; VAT is on the base and withholding is the given share of that VAT. A new delivery address
+     * is saved under the customer.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -131,10 +131,8 @@ class ShipmentService extends Service
     {
         $date = Carbon::parse($data['shipped_on'])->startOfDay();
         $vehicle = Vehicle::findByPlate((string) $data['plate']) ?? throw new OperationRejectedException('Plaka bulunamadı.');
-
-        if ($vehicle->ownershipOn($date)?->party_id !== $data['party_id']) {
-            throw new OperationRejectedException(sprintf('%s plakası %s tarihinde seçilen nakliyeciye ait değil.', $vehicle->plate, $date->format('d.m.Y')));
-        }
+        $carrier = $vehicle->ownershipOn($date)?->party_id
+            ?? throw new OperationRejectedException(sprintf('%s aracının %s tarihinde kayıtlı sahibi yok.', $vehicle->plate, $date->format('d.m.Y')));
 
         $tons = (int) $data['net_kg'] / 1000;
         $side = function (string $price, string $vatRate, string $withholding) use ($data, $tons): array {
@@ -153,10 +151,10 @@ class ShipmentService extends Service
 
         return [
             'shipped_on' => $date->toDateString(),
-            'party_id' => $data['party_id'],
+            'party_id' => $carrier,
             'vehicle_id' => $vehicle->id,
-            'driver_party_id' => $data['driver_party_id'] ?? null,
-            'driver_amount' => ($data['driver_party_id'] ?? null) ? LedgerLine::money($data['driver_amount'] ?? 0) : 0,
+            'driver_name' => $data['driver_name'] ?? null,
+            'driver_amount' => LedgerLine::money($data['driver_amount'] ?? 0),
             'waybill_no' => $data['waybill_no'] ?? null,
             'loading_place' => $data['loading_place'],
             'scale_ticket_no' => $data['scale_ticket_no'] ?? null,

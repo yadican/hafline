@@ -34,10 +34,9 @@ class ShipmentTest extends TestCase
         $this->truck = Vehicle::factory()->ownedBy($this->carrier, '2026-01-01')->create(['plate' => '34 NK 100']);
     }
 
-    public function test_a_trip_posts_both_sides_with_vat_and_withholding_plus_driver_and_referrer(): void
+    public function test_a_trip_posts_both_sides_with_vat_and_withholding_plus_driver_fee_and_referrer(): void
     {
         $referrer = Party::factory()->create();
-        $driver = Party::factory()->person()->create();
 
         $this->actingAs($this->admin)->get(route('admin.shipments.create'))->assertOk();
 
@@ -48,8 +47,8 @@ class ShipmentTest extends TestCase
                 'carrier_vat_rate' => '20',
                 'carrier_withholding_rate' => '0.20',
                 'sale_price' => '50000',
-                'driver_party_id' => $driver->id,
-                'driver_amount' => '7000',
+                'driver_name' => 'Ahmet Yılmaz',
+                'driver_amount' => '2000',
                 'commission_party_id' => $referrer->id,
                 'commission_amount' => '7000',
             ]))
@@ -63,14 +62,16 @@ class ShipmentTest extends TestCase
         $this->assertSame('3248000.00', $shipment->carrier_net_amount);
         $this->assertSame('3500000.00', $shipment->sale_amount);
         $this->assertSame('4060000.00', $shipment->customer_amount);
-        $this->assertSame(686000.0, $shipment->profit());
+        $this->assertSame(691000.0, $shipment->profit());
         $this->assertSame('Kartal şantiyesi', $shipment->deliveryAddress->name);
 
         $this->assertSame(4060000.0, $this->balance($this->customer));
-        $this->assertSame(-3248000.0, $this->balance($this->carrier));
-        $this->assertSame(-7000.0, $this->balance($driver));
+        $this->assertSame(-3250000.0, $this->balance($this->carrier));
         $this->assertSame(-7000.0, $this->balance($referrer));
-        $this->assertSame($this->truck->id, LedgerEntry::query()->where('party_id', $driver->id)->sole()->vehicle_id);
+
+        $driverFee = LedgerEntry::query()->where('party_id', $this->carrier->id)->where('credit', 2000)->sole();
+        $this->assertSame($this->truck->id, $driverFee->vehicle_id);
+        $this->assertStringStartsWith('Şoför ücreti · Ahmet Yılmaz · Sefer IRS-1', $driverFee->description);
         $this->assertTrue($this->customer->fresh()->hasRole(PartyRole::Customer));
         $this->assertTrue($referrer->fresh()->hasRole(PartyRole::Commission));
 
@@ -86,7 +87,6 @@ class ShipmentTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame(0.0, $this->balance($referrer));
-        $this->assertSame(0.0, $this->balance($driver));
         $this->assertSame(-5000.0, $this->balance($this->carrier));
         $this->assertSame(1, DeliveryAddress::query()->count());
 
@@ -102,24 +102,19 @@ class ShipmentTest extends TestCase
         $this->assertSame(0.0, $this->balance($this->carrier));
     }
 
-    public function test_the_plate_must_belong_to_the_chosen_carrier(): void
+    public function test_the_carrier_is_the_plate_owner_and_a_plate_without_one_is_rejected(): void
     {
         $this->actingAs($this->admin)
-            ->post(route('admin.shipments.store'), $this->payload(['party_id' => Party::factory()->withRole(PartyRole::VehicleOwner)->create()->id]))
+            ->getJson(route('admin.shipments.lookups.vehicles', ['q' => '34NK']))
+            ->assertOk()
+            ->assertJsonPath('0.value', '34 NK 100')
+            ->assertJsonPath('0.meta', $this->carrier->name);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.shipments.store'), $this->payload(['shipped_on' => '2025-12-31']))
             ->assertSessionHasErrors('plate');
 
         $this->assertSame(0, Shipment::query()->count());
-    }
-
-    public function test_plate_lookup_lists_only_the_carriers_plates(): void
-    {
-        Vehicle::factory()->ownedBy(Party::factory()->create(), '2026-01-01')->create(['plate' => '34 NK 200']);
-
-        $this->actingAs($this->admin)
-            ->getJson(route('admin.shipments.lookups.vehicles', ['q' => '34NK', 'party' => $this->carrier->id]))
-            ->assertOk()
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.value', '34 NK 100');
     }
 
     public function test_a_trip_moves_with_the_plate_when_ownership_changes(): void
@@ -152,7 +147,6 @@ class ShipmentTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return [
-            'party_id' => $this->carrier->id,
             'plate' => '34 NK 100',
             'waybill_no' => 'IRS-1',
             'carrier_price' => '200',
