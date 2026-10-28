@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Models\CompanyTransaction;
 use App\Models\DumpSitePayment;
+use App\Models\EmployeeBonus;
+use App\Models\EmployeePayment;
+use App\Models\EmployeeSalary;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\MachineWork;
@@ -40,6 +43,9 @@ class AppServiceProvider extends ServiceProvider
             'party_payment' => PartyPayment::class,
             'dump_site_payment' => DumpSitePayment::class,
             'vehicle_ownership' => VehicleOwnership::class,
+            'employee_salary' => EmployeeSalary::class,
+            'employee_bonus' => EmployeeBonus::class,
+            'employee_payment' => EmployeePayment::class,
         ]);
     }
 }

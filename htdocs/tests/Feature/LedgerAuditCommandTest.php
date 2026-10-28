@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\PartyRole;
+use App\Enums\PaymentMethod;
 use App\Models\DumpSiteClassPrice;
+use App\Models\Employee;
 use App\Models\HaulRoute;
 use App\Models\LedgerEntry;
 use App\Models\Party;
@@ -62,6 +64,28 @@ class LedgerAuditCommandTest extends TestCase
             ->expectsOutputToContain('Devirde eski sahibin plaka bakiyesi kapalı · kontrol 1 · uyumsuz 0')
             ->expectsOutputToContain('Plaka Aylık: devir, satırlar, bakiye')
             ->expectsOutputToContain('Plaka Sahibi Aylık: devir, satırlar, bakiye')
+            ->expectsOutputToContain('Cari, belgeler ve raporlar birebir tutuyor.')
+            ->assertSuccessful();
+    }
+
+    public function test_audit_matches_payroll_postings_on_the_employee_cari(): void
+    {
+        $employee = Employee::factory()->create(['salary' => 30000]);
+
+        $this->actingAs(User::query()->firstOrFail())
+            ->post(route('admin.employee-payments.store'), [
+                'employee_id' => $employee->id,
+                'amount' => '4000',
+                'payment_method' => PaymentMethod::Cash->value,
+                'year' => 2026,
+                'month' => 2,
+                'occurred_on' => '2026-02-10',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->artisan('ledger:audit')
+            ->expectsOutputToContain('Cari satırları kaynak belgelerle birebir · kontrol')
+            ->expectsOutputToContain('Kasa kapanışı = tüm nakit hareketler · kontrol 1 · uyumsuz 0')
             ->expectsOutputToContain('Cari, belgeler ve raporlar birebir tutuyor.')
             ->assertSuccessful();
     }

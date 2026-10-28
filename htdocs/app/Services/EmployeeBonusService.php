@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\EmployeeBonus;
 use App\Repositories\EmployeeBonusRepository;
+use App\Services\Ledger\PayrollLedger;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,7 @@ class EmployeeBonusService extends Service
     public function __construct(
         private EmployeeBonusRepository $bonuses,
         private EmployeeService $employees,
+        private PayrollLedger $payroll,
     ) {}
 
     /**
@@ -47,6 +49,7 @@ class EmployeeBonusService extends Service
                 'description' => $data['description'] ?? null,
                 'created_by' => Auth::id(),
             ]);
+            $this->payroll->syncBonus($bonus);
 
             return $bonus;
         });
@@ -65,6 +68,7 @@ class EmployeeBonusService extends Service
                 'occurred_on' => $data['occurred_on'],
                 'description' => $data['description'] ?? null,
             ]);
+            $this->payroll->syncBonus($updated);
 
             return $updated;
         });
@@ -72,6 +76,9 @@ class EmployeeBonusService extends Service
 
     public function delete(EmployeeBonus $bonus): void
     {
-        $this->transaction(fn () => $this->bonuses->delete($bonus));
+        $this->transaction(function () use ($bonus): void {
+            $this->payroll->void($bonus);
+            $this->bonuses->delete($bonus);
+        });
     }
 }

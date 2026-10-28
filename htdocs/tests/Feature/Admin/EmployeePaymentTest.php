@@ -7,6 +7,8 @@ use App\Models\Employee;
 use App\Models\EmployeePayment;
 use App\Models\EmployeeSalary;
 use App\Models\User;
+use App\Repositories\PartyRepository;
+use App\Services\Ledger\Ledger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -78,6 +80,54 @@ class EmployeePaymentTest extends TestCase
             ->assertRedirect(route('admin.employee-payments.index'));
 
         $this->assertSoftDeleted($payment);
+    }
+
+    public function test_payment_and_its_salary_card_post_to_the_employee_cari_and_follow_edits(): void
+    {
+        $employee = Employee::factory()->create(['salary' => 28000]);
+        $ledger = app(Ledger::class);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.employee-payments.store'), [
+                'employee_id' => $employee->id,
+                'amount' => '5000',
+                'payment_method' => PaymentMethod::Cash->value,
+                'year' => 2026,
+                'month' => 9,
+                'occurred_on' => '2026-09-15',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $payment = EmployeePayment::query()->sole();
+        $salary = $ledger->live(EmployeeSalary::query()->sole())->sole();
+        $this->assertSame($employee->party_id, $salary->party_id);
+        $this->assertSame('2026-09-30', $salary->occurred_on->toDateString());
+        $this->assertSame('28000.00', $salary->credit);
+
+        $paid = $ledger->live($payment)->sole();
+        $this->assertSame($employee->party_id, $paid->party_id);
+        $this->assertSame('5000.00', $paid->debit);
+        $this->assertSame(PaymentMethod::Cash, $paid->payment_method);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.employee-payments.update', $payment), [
+                'employee_id' => $employee->id,
+                'amount' => '6000',
+                'payment_method' => PaymentMethod::BankTransfer->value,
+                'year' => 2026,
+                'month' => 9,
+                'occurred_on' => '2026-09-16',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $paid = $ledger->live($payment)->sole();
+        $this->assertSame('6000.00', $paid->debit);
+        $this->assertSame(PaymentMethod::BankTransfer, $paid->payment_method);
+
+        $this->actingAs($this->admin)->delete(route('admin.employee-payments.destroy', $payment));
+
+        $this->assertCount(0, $ledger->live($payment));
+        $this->assertSame(-28000.0, app(PartyRepository::class)->totals($employee->party)['balance']);
     }
 
     public function test_creating_payment_does_not_duplicate_existing_salary_card(): void

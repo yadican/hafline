@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Models\EmployeePayment;
 use App\Repositories\EmployeePaymentRepository;
 use App\Repositories\EmployeeSalaryRepository;
+use App\Services\Ledger\PayrollLedger;
 use App\Services\Reports\SiteExitReportService;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -18,6 +19,7 @@ class EmployeePaymentService extends Service
         private EmployeePaymentRepository $payments,
         private EmployeeSalaryRepository $salaries,
         private EmployeeService $employees,
+        private PayrollLedger $payroll,
     ) {}
 
     /**
@@ -56,7 +58,9 @@ class EmployeePaymentService extends Service
         return $this->transaction(function () use ($data): EmployeePayment {
             $period = Carbon::create((int) $data['year'], (int) $data['month'], 1)->toDateString();
 
-            $this->salaries->ensureCardsForActiveEmployees($period);
+            foreach ($this->salaries->ensureCardsForActiveEmployees($period) as $salary) {
+                $this->payroll->syncSalary($salary);
+            }
 
             /** @var EmployeePayment $payment */
             $payment = $this->payments->create([
@@ -68,6 +72,7 @@ class EmployeePaymentService extends Service
                 'description' => $data['description'] ?? null,
                 'created_by' => Auth::id(),
             ]);
+            $this->payroll->syncPayment($payment);
 
             return $payment;
         });
@@ -90,6 +95,7 @@ class EmployeePaymentService extends Service
                 'occurred_on' => $data['occurred_on'] ?? $payment->occurred_on?->toDateString(),
                 'description' => $data['description'] ?? null,
             ]);
+            $this->payroll->syncPayment($updated);
 
             return $updated;
         });
@@ -97,6 +103,9 @@ class EmployeePaymentService extends Service
 
     public function delete(EmployeePayment $payment): void
     {
-        $this->transaction(fn () => $this->payments->delete($payment));
+        $this->transaction(function () use ($payment): void {
+            $this->payroll->void($payment);
+            $this->payments->delete($payment);
+        });
     }
 }

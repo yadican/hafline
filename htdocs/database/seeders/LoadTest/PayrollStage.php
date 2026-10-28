@@ -5,7 +5,11 @@ namespace Database\Seeders\LoadTest;
 use App\Enums\EmployeeOccupation;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\EmployeeBonus;
+use App\Models\EmployeePayment;
+use App\Models\EmployeeSalary;
 use App\Models\User;
+use App\Services\Ledger\PayrollLedger;
 use Database\Seeders\LoadTest\Support\Progress;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -168,6 +172,7 @@ final class PayrollStage
         $this->insert('employee_salaries', $salaries);
         $this->insert('employee_payments', $payments);
         $this->insert('employee_bonuses', $bonuses);
+        $this->postToLedger();
 
         $this->progress->done(sprintf(
             '%d kart · %d maaş · %d ödeme · %d prim',
@@ -195,6 +200,17 @@ final class PayrollStage
         }
 
         return $periods;
+    }
+
+    private function postToLedger(): void
+    {
+        $payroll = app(PayrollLedger::class);
+
+        DB::transaction(function () use ($payroll): void {
+            EmployeeSalary::query()->with('employee')->lazyById(500)->each(fn (EmployeeSalary $salary) => $payroll->syncSalary($salary));
+            EmployeeBonus::query()->with('employee')->lazyById(500)->each(fn (EmployeeBonus $bonus) => $payroll->syncBonus($bonus));
+            EmployeePayment::query()->with('employee')->lazyById(500)->each(fn (EmployeePayment $payment) => $payroll->syncPayment($payment));
+        });
     }
 
     /**

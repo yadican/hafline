@@ -164,20 +164,24 @@ class EmployeeSalaryRepository extends Repository
 
     /**
      * Ensure every active employee has a salary card for the period.
+     *
+     * @return list<EmployeeSalary> the cards created now
      */
-    public function ensureCardsForActiveEmployees(string $period): void
+    public function ensureCardsForActiveEmployees(string $period): array
     {
         $existing = $this->query()
             ->whereDate('period', $period)
             ->pluck('employee_id')
             ->all();
 
+        $created = [];
+
         Employee::query()
             ->where('active', true)
             ->whereNotIn('id', $existing)
-            ->each(function (Employee $employee) use ($period): void {
+            ->each(function (Employee $employee) use ($period, &$created): void {
                 $base = (float) $employee->salary;
-                $this->create([
+                $created[] = $this->create([
                     'employee_id' => $employee->id,
                     'period' => $period,
                     'base_salary' => $base,
@@ -185,5 +189,7 @@ class EmployeeSalaryRepository extends Repository
                     'earned_salary' => $base,
                 ]);
             });
+
+        return $created;
     }
 }

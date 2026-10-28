@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\OperationRejectedException;
 use App\Repositories\EmployeeRepository;
 use App\Repositories\EmployeeSalaryRepository;
+use App\Services\Ledger\PayrollLedger;
 use App\Services\Reports\SiteExitReportService;
 use Illuminate\Support\Carbon;
 
@@ -13,6 +14,7 @@ class EmployeeSalaryService extends Service
     public function __construct(
         private EmployeeSalaryRepository $salaries,
         private EmployeeRepository $employees,
+        private PayrollLedger $payroll,
     ) {}
 
     /**
@@ -131,13 +133,14 @@ class EmployeeSalaryService extends Service
                 $base = round((float) $row['base_salary'], 2);
                 $days = max(0, min(31, (int) $row['worked_days']));
 
-                $this->salaries->upsertForPeriod([
+                $salary = $this->salaries->upsertForPeriod([
                     'employee_id' => $row['employee_id'],
                     'period' => $periodDate,
                     'base_salary' => $base,
                     'worked_days' => $days,
                     'earned_salary' => $this->earnedSalary($base, $days),
                 ]);
+                $this->payroll->syncSalary($salary);
             }
         });
     }

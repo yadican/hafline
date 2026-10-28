@@ -8,6 +8,7 @@ use App\Models\EmployeeBonus;
 use App\Models\EmployeePayment;
 use App\Models\EmployeeSalary;
 use App\Models\User;
+use App\Services\Ledger\Ledger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -139,5 +140,10 @@ class EmployeeSalaryTest extends TestCase
 
         $this->assertSame(1, EmployeeSalary::query()->where('employee_id', $employee->id)->count());
         $this->assertSame('20000.00', $card->fresh()->earned_salary);
+
+        $posted = app(Ledger::class)->live($card)->sole();
+        $this->assertSame($employee->party_id, $posted->party_id);
+        $this->assertSame('2026-09-30', $posted->occurred_on->toDateString());
+        $this->assertSame('20000.00', $posted->credit);
     }
 }

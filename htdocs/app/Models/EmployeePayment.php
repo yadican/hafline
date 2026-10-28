@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\Module;
 use App\Enums\PaymentMethod;
+use App\Services\Ledger\LedgerSource;
 use Database\Factories\EmployeePaymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,10 +22,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'description',
     'created_by',
 ])]
-class EmployeePayment extends Model
+class EmployeePayment extends Model implements LedgerSource
 {
     /** @use HasFactory<EmployeePaymentFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    public function ledgerModule(): Module
+    {
+        return Module::General;
+    }
+
+    public function ledgerSiteId(): ?string
+    {
+        return null;
+    }
 
     /**
      * @return BelongsTo<Employee, $this>

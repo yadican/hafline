@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Employee;
 use App\Models\EmployeeBonus;
 use App\Models\User;
+use App\Services\Ledger\Ledger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -55,11 +56,16 @@ class EmployeeBonusTest extends TestCase
 
         $this->assertSame('2000.00', $bonus->fresh()->amount);
 
+        $posted = app(Ledger::class)->live($bonus)->sole();
+        $this->assertSame($employee->party_id, $posted->party_id);
+        $this->assertSame('2000.00', $posted->credit);
+
         $this->actingAs($this->admin)
             ->delete(route('admin.employee-bonuses.destroy', $bonus))
             ->assertRedirect(route('admin.employee-bonuses.index'));
 
         $this->assertSoftDeleted($bonus);
+        $this->assertCount(0, app(Ledger::class)->live($bonus));
     }
 
     public function test_list_filters_by_employee(): void

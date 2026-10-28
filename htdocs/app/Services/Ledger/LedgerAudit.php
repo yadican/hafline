@@ -32,6 +32,9 @@ class LedgerAudit
         union all select 'company_transaction', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), debit, credit from company_transactions where deleted_at is null and (debit <> 0 or credit <> 0)
         union all select 'vehicle_ownership', cast(id as text), cast(carried_from_party_id as text), substr(cast(started_on as text), 1, 10), case when carried_balance > 0 then carried_balance else 0 end, case when carried_balance < 0 then -carried_balance else 0 end from vehicle_ownerships where carried_balance <> 0
         union all select 'vehicle_ownership', cast(id as text), cast(party_id as text), substr(cast(started_on as text), 1, 10), case when carried_balance < 0 then -carried_balance else 0 end, case when carried_balance > 0 then carried_balance else 0 end from vehicle_ownerships where carried_balance <> 0
+        union all select 'employee_salary', cast(s.id as text), cast(e.party_id as text), %s, 0, s.earned_salary from employee_salaries s join employees e on e.id = s.employee_id where s.deleted_at is null and s.earned_salary <> 0
+        union all select 'employee_bonus', cast(b.id as text), cast(e.party_id as text), substr(cast(b.occurred_on as text), 1, 10), 0, b.amount from employee_bonuses b join employees e on e.id = b.employee_id where b.deleted_at is null and b.amount <> 0
+        union all select 'employee_payment', cast(t.id as text), cast(e.party_id as text), substr(cast(t.occurred_on as text), 1, 10), t.amount, 0 from employee_payments t join employees e on e.id = t.employee_id where t.deleted_at is null and t.amount <> 0
     SQL;
 
     /**
@@ -78,7 +81,7 @@ class LedgerAudit
             'select coalesce(e.st, l.st) st, coalesce(e.sid, l.sid) sid, coalesce(e.p, l.p) p, coalesce(e.d, l.d) d, e.dr edr, e.cr ecr, l.dr ldr, l.cr lcr
              from (%s) e full outer join (%s) l on e.st = l.st and e.sid = l.sid and e.p = l.p and e.d = l.d
              where e.st is null or l.st is null or e.dr <> l.dr or e.cr <> l.cr',
-            $grouped(self::EXPECTED),
+            $grouped(sprintf(self::EXPECTED, $this->monthEnd('s.period'))),
             $grouped(self::LIVE),
         ));
 
@@ -115,6 +118,9 @@ class LedgerAudit
                 union all select 'vehicle_receivable', cast(id as text), 'general', null from vehicle_receivables
                 union all select 'party_payment', cast(id as text), 'general', null from party_payments
                 union all select 'vehicle_ownership', cast(id as text), 'general', null from vehicle_ownerships
+                union all select 'employee_salary', cast(id as text), 'general', null from employee_salaries
+                union all select 'employee_bonus', cast(id as text), 'general', null from employee_bonuses
+                union all select 'employee_payment', cast(id as text), 'general', null from employee_payments
             ) x on x.st = le.source_type and x.sid = cast(le.source_id as text)
             where le.reversal_of is null and not exists (select 1 from ledger_entries r where r.reversal_of = le.id)
               and (le.module <> x.module or coalesce(cast(le.site_id as text), '') <> coalesce(x.site, ''))
@@ -185,7 +191,7 @@ class LedgerAudit
         $cari = collect(DB::select(<<<'SQL'
             select le.party_id, sum(le.credit - le.debit) net from ledger_entries le
             where le.party_id in (select party_id from vehicle_ownerships)
-              and le.source_type not in ('company_transaction', 'dump_site_payment')
+              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment')
               and not (le.source_type = 'haul' and exists (select 1 from hauls h where h.id = le.source_id and h.dump_party_id = le.party_id and h.party_id <> le.party_id))
             group by le.party_id
         SQL))->mapWithKeys(fn (object $row) => [$row->party_id => round((float) $row->net, 2)]);
@@ -275,6 +281,16 @@ class LedgerAudit
             : [];
 
         return $this->result('Kasa kapanışı = tüm nakit hareketler', 1, $failures);
+    }
+
+    /**
+     * A salary is owed on the last day of its period month.
+     */
+    private function monthEnd(string $column): string
+    {
+        return DB::getDriverName() === 'pgsql'
+            ? "to_char(date_trunc('month', {$column}) + interval '1 month - 1 day', 'YYYY-MM-DD')"
+            : "date({$column}, 'start of month', '+1 month', '-1 day')";
     }
 
     /**

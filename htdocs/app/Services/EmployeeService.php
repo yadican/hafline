@@ -12,6 +12,7 @@ use App\Models\EmployeeSalary;
 use App\Models\Party;
 use App\Repositories\EmployeeRepository;
 use App\Repositories\EmployeeSalaryRepository;
+use App\Services\Ledger\PayrollLedger;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -23,6 +24,7 @@ class EmployeeService extends Service
     public function __construct(
         private EmployeeRepository $employees,
         private EmployeeSalaryRepository $salaries,
+        private PayrollLedger $payroll,
     ) {}
 
     /**
@@ -267,6 +269,7 @@ class EmployeeService extends Service
             'base_salary' => $employee->salary,
             'earned_salary' => round((float) $employee->salary / 30 * (int) $salary->worked_days, 2),
         ]);
+        $this->payroll->syncSalary($salary);
     }
 
     /**
