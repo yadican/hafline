@@ -6,10 +6,12 @@ use App\Enums\PartyRole;
 use App\Enums\PartySide;
 use App\Enums\PartyType;
 use App\Exceptions\OperationRejectedException;
+use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\Party;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Ledger\FuelReceiptLedger;
 use App\Services\Ledger\HaulLedger;
 use App\Services\PartyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -218,6 +220,29 @@ class PartyTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder(['Taşıma fişi T-2', '1.500,00 TL', 'Taşıma fişi T-1', '1.000,00 TL'])
             ->assertSee('34 RB 1');
+    }
+
+    public function test_statement_can_be_narrowed_to_one_module_and_shows_the_split(): void
+    {
+        $owner = Party::factory()->create();
+        $vehicle = Vehicle::factory()->ownedBy($owner)->create(['plate' => '34 MD 1']);
+        $haul = Haul::factory()->create(['ticket_no' => 'T-9', 'vehicle_id' => $vehicle->id, 'party_id' => $owner->id, 'price' => 1000, 'dump_price' => 0]);
+        app(HaulLedger::class)->sync($haul);
+        $receipt = FuelReceipt::factory()->create(['vehicle_id' => $vehicle->id, 'party_id' => $owner->id, 'quantity' => 10, 'unit_price' => 40]);
+        app(FuelReceiptLedger::class)->sync($receipt);
+
+        $all = $this->actingAs($this->admin)->get(route('admin.parties.show', $owner))->assertOk();
+
+        $this->assertSame(-600.0, $all->viewData('totals')['balance']);
+        $this->assertSame(-1000.0, $all->viewData('moduleTotals')['excavation']['balance']);
+        $this->assertSame(400.0, $all->viewData('moduleTotals')['fuel']['balance']);
+        $all->assertSee('Hafriyat')->assertSee('Yakıt');
+
+        $fuel = $this->actingAs($this->admin)->get(route('admin.parties.show', [$owner, 'modul' => 'fuel']))->assertOk();
+
+        $this->assertSame(400.0, $fuel->viewData('totals')['balance']);
+        $this->assertCount(1, $fuel->viewData('entries'));
+        $fuel->assertDontSee('Taşıma fişi T-9');
     }
 
     public function test_statement_and_totals_leave_out_cancelled_postings_unless_asked(): void

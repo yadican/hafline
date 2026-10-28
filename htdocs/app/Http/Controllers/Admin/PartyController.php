@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Module;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
 use App\Http\Requests\Admin\PartyRequest;
@@ -72,10 +73,7 @@ class PartyController extends AdminController
         return view('admin.parties.show', [
             'title' => 'Cari kart detayı',
             'party' => $party,
-            'entries' => $this->parties->statement($party, $request->boolean('iptaller')),
-            'totals' => $this->parties->totals($party),
-            'withReversals' => $request->boolean('iptaller'),
-            'hasReversals' => $this->parties->hasReversals($party),
+            ...$this->statementData($request, $party),
         ]);
     }
 
@@ -94,11 +92,27 @@ class PartyController extends AdminController
                 old('district_id', $values['district_id']),
             ),
             'lockedRoles' => $this->parties->lockedRoles($party),
-            'entries' => $this->parties->statement($party, $request->boolean('iptaller')),
-            'totals' => $this->parties->totals($party),
+            ...$this->statementData($request, $party),
+        ]);
+    }
+
+    /**
+     * The cari statement, optionally narrowed to one module; the module split always covers the whole balance.
+     *
+     * @return array<string, mixed>
+     */
+    private function statementData(Request $request, Party $party): array
+    {
+        $module = Module::tryFrom((string) $request->query('modul'));
+
+        return [
+            'entries' => $this->parties->statement($party, $request->boolean('iptaller'), $module),
+            'totals' => $this->parties->totals($party, $module),
+            'moduleTotals' => $this->parties->moduleTotals($party),
+            'module' => $module,
             'withReversals' => $request->boolean('iptaller'),
             'hasReversals' => $this->parties->hasReversals($party),
-        ]);
+        ];
     }
 
     public function update(PartyRequest $request, Party $party): RedirectResponse

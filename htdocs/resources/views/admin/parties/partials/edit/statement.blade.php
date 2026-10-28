@@ -1,5 +1,15 @@
 <div class="panel-form-grid panel-form-grid-after" id="cari-hareketleri">
     <x-form.group legend="Cari hareketleri" icon="fa-solid fa-scale-balanced" description="Borç: cari bize borçlu / biz ödedik · Alacak: biz cariye borçluyuz" class="is-wide">
+        @if (count($moduleTotals) > 1 || $module)
+            <nav class="panel-ledger-modules" aria-label="Modüle göre hareketler">
+                <a href="{{ request()->fullUrlWithQuery(['modul' => null, 'hareket' => null]) }}#cari-hareketleri" @class(['panel-chip', 'is-active' => $module === null])>Tümü</a>
+                @foreach ($moduleTotals as $row)
+                    <a href="{{ request()->fullUrlWithQuery(['modul' => $row['module']->value, 'hareket' => null]) }}#cari-hareketleri" @class(['panel-chip', 'is-active' => $module === $row['module']])>
+                        {{ $row['module']->label() }} <x-ui.balance :value="$row['balance']" />
+                    </a>
+                @endforeach
+            </nav>
+        @endif
         <div class="panel-ledger-totals">
             <span>Toplam borç <x-ui.money :value="$totals['debit']" /></span>
             <span>Toplam alacak <x-ui.money :value="$totals['credit']" /></span>
@@ -34,16 +44,21 @@
                                     <a href="{{ route('admin.machine-works.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'fuel_receipt' && $entry->source && ! $entry->source->trashed())
                                     <a href="{{ route('admin.fuel-receipts.show', $entry->source) }}">{{ $entry->description }}</a>
-                                @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment'], true) && $entry->source && ! $entry->source->trashed())
+                                @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'opening_balance', 'party_transfer'], true) && $entry->source && ! $entry->source->trashed())
                                     @php
                                         $cariKind = match ($entry->source_type) {
                                             'company_transaction' => $entry->source->role->value,
                                             'party_payment' => 'owner_payment',
                                             'dump_site_payment' => 'dump_payment',
+                                            'opening_balance' => 'opening',
                                             default => $entry->source_type,
                                         };
                                     @endphp
                                     <a href="{{ route('admin.cari-entries.show', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $entry->description }}</a>
+                                @elseif ($entry->source_type === 'employee_payment' && $entry->source && ! $entry->source->trashed())
+                                    <a href="{{ route('admin.employee-payments.show', $entry->source) }}">{{ $entry->description }}</a>
+                                @elseif ($entry->source_type === 'employee_bonus' && $entry->source && ! $entry->source->trashed())
+                                    <a href="{{ route('admin.employee-bonuses.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @else
                                     {{ $entry->description }}
                                 @endif

@@ -1076,6 +1076,23 @@ input.panel-plate::placeholder {
     font-size: 14px;
 }
 
+.panel-ledger-modules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.panel-ledger-modules .panel-chip {
+    border: 1px solid transparent;
+    text-decoration: none;
+}
+
+.panel-ledger-modules .panel-chip.is-active {
+    border-color: var(--ui-brand-line);
+    font-weight: 600;
+}
+
 .panel-ledger-totals > span > span {
     margin-left: 4px;
     color: var(--ui-ink);

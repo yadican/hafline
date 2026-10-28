@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Cache\FormOptionsCache;
+use App\Enums\Module;
 use App\Enums\PartyRole;
 use App\Enums\PartySide;
 use App\Enums\PartyType;
@@ -86,12 +87,13 @@ class PartyRepository extends Repository
      * Cancelled postings and their reversals net to zero and are left out unless asked for, so the
      * listed rows add up to the totals and to the reports.
      */
-    public function statement(Party $party, int $perPage = 25, bool $withReversals = false): LengthAwarePaginator
+    public function statement(Party $party, int $perPage = 25, bool $withReversals = false, ?Module $module = null): LengthAwarePaginator
     {
         $rows = LedgerEntry::query()
             ->select('ledger_entries.*')
             ->selectRaw('SUM(debit - credit) OVER (ORDER BY occurred_on, created_at, id) AS running_balance')
             ->where('party_id', $party->id)
+            ->when($module, fn (Builder $query, Module $module) => $query->where('module', $module))
             ->unless($withReversals, fn (Builder $query) => $this->live($query));
 
         return LedgerEntry::query()
@@ -107,9 +109,10 @@ class PartyRepository extends Repository
     /**
      * @return array{debit: float, credit: float, balance: float}
      */
-    public function totals(Party $party): array
+    public function totals(Party $party, ?Module $module = null): array
     {
         $row = $this->live(LedgerEntry::query()->toBase()->where('party_id', $party->id))
+            ->when($module, fn (QueryBuilder $query, Module $module) => $query->where('module', $module->value))
             ->selectRaw('COALESCE(SUM(debit), 0) AS debit, COALESCE(SUM(credit), 0) AS credit')
             ->first();
 
@@ -118,6 +121,35 @@ class PartyRepository extends Repository
             'credit' => (float) $row->credit,
             'balance' => (float) $row->debit - (float) $row->credit,
         ];
+    }
+
+    /**
+     * The party's one balance split by the module each movement came from; modules without movement are left out.
+     *
+     * @return array<string, array{module: Module, debit: float, credit: float, balance: float}>
+     */
+    public function moduleTotals(Party $party): array
+    {
+        $rows = $this->live(LedgerEntry::query()->toBase()->where('party_id', $party->id))
+            ->groupBy('module')
+            ->selectRaw('module, COALESCE(SUM(debit), 0) AS debit, COALESCE(SUM(credit), 0) AS credit')
+            ->get()
+            ->keyBy('module');
+
+        $totals = [];
+
+        foreach (Module::cases() as $module) {
+            if ($row = $rows->get($module->value)) {
+                $totals[$module->value] = [
+                    'module' => $module,
+                    'debit' => (float) $row->debit,
+                    'credit' => (float) $row->credit,
+                    'balance' => (float) $row->debit - (float) $row->credit,
+                ];
+            }
+        }
+
+        return $totals;
     }
 
     /**

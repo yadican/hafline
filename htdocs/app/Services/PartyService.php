@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Cache\FormOptionsCache;
 use App\Cache\PartyCache;
+use App\Enums\Module;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
 use App\Exceptions\OperationRejectedException;
@@ -59,9 +60,17 @@ class PartyService extends Service
         return $this->parties->options($role, $include);
     }
 
-    public function statement(Party $party, bool $withReversals = false): LengthAwarePaginator
+    public function statement(Party $party, bool $withReversals = false, ?Module $module = null): LengthAwarePaginator
     {
-        return $this->parties->statement($party, withReversals: $withReversals);
+        return $this->parties->statement($party, withReversals: $withReversals, module: $module);
+    }
+
+    /**
+     * @return array<string, array{module: Module, debit: float, credit: float, balance: float}>
+     */
+    public function moduleTotals(Party $party): array
+    {
+        return $this->parties->moduleTotals($party);
     }
 
     public function hasReversals(Party $party): bool
@@ -72,9 +81,9 @@ class PartyService extends Service
     /**
      * @return array{debit: float, credit: float, balance: float}
      */
-    public function totals(Party $party): array
+    public function totals(Party $party, ?Module $module = null): array
     {
-        return $this->parties->totals($party);
+        return $this->parties->totals($party, $module);
     }
 
     /**
