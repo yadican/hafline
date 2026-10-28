@@ -30,6 +30,32 @@
         </div>
     @endcanany
 
+    @canany(['view-shipment', 'view-quarry', 'view-material', 'view-delivery-address'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.shipments.*', 'admin.quarries.*', 'admin.materials.*', 'admin.delivery-addresses.*')]) id="um-sec-transport">
+            <button type="button" class="um-title" data-um-toggle="um-sec-transport">
+                <span class="um-title-text">
+                    <i class="fa-solid fa-truck-moving um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Nakliye</span>
+                </span>
+                <span class="um-caret" aria-hidden="true"></span>
+            </button>
+            <div class="um-items">
+                @can('view-shipment')
+                    <a href="{{ route('admin.shipments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.shipments.*')])>Seferler</a>
+                @endcan
+                @can('view-quarry')
+                    <a href="{{ route('admin.quarries.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.quarries.*')])>Ocaklar ve yükleme yerleri</a>
+                @endcan
+                @can('view-delivery-address')
+                    <a href="{{ route('admin.delivery-addresses.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.delivery-addresses.*')])>Sevk yerleri</a>
+                @endcan
+                @can('view-material')
+                    <a href="{{ route('admin.materials.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.materials.*')])>Malzemeler</a>
+                @endcan
+            </div>
+        </div>
+    @endcanany
+
     @canany(['view-fuel-receipt', 'view-fuel-station'])
         <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.fuel-receipts.*', 'admin.fuel-stations.*')]) id="um-sec-fuel">
             <button type="button" class="um-title" data-um-toggle="um-sec-fuel">

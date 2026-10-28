@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CariEntryController;
 use App\Http\Controllers\Admin\CariEntryLookupController;
 use App\Http\Controllers\Admin\CashCategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DeliveryAddressController;
 use App\Http\Controllers\Admin\DumpSiteController;
 use App\Http\Controllers\Admin\EmployeeBonusController;
 use App\Http\Controllers\Admin\EmployeeController;
@@ -24,8 +25,10 @@ use App\Http\Controllers\Admin\HaulRouteController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MachineWorkController;
 use App\Http\Controllers\Admin\MachineWorkLookupController;
+use App\Http\Controllers\Admin\MaterialController;
 use App\Http\Controllers\Admin\PartyController;
 use App\Http\Controllers\Admin\Permission\PermissionController;
+use App\Http\Controllers\Admin\QuarryController;
 use App\Http\Controllers\Admin\Reports\CashMovementReportController;
 use App\Http\Controllers\Admin\Reports\CompanyBalanceReportController;
 use App\Http\Controllers\Admin\Reports\CompanyLedgerReportController;
@@ -51,7 +54,10 @@ use App\Http\Controllers\Admin\Reports\VehiclePeriodicReportController;
 use App\Http\Controllers\Admin\Reports\VehicleSiteMonthlyReportController;
 use App\Http\Controllers\Admin\Role\RoleController;
 use App\Http\Controllers\Admin\RouteVehiclePriceController;
+use App\Http\Controllers\Admin\ShipmentController;
+use App\Http\Controllers\Admin\ShipmentLookupController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\Admin\TransportPriceController;
 use App\Http\Controllers\Admin\User\UserController;
 use App\Http\Controllers\Admin\VehicleClassController;
 use App\Http\Controllers\Admin\VehicleController;
@@ -185,6 +191,27 @@ Route::middleware('auth')->group(function () {
         Route::get('fuel-receipts/lookups/stations/{fuelStation}', [FuelReceiptLookupController::class, 'station'])->name('fuel-receipts.lookups.station');
         Route::resource('fuel-receipts', FuelReceiptController::class);
     });
+
+    Route::middleware('can:view-shipment')->group(function () {
+        Route::get('shipments/lookups/vehicles', [ShipmentLookupController::class, 'vehicles'])->name('shipments.lookups.vehicles');
+        Route::get('shipments/lookups/prices', [ShipmentLookupController::class, 'prices'])->name('shipments.lookups.prices');
+        Route::resource('shipments', ShipmentController::class);
+    });
+
+    Route::middleware('can:view-material')->group(function () {
+        Route::resource('materials', MaterialController::class)->except('show');
+    });
+
+    Route::middleware('can:view-quarry')->group(function () {
+        Route::resource('quarries', QuarryController::class)->except('show');
+    });
+
+    Route::middleware('can:view-delivery-address')->group(function () {
+        Route::resource('delivery-addresses', DeliveryAddressController::class)->except('show');
+    });
+
+    Route::post('transport-prices', [TransportPriceController::class, 'store'])->name('transport-prices.store');
+    Route::delete('transport-prices/{transportPrice}', [TransportPriceController::class, 'destroy'])->name('transport-prices.destroy');
 
     Route::middleware('can:view-report-monthly-vouchers')->group(function () {
         Route::get('reports/monthly-vouchers', [MonthlyVoucherReportController::class, 'index'])->name('reports.monthly-vouchers');

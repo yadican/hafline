@@ -6,6 +6,7 @@ use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\LedgerEntry;
 use App\Models\MachineWork;
+use App\Models\Shipment;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,7 @@ class VehicleAccountRepository
             ->sum($column);
 
         $earned = $sum(Haul::query(), 'price')
+            + $sum(Shipment::query(), 'carrier_amount')
             + $sum(MachineWork::query(), 'amount')
             + $sum(VehicleReceivable::query(), 'amount');
 
