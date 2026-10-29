@@ -8,10 +8,20 @@
             @endforeach
         </select>
     </x-form.field>
-    <div x-show="['supplier', 'customer', 'fuel', 'market', 'site', 'cash', 'opening'].includes(kind)" x-cloak>
-        <x-form.radios name="direction" label="Yön" :options="['debit' => 'Borç', 'credit' => 'Alacak']" />
-        <p class="panel-hint" x-show="kind !== 'cash'">Borç: cari bize borçlu veya biz ödedik. Alacak: biz cariye borçluyuz.</p>
-        <p class="panel-hint" x-show="kind === 'cash'" x-cloak>Kasada borç, kasaya giren paradır. Alacak, kasadan çıkan paradır.</p>
+    <div x-show="['supplier', 'customer', 'fuel', 'market', 'site', 'cash', 'opening'].includes(kind)" x-cloak x-data="{ directions: @js($options['directions']) }">
+        @php($direction = old('direction', $form['direction'] ?? null))
+        <x-form.field label="Yön" name="direction">
+            <div class="panel-choices" role="radiogroup">
+                @foreach (['debit', 'credit'] as $side)
+                    <label class="panel-choice">
+                        <input type="radio" name="direction" value="{{ $side }}" @checked($direction === $side)>
+                        <span x-text="directions[kind]?.{{ $side }}">{{ $side === 'debit' ? 'Borç' : 'Alacak' }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </x-form.field>
+        <p class="panel-hint" x-show="['supplier', 'customer', 'fuel', 'market'].includes(kind)">Ödeme tipi seçilmezse kasa etkilenmez; tutar yalnızca cariye borç ya da alacak olarak yazılır (vadeli fatura, çek, mahsup).</p>
+        <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Açılış bakiyesi kasayı etkilemez; yalnızca carinin başlangıç durumunu yazar.</p>
     </div>
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
@@ -25,8 +35,8 @@
     <div x-show="! ['opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
     </div>
-    <p class="panel-hint" x-show="kind === 'site_bill'" x-cloak>Şantiyenin dönem hakedişi: şantiye carisini bu tutarla borçlandırır. Ödeme değildir; tahsilat "Şantiye Gelir / Gider" ile alacak olarak girilir.</p>
-    <p class="panel-hint" x-show="kind === 'site'" x-cloak>Alacak: şantiyeden alınan ödeme; şantiyenin carisi varsa ona yazılır. Borç: şantiyede yapılan gider; hiçbir cariye yazılmaz.</p>
+    <p class="panel-hint" x-show="kind === 'site_bill'" x-cloak>Şantiyenin dönem hakedişi: şantiye carisini bu tutarla borçlandırır. Ödeme değildir; tahsilat "Şantiye Gelir / Gider" ile kasa girişi olarak girilir.</p>
+    <p class="panel-hint" x-show="kind === 'site'" x-cloak>Kasa girişi: şantiyeden alınan ödeme; şantiyenin carisi varsa ona yazılır. Kasa çıkışı: şantiyede yapılan gider; hiçbir cariye yazılmaz.</p>
     <p class="panel-hint" x-show="kind === 'fuel'" x-cloak>Yakıt fişleri istasyonu alış fiyatıyla kendiliğinden alacaklandırır; saha pompasının yakıt dolumu da pompa kartından girilir. Buraya sadece fişe bağlı olmayan alımları ve istasyona yapılan ödemeleri girin, yoksa aynı litre iki kez yazılır.</p>
     <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Carinin sisteme geçmeden önceki bakiyesi. Her cari için bir kez girilir; para hareketi değildir, kasayı etkilemez.</p>
     <p class="panel-hint" x-show="kind === 'party_transfer'" x-cloak>Mahsup: borçlanan carinin bakiyesi artar, alacaklanan carinin bakiyesi aynı tutarda azalır. Kasa ve banka etkilenmez.</p>
@@ -48,7 +58,7 @@
     @endforeach
     <div x-show="kind === 'party_transfer'" x-cloak>
         <x-form.field label="Alacaklanacak cari" for="counter-party" name="counter_party_id">
-            <select data-searchable-select id="counter-party" name="counter_party_id" class="slct" x-bind:disabled="kind !== 'party_transfer'">
+            <select data-searchable-select id="counter-party" name="counter_party_id" class="slct" data-cari-counter-party x-bind:disabled="kind !== 'party_transfer'">
                 <option value="">Alacaklanacak cari seçin</option>
                 @foreach ($options['parties']['party_transfer'] ?? [] as $id => $name)
                     <option value="{{ $id }}" @selected((string) old('counter_party_id', $form['counter_party_id'] ?? '') === (string) $id)>{{ $name }}</option>
@@ -58,6 +68,9 @@
     </div>
     <div x-show="['supplier', 'customer', 'fuel', 'market', 'owner_payment', 'opening', 'party_transfer'].includes(kind)" x-cloak>
         <div class="panel-cari-summary is-idle" data-cari-party-status aria-live="polite">Firma veya kişi seçilince cari durumu gelir</div>
+    </div>
+    <div x-show="kind === 'party_transfer'" x-cloak>
+        <div class="panel-cari-summary is-idle" data-cari-counter-status aria-live="polite">Alacaklanacak cari seçilince cari durumu gelir</div>
     </div>
     <div x-show="['vehicle_payment', 'vehicle_receivable', 'market'].includes(kind)" x-cloak>
         <x-form.autocomplete

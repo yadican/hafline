@@ -6,6 +6,7 @@ use App\Http\Requests\Admin\EmployeeRequest;
 use App\Http\Requests\Admin\EmployeeSearchRequest;
 use App\Models\Employee;
 use App\Services\EmployeeService;
+use App\Services\Reports\EmployeeAnnualReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,11 +49,12 @@ class EmployeeController extends AdminController
         );
     }
 
-    public function show(Employee $employee): View
+    public function show(Request $request, Employee $employee, EmployeeAnnualReportService $reports): View
     {
         return view('admin.employees.show', [
             'title' => 'Personel kartı detayı',
             'employee' => $employee->load(['party', 'periods']),
+            'statement' => $request->user()->can('view-employee-salary') ? $reports->recentStatement($employee->id) : null,
         ]);
     }
 

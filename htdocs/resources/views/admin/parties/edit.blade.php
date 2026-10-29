@@ -17,8 +17,6 @@
             </x-form.grid>
         </form>
 
-        @include('admin.parties.partials.edit.vehicles')
         @include('admin.parties.partials.edit.sites')
-        @include('admin.parties.partials.edit.statement')
     </x-panel.page>
 @endsection

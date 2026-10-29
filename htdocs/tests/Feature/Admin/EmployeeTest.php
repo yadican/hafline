@@ -11,6 +11,7 @@ use App\Models\EmployeePayment;
 use App\Models\EmployeeSalary;
 use App\Models\Party;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -278,5 +279,72 @@ class EmployeeTest extends TestCase
                 'paid' => 5000,
                 'balance' => 45000,
             ]);
+    }
+
+    public function test_show_lists_last_six_months_of_payroll_after_a_carry_line(): void
+    {
+        $this->travelTo('2026-10-15 12:00:00');
+
+        $employee = Employee::factory()->create();
+
+        EmployeeSalary::factory()->create([
+            'employee_id' => $employee->id,
+            'period' => '2026-04-01',
+            'earned_salary' => 20000,
+        ]);
+        EmployeePayment::factory()->create([
+            'employee_id' => $employee->id,
+            'period' => '2026-04-01',
+            'occurred_on' => '2026-05-03',
+            'amount' => 15000,
+        ]);
+
+        EmployeeSalary::factory()->create([
+            'employee_id' => $employee->id,
+            'period' => '2026-05-01',
+            'earned_salary' => 30000,
+        ]);
+        EmployeeBonus::factory()->create([
+            'employee_id' => $employee->id,
+            'occurred_on' => '2026-10-10',
+            'amount' => 2000,
+        ]);
+        EmployeePayment::factory()->create([
+            'employee_id' => $employee->id,
+            'period' => '2026-10-01',
+            'occurred_on' => '2026-10-12',
+            'amount' => 12000,
+        ]);
+
+        $statement = $this->actingAs($this->admin)
+            ->get(route('admin.employees.show', $employee))
+            ->assertOk()
+            ->assertSee('Maaş dökümü')
+            ->assertSee('Mayıs 2026 Maaşı')
+            ->viewData('statement');
+
+        $this->assertSame('Devir', $statement['lines'][0]['description']);
+        $this->assertSame(5000.0, $statement['lines'][0]['balance']);
+        $this->assertCount(4, $statement['lines']);
+        $this->assertSame(30000.0, $statement['totals']['salary']);
+        $this->assertSame(2000.0, $statement['totals']['bonus']);
+        $this->assertSame(12000.0, $statement['totals']['payment']);
+        $this->assertSame(25000.0, $statement['totals']['closing']);
+    }
+
+    public function test_show_hides_payroll_statement_without_salary_permission(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-employee', 'view-dashboard']);
+
+        $employee = Employee::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('admin.employees.show', $employee))
+            ->assertOk()
+            ->assertViewHas('statement', null)
+            ->assertDontSee('Maaş dökümü');
     }
 }

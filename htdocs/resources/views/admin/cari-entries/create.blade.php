@@ -4,7 +4,7 @@
     <x-panel.page
         heading="Yeni cari hareketi"
         icon="fa-solid fa-plus"
-        description="Borç: cari bize borçlu ya da biz ödedik. Alacak: biz cariye borçluyuz. Kasa girişinde borç, kasaya giren paradır."
+        description="Kasaya giren ve kasadan çıkan paraları, cari açılışlarını ve virmanları girin."
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari hareketleri' => route('admin.cari-entries.index'), 'Yeni' => null]"
         :back="route('admin.cari-entries.index')"
     >

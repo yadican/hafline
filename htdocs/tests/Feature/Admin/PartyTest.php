@@ -67,8 +67,7 @@ class PartyTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.parties.edit', $party))
             ->assertOk()
-            ->assertSee('value="Yılmaz"', false)
-            ->assertSee('Bu cari kartta henüz hareket yok.');
+            ->assertSee('value="Yılmaz"', false);
 
         $this->actingAs($this->admin)
             ->put(route('admin.parties.update', $party), [
@@ -197,7 +196,7 @@ class PartyTest extends TestCase
             ->assertSee('Kemal Aslan');
     }
 
-    public function test_edit_page_lists_the_statement_with_a_running_balance(): void
+    public function test_show_page_lists_the_statement_with_a_running_balance(): void
     {
         $owner = Party::factory()->create();
         $vehicle = Vehicle::factory()->ownedBy($owner)->create(['plate' => '34 RB 1']);
@@ -215,10 +214,27 @@ class PartyTest extends TestCase
         }
 
         $this->actingAs($this->admin)
-            ->get(route('admin.parties.edit', $owner))
+            ->get(route('admin.parties.show', $owner))
             ->assertOk()
             ->assertSeeInOrder(['Taşıma fişi T-2', '1.500,00 TL', 'Taşıma fişi T-1', '1.000,00 TL'])
             ->assertSee('34 RB 1');
+    }
+
+    public function test_edit_page_leaves_out_the_vehicles_and_statement(): void
+    {
+        $owner = Party::factory()->create();
+        $vehicle = Vehicle::factory()->ownedBy($owner)->create(['plate' => '34 ED 1']);
+        $haul = Haul::factory()->create(['ticket_no' => 'T-1', 'vehicle_id' => $vehicle->id, 'party_id' => $owner->id, 'price' => 1000, 'dump_price' => 0]);
+        app(HaulLedger::class)->sync($haul);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.parties.edit', $owner))
+            ->assertOk()
+            ->assertViewMissing('entries')
+            ->assertViewMissing('plateBalances')
+            ->assertDontSee('Araçları')
+            ->assertDontSee('34 ED 1')
+            ->assertDontSee('Taşıma fişi T-1');
     }
 
     public function test_statement_can_be_narrowed_to_one_module_and_shows_the_split(): void
@@ -260,13 +276,13 @@ class PartyTest extends TestCase
         $haul->update(['price' => 1200]);
         app(HaulLedger::class)->sync($haul->refresh());
 
-        $response = $this->actingAs($this->admin)->get(route('admin.parties.edit', $owner))->assertOk();
+        $response = $this->actingAs($this->admin)->get(route('admin.parties.show', $owner))->assertOk();
 
         $this->assertSame(['debit' => 0.0, 'credit' => 1200.0, 'balance' => -1200.0], $response->viewData('totals'));
         $this->assertCount(1, $response->viewData('entries'));
         $response->assertSee('İptal edilen kayıtları göster');
 
-        $withReversals = $this->actingAs($this->admin)->get(route('admin.parties.edit', [$owner, 'iptaller' => 1]))->assertOk();
+        $withReversals = $this->actingAs($this->admin)->get(route('admin.parties.show', [$owner, 'iptaller' => 1]))->assertOk();
 
         $this->assertCount(3, $withReversals->viewData('entries'));
         $this->assertSame(-1200.0, (float) $withReversals->viewData('entries')->first()->running_balance);

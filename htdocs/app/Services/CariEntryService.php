@@ -76,6 +76,7 @@ class CariEntryService extends Service
 
         return [
             'kinds' => CariEntryKind::options(),
+            'directions' => collect(CariEntryKind::cases())->mapWithKeys(fn (CariEntryKind $kind) => [$kind->value => $kind->directionLabels()])->all(),
             'parties' => $parties,
             'sites' => $this->sites->options(activeOnly: true, include: $current['site_id'] ?? null),
             'stations' => $this->stations->options(activeOnly: true, include: $current['fuel_station_id'] ?? null),
@@ -201,8 +202,7 @@ class CariEntryService extends Service
         return [
             'direction' => match (true) {
                 $kind === CariEntryKind::PartyTransfer => 'Borçlanan cariye borç, alacaklanan cariye alacak',
-                $form['direction'] === 'credit' => 'Alacak',
-                default => 'Borç',
+                default => $kind->directionLabels()[$form['direction']],
             },
             'amount' => $form['amount'],
             'occurred_on' => Carbon::parse($form['occurred_on']),

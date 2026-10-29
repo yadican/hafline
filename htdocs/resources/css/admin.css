@@ -114,6 +114,12 @@ button.panel-btn {
     gap: 2px;
 }
 
+.panel-choices.is-inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 24px;
+}
+
 .panel-choice,
 .panel-field > label.panel-choice {
     display: inline-flex;

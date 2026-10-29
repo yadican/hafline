@@ -77,9 +77,9 @@ class PartyController extends AdminController
         ]);
     }
 
-    public function edit(Request $request, Party $party): View
+    public function edit(Party $party): View
     {
-        $party->load(['ownerships' => fn ($query) => $query->with('vehicle')->orderByDesc('started_on'), 'sites']);
+        $party->load('sites');
 
         $values = $this->parties->formValues($party);
 
@@ -92,7 +92,6 @@ class PartyController extends AdminController
                 old('district_id', $values['district_id']),
             ),
             'lockedRoles' => $this->parties->lockedRoles($party),
-            ...$this->statementData($request, $party),
         ]);
     }
 

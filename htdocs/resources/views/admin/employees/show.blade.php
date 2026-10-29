@@ -16,5 +16,8 @@
 
         @include('admin.employees.partials.show.details')
         @include('admin.employees.partials.edit.periods')
+        @if ($statement)
+            @include('admin.employees.partials.show.statement')
+        @endif
     </x-panel.page>
 @endsection

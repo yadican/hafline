@@ -87,6 +87,24 @@ enum CariEntryKind: string
     }
 
     /**
+     * What borç / alacak means for this kind, in the words the form shows.
+     * Kasa Nakit is the drawer's own side (borç = giriş); cari and site entries are the party's side (alacak = giriş).
+     *
+     * @return array{debit: string, credit: string}
+     */
+    public function directionLabels(): array
+    {
+        return match ($this) {
+            self::Cash => ['debit' => 'Kasa girişi', 'credit' => 'Kasa çıkışı'],
+            self::Site => ['debit' => 'Kasa çıkışı (gider)', 'credit' => 'Kasa girişi (tahsilat)'],
+            self::Opening => ['debit' => 'Cari bize borçlu', 'credit' => 'Biz cariye borçluyuz'],
+            self::Supplier, self::Customer, self::Fuel, self::Market,
+            self::VehiclePayment, self::OwnerPayment, self::DumpPayment => ['debit' => 'Kasa çıkışı (borç)', 'credit' => 'Kasa girişi (alacak)'],
+            default => ['debit' => 'Borç', 'credit' => 'Alacak'],
+        };
+    }
+
+    /**
      * A site entry posts only a collection, and only when the site has its own cari.
      */
     public function postsLedger(): bool

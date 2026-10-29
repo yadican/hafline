@@ -54,7 +54,64 @@ class EmployeeAnnualReportService extends Service
         }
 
         $year = $filters['year'];
-        $opening = $this->reports->openingCarry($employee->id, $year);
+        $statement = $this->statement(
+            $employee->id,
+            Carbon::create($year, 1, 1),
+            Carbon::create($year, 12, 31),
+            'Geçmiş Yıllar Devir',
+        );
+
+        return [
+            'title' => 'Personel Yıllık Ödeme Raporu',
+            'subtitle' => $employee->name.' · '.$year,
+            'employee' => [
+                'name' => $employee->name,
+                'started_on' => $employee->started_on?->toDateString(),
+                'address' => $employee->party?->address,
+                'phone' => $employee->party?->phone,
+                'mobile' => $employee->party?->mobile,
+                'occupation' => $employee->occupation?->label(),
+            ],
+            'year' => $year,
+            ...$statement,
+        ];
+    }
+
+    /**
+     * Statement for the last N months including the current one; the first line carries everything before.
+     *
+     * @return array{
+     *     from: Carbon,
+     *     opening: float,
+     *     lines: list<array{date: ?string, period: string, description: string, salary: float, payment: float, balance: float}>,
+     *     totals: array{salary: float, bonus: float, payment: float, closing: float}
+     * }
+     */
+    public function recentStatement(string $employeeId, int $months = 6): array
+    {
+        $from = now()->startOfMonth()->subMonths($months - 1);
+
+        return [
+            'from' => $from,
+            ...$this->statement($employeeId, $from, now()->endOfMonth(), 'Devir'),
+        ];
+    }
+
+    /**
+     * Salaries, bonuses and payments within the range, opened by the balance carried from before it.
+     *
+     * @return array{
+     *     opening: float,
+     *     lines: list<array{date: ?string, period: string, description: string, salary: float, payment: float, balance: float}>,
+     *     totals: array{salary: float, bonus: float, payment: float, closing: float}
+     * }
+     */
+    public function statement(string $employeeId, Carbon $from, Carbon $to, string $openingDescription): array
+    {
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
+
+        $opening = $this->reports->openingCarry($employeeId, $fromDate);
         $running = $opening;
         $lines = [];
         $totalSalary = 0.0;
@@ -64,7 +121,7 @@ class EmployeeAnnualReportService extends Service
         $lines[] = [
             'date' => null,
             'period' => '',
-            'description' => 'Geçmiş Yıllar Devir',
+            'description' => $openingDescription,
             'salary' => 0.0,
             'payment' => 0.0,
             'balance' => $running,
@@ -72,19 +129,19 @@ class EmployeeAnnualReportService extends Service
 
         $events = [];
 
-        foreach ($this->reports->salariesInYear($employee->id, $year) as $salary) {
+        foreach ($this->reports->salariesBetween($employeeId, $fromDate, $toDate) as $salary) {
             $events[] = [
                 'sort' => $salary->period->format('Y-m-d').'-1-'.$salary->id,
                 'date' => $salary->period->toDateString(),
                 'period' => $salary->period->format('Y-m'),
-                'description' => SiteExitReportService::MONTHS[(int) $salary->period->format('n')].' '.$year.' Maaşı',
+                'description' => SiteExitReportService::MONTHS[(int) $salary->period->format('n')].' '.$salary->period->year.' Maaşı',
                 'salary' => (float) $salary->earned_salary,
                 'payment' => 0.0,
                 'kind' => 'salary',
             ];
         }
 
-        foreach ($this->reports->bonusesInYear($employee->id, $year) as $bonus) {
+        foreach ($this->reports->bonusesBetween($employeeId, $fromDate, $toDate) as $bonus) {
             $events[] = [
                 'sort' => $bonus->occurred_on->format('Y-m-d').'-2-'.$bonus->id,
                 'date' => $bonus->occurred_on->toDateString(),
@@ -96,7 +153,7 @@ class EmployeeAnnualReportService extends Service
             ];
         }
 
-        foreach ($this->reports->paymentsInYear($employee->id, $year) as $payment) {
+        foreach ($this->reports->paymentsBetween($employeeId, $fromDate, $toDate) as $payment) {
             $events[] = [
                 'sort' => $payment->occurred_on->format('Y-m-d').'-3-'.$payment->id,
                 'date' => $payment->occurred_on->toDateString(),
@@ -132,17 +189,6 @@ class EmployeeAnnualReportService extends Service
         }
 
         return [
-            'title' => 'Personel Yıllık Ödeme Raporu',
-            'subtitle' => $employee->name.' · '.$year,
-            'employee' => [
-                'name' => $employee->name,
-                'started_on' => $employee->started_on?->toDateString(),
-                'address' => $employee->party?->address,
-                'phone' => $employee->party?->phone,
-                'mobile' => $employee->party?->mobile,
-                'occupation' => $employee->occupation?->label(),
-            ],
-            'year' => $year,
             'opening' => $opening,
             'lines' => $lines,
             'totals' => [

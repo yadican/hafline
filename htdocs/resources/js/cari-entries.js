@@ -1,6 +1,6 @@
 import { getJson, money, normalizePlate, onReady } from './entry-support.js';
 
-const PARTY_KINDS = ['supplier', 'customer', 'fuel', 'market', 'owner_payment'];
+const PARTY_KINDS = ['supplier', 'customer', 'fuel', 'market', 'owner_payment', 'opening', 'party_transfer'];
 const PLATE_KINDS = ['vehicle_payment', 'vehicle_receivable'];
 
 // Kasa hareketlerinin party alanı yok; tür cash iken filtreyi kapat.
@@ -88,7 +88,7 @@ function renderSummary(element, state, info) {
         name,
         line('Borç', amount(info.debit), Number(info.debit) > 0.005 ? 'debit' : 'zero'),
         line('Alacak', amount(info.credit), Number(info.credit) > 0.005 ? 'credit' : 'zero'),
-        line('Bakiye', balanceText, balanceTone, true),
+        line(info.owner ? `Cari sahibi bakiyesi · ${info.owner}` : 'Bakiye', balanceText, balanceTone, true),
     );
 
     if (info.plate_balance !== undefined) {
@@ -102,10 +102,8 @@ function renderSummary(element, state, info) {
     }
 }
 
-// Seçilen firmanın cari borç, alacak ve bakiyesini formun altında gösterir.
-function bindParty(form) {
-    const selects = form.querySelectorAll('[data-cari-party]');
-    const hint = form.querySelector('[data-cari-party-status]');
+// Seçilen carinin borç, alacak ve bakiyesini verilen kutuda gösterir; mahsupta başlığa cari rolü eklenir.
+function bindPartySummary(form, selects, hint, kinds, idleText, role) {
     const kind = form.querySelector('#kind');
 
     if (selects.length === 0 || ! hint || ! kind || ! form.dataset.partyUrl) {
@@ -114,14 +112,14 @@ function bindParty(form) {
 
     let request = 0;
 
-    const active = () => [...selects].find((select) => ! select.disabled && PARTY_KINDS.includes(kind.value));
+    const active = () => [...selects].find((select) => ! select.disabled && kinds.includes(kind.value));
 
     const refresh = async () => {
         const current = ++request;
         const select = active();
 
         if (! select?.value) {
-            renderSummary(hint, 'idle', 'Firma veya kişi seçilince cari durumu gelir');
+            renderSummary(hint, 'idle', idleText);
 
             return;
         }
@@ -133,7 +131,9 @@ function bindParty(form) {
                 return;
             }
 
-            renderSummary(hint, 'ok', info);
+            const label = role(kind.value);
+
+            renderSummary(hint, 'ok', label ? { ...info, name: `${label} · ${info.name}` } : info);
         } catch {
             if (current === request) {
                 renderSummary(hint, 'err', 'Cari durumu alınamadı');
@@ -146,6 +146,26 @@ function bindParty(form) {
     kind.addEventListener('change', () => requestAnimationFrame(() => refresh()));
 
     refresh();
+}
+
+function bindParty(form) {
+    bindPartySummary(
+        form,
+        form.querySelectorAll('[data-cari-party]'),
+        form.querySelector('[data-cari-party-status]'),
+        PARTY_KINDS,
+        'Firma veya kişi seçilince cari durumu gelir',
+        (kind) => (kind === 'party_transfer' ? 'Borçlanacak cari' : null),
+    );
+
+    bindPartySummary(
+        form,
+        form.querySelectorAll('[data-cari-counter-party]'),
+        form.querySelector('[data-cari-counter-status]'),
+        ['party_transfer'],
+        'Alacaklanacak cari seçilince cari durumu gelir',
+        () => 'Alacaklanacak cari',
+    );
 }
 
 // Plaka ödeme ve plaka alacak, o tarihteki araç sahibinin carisine yazılır.
@@ -182,7 +202,7 @@ function bindPlate(form) {
                 return;
             }
 
-            renderSummary(hint, 'ok', { ...info, name: `${info.plate} · ${info.name}` });
+            renderSummary(hint, 'ok', { ...info, name: `${info.plate} · ${info.name}`, owner: info.name });
         } catch (error) {
             if (current === request) {
                 renderSummary(hint, 'err', error.payload?.message || 'Cari durumu alınamadı');

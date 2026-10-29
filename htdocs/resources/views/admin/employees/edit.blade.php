@@ -9,6 +9,5 @@
         :back="route('admin.employees.index')"
     >
         @include('admin.employees.partials.edit.form')
-        @include('admin.employees.partials.edit.periods')
     </x-panel.page>
 @endsection

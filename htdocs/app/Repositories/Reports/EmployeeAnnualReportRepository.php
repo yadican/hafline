@@ -16,25 +16,23 @@ class EmployeeAnnualReportRepository
     }
 
     /**
-     * Opening carry before year: earned + bonuses − payments.
+     * Opening carry before the given date: earned + bonuses − payments.
      */
-    public function openingCarry(string $employeeId, int $year): float
+    public function openingCarry(string $employeeId, string $before): float
     {
-        $cutoff = sprintf('%04d-01-01', $year);
-
         $earned = (float) EmployeeSalary::query()
             ->where('employee_id', $employeeId)
-            ->where('period', '<', $cutoff)
+            ->where('period', '<', $before)
             ->sum('earned_salary');
 
         $bonuses = (float) EmployeeBonus::query()
             ->where('employee_id', $employeeId)
-            ->where('occurred_on', '<', $cutoff)
+            ->where('occurred_on', '<', $before)
             ->sum('amount');
 
         $payments = (float) EmployeePayment::query()
             ->where('employee_id', $employeeId)
-            ->where('period', '<', $cutoff)
+            ->where('period', '<', $before)
             ->sum('amount');
 
         return round($earned + $bonuses - $payments, 2);
@@ -43,11 +41,11 @@ class EmployeeAnnualReportRepository
     /**
      * @return Collection<int, EmployeeSalary>
      */
-    public function salariesInYear(string $employeeId, int $year): Collection
+    public function salariesBetween(string $employeeId, string $from, string $to): Collection
     {
         return EmployeeSalary::query()
             ->where('employee_id', $employeeId)
-            ->whereYear('period', $year)
+            ->whereBetween('period', [$from, $to])
             ->orderBy('period')
             ->get();
     }
@@ -55,11 +53,11 @@ class EmployeeAnnualReportRepository
     /**
      * @return Collection<int, EmployeeBonus>
      */
-    public function bonusesInYear(string $employeeId, int $year): Collection
+    public function bonusesBetween(string $employeeId, string $from, string $to): Collection
     {
         return EmployeeBonus::query()
             ->where('employee_id', $employeeId)
-            ->whereYear('occurred_on', $year)
+            ->whereBetween('occurred_on', [$from, $to])
             ->orderBy('occurred_on')
             ->orderBy('created_at')
             ->get();
@@ -68,11 +66,11 @@ class EmployeeAnnualReportRepository
     /**
      * @return Collection<int, EmployeePayment>
      */
-    public function paymentsInYear(string $employeeId, int $year): Collection
+    public function paymentsBetween(string $employeeId, string $from, string $to): Collection
     {
         return EmployeePayment::query()
             ->where('employee_id', $employeeId)
-            ->whereYear('period', $year)
+            ->whereBetween('period', [$from, $to])
             ->orderBy('occurred_on')
             ->orderBy('created_at')
             ->get();

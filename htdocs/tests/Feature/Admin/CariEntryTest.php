@@ -89,7 +89,7 @@ class CariEntryTest extends TestCase
             ->get(route('admin.cari-entries.show', ['kind' => 'supplier', 'entry' => $row->id]))
             ->assertOk()
             ->assertSee($supplier->name)
-            ->assertSee('Alacak')
+            ->assertSee('Kasa girişi (alacak)')
             ->assertSee('1.500,00 TL')
             ->assertSee('Malzeme');
     }
@@ -360,8 +360,14 @@ class CariEntryTest extends TestCase
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('250.00', CashEntry::query()->sole()->debit);
+        $cash = CashEntry::query()->sole();
+        $this->assertSame('250.00', $cash->debit);
         $this->assertSame(0, LedgerEntry::query()->count());
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.show', ['kind' => 'cash', 'entry' => $cash->id]))
+            ->assertOk()
+            ->assertSee('Kasa girişi');
     }
 
     public function test_cash_search_disables_party_and_drops_it_from_filters(): void
