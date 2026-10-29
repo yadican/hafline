@@ -5,7 +5,7 @@
         heading="Hesap detayı"
         :icon="$bank->type->icon()"
         :description="$bank->name.' · '.$bank->type->label()"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa / Banka / POS' => route('admin.banks.index'), 'Detay' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Kasa / Banka / POS' => route('admin.banks.index'), 'Detay' => null]"
         :back="route('admin.banks.index')"
     >
         <x-slot:actions>

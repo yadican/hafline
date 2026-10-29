@@ -5,7 +5,7 @@
         heading="Kasa kategorisi detayı"
         icon="fa-solid fa-tags"
         :description="$cashCategory->name"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa kategorileri' => route('admin.cash-categories.index'), 'Detay' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Kasa kategorileri' => route('admin.cash-categories.index'), 'Detay' => null]"
         :back="route('admin.cash-categories.index')"
     >
         <x-slot:actions>

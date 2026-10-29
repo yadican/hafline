@@ -5,7 +5,7 @@
         heading="Yeni çek / senet"
         icon="fa-solid fa-money-check"
         description="Alınan ya da verilen çeki / senedi girin; carinin hareketi kendiliğinden yazılır."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, 'Çek / Senet' => route('admin.financial-instruments.index'), 'Yeni' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Çek / Senet' => route('admin.financial-instruments.index'), 'Yeni' => null]"
         :back="route('admin.financial-instruments.index')"
     >
         @php($counterparty = old('counterparty'))

@@ -5,7 +5,7 @@
         heading="Cari kart detayı"
         :icon="$party->type->icon()"
         :description="$party->name.' · '.$party->type->label()"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, $party->type->pluralLabel() => route($party->type->indexRoute()), 'Detay' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari kartlar' => null, $party->type->pluralLabel() => route($party->type->indexRoute()), 'Detay' => null]"
         :back="route($party->type->indexRoute())"
     >
         <x-slot:actions>

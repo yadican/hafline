@@ -5,7 +5,7 @@
         :heading="$type->pluralLabel()"
         :icon="$type->icon()"
         :description="$type === \App\Enums\PartyType::Person ? 'Araç sahibi, şoför ve personel gibi kişilerin cari kartları.' : 'Firma, döküm işletmecisi ve akaryakıtçı gibi şirketlerin cari kartları.'"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, $type->pluralLabel() => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari kartlar' => null, $type->pluralLabel() => null]"
     >
         @include('admin.parties.partials.index.toolbar')
         <x-table.list>

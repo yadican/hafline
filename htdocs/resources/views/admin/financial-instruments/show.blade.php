@@ -5,7 +5,7 @@
         heading="Çek / senet detayı"
         :icon="$instrument->payment_method->icon()"
         :description="$instrument->direction->label().' '.mb_strtolower($instrument->payment_method->label(), 'UTF-8').($instrument->number ? ' · No '.$instrument->number : '').' · vade '.$instrument->due_on->format('d.m.Y')"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, 'Çek / Senet' => route('admin.financial-instruments.index'), 'Detay' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Çek / Senet' => route('admin.financial-instruments.index'), 'Detay' => null]"
         :back="route('admin.financial-instruments.index')"
     >
         @if ($source)

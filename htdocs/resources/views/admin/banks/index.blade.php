@@ -5,7 +5,7 @@
         heading="Kasa / Banka / POS"
         icon="fa-solid fa-wallet"
         description="Şirketin para tuttuğu hesaplar: kasalar, banka hesapları, POS cihazları ve kredi kartları."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Tanımlar' => null, 'Kasa / Banka / POS' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Kasa / Banka / POS' => null]"
     >
         @include('admin.banks.partials.index.toolbar')
         <x-table.list>

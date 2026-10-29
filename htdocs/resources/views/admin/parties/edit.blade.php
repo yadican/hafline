@@ -5,7 +5,7 @@
         heading="Cari kartı düzenle"
         :icon="$party->type->icon()"
         :description="$party->name.' · '.$party->type->label()"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, $party->type->pluralLabel() => route($party->type->indexRoute()), 'Düzenle' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari kartlar' => null, $party->type->pluralLabel() => route($party->type->indexRoute()), 'Düzenle' => null]"
         :back="route($party->type->indexRoute())"
     >
         <form method="POST" action="{{ route('admin.parties.update', $party) }}">

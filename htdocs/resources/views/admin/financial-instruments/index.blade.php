@@ -5,7 +5,7 @@
         heading="Çek / Senet"
         icon="fa-solid fa-money-check"
         description="Alınan ve verilen çek / senetler: giriş, vade takibi, tahsil, ciro, ödeme ve karşılıksız işlemleri."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, 'Çek / Senet' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Çek / Senet' => null]"
     >
         @include('admin.financial-instruments.partials.index.toolbar')
         <div class="panel-ledger-totals">

@@ -36,18 +36,12 @@
         </div>
     @endcanany
 
-    @php
-        $partyType = request()->route('party') instanceof \App\Models\Party
-            ? request()->route('party')->type
-            : \App\Enums\PartyType::tryFrom((string) request('type'));
-        $onParty = request()->routeIs('admin.parties.*');
-    @endphp
-    @canany(['view-party', 'view-cari-entry', 'view-financial-instrument'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*', 'admin.cari-entries.*', 'admin.financial-instruments.*')]) id="um-sec-accounts">
-            <button type="button" class="um-title" data-um-toggle="um-sec-accounts">
+    @canany(['view-cari-entry', 'view-financial-instrument', 'view-bank', 'view-cash-category'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.cari-entries.*', 'admin.financial-instruments.*', 'admin.banks.*', 'admin.cash-categories.*')]) id="um-sec-finance">
+            <button type="button" class="um-title" data-um-toggle="um-sec-finance">
                 <span class="um-title-text">
-                    <i class="fa-solid fa-address-card um-title-icon" aria-hidden="true"></i>
-                    <span class="um-title-label">Cari</span>
+                    <i class="fa-solid fa-wallet um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Finans</span>
                 </span>
                 <span class="um-caret" aria-hidden="true"></span>
             </button>
@@ -58,33 +52,37 @@
                 @can('view-financial-instrument')
                     <a href="{{ route('admin.financial-instruments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.financial-instruments.*')])>Çek / Senet</a>
                 @endcan
-                @can('view-party')
-                    <a href="{{ route('admin.persons.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.persons.*') || ($onParty && $partyType === \App\Enums\PartyType::Person)])>Kişiler</a>
-                    <a href="{{ route('admin.companies.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.companies.*') || ($onParty && $partyType === \App\Enums\PartyType::Company)])>Şirketler</a>
+                @can('view-bank')
+                    <a href="{{ route('admin.banks.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.banks.*')])>Kasa / Banka / POS</a>
+                @endcan
+                @can('view-cash-category')
+                    <a href="{{ route('admin.cash-categories.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cash-categories.*')])>Kasa kategorileri</a>
                 @endcan
             </div>
         </div>
     @endcanany
 
-    @canany(['view-cash-category', 'view-bank'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.cash-categories.*', 'admin.banks.*')]) id="um-sec-definitions">
-            <button type="button" class="um-title" data-um-toggle="um-sec-definitions">
+    @php
+        $partyType = request()->route('party') instanceof \App\Models\Party
+            ? request()->route('party')->type
+            : \App\Enums\PartyType::tryFrom((string) request('type'));
+        $onParty = request()->routeIs('admin.parties.*');
+    @endphp
+    @can('view-party')
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*')]) id="um-sec-accounts">
+            <button type="button" class="um-title" data-um-toggle="um-sec-accounts">
                 <span class="um-title-text">
-                    <i class="fa-solid fa-sliders um-title-icon" aria-hidden="true"></i>
-                    <span class="um-title-label">Tanımlar</span>
+                    <i class="fa-solid fa-address-card um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Cari kartlar</span>
                 </span>
                 <span class="um-caret" aria-hidden="true"></span>
             </button>
             <div class="um-items">
-                @can('view-cash-category')
-                    <a href="{{ route('admin.cash-categories.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cash-categories.*')])>Kasa kategorileri</a>
-                @endcan
-                @can('view-bank')
-                    <a href="{{ route('admin.banks.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.banks.*')])>Kasa / Banka / POS</a>
-                @endcan
+                <a href="{{ route('admin.persons.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.persons.*') || ($onParty && $partyType === \App\Enums\PartyType::Person)])>Kişiler</a>
+                <a href="{{ route('admin.companies.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.companies.*') || ($onParty && $partyType === \App\Enums\PartyType::Company)])>Şirketler</a>
             </div>
         </div>
-    @endcanany
+    @endcan
 
     @canany(['view-vehicle', 'view-vehicle-class'])
         <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.vehicles.*', 'admin.vehicle-classes.*')]) id="um-sec-fleet">

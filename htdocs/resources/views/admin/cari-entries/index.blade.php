@@ -5,7 +5,7 @@
         heading="Cari hareketleri"
         icon="fa-solid fa-right-left"
         description="Satıcı, alıcı, petrol, piyasa, plaka, araç sahibi, döküm yeri, şantiye ve kasa girişlerini tek listeden yönetin."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari' => null, 'Cari hareketleri' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Finans' => null, 'Cari hareketleri' => null]"
     >
         @include('admin.cari-entries.partials.index.toolbar')
         <x-table.list>
