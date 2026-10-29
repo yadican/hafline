@@ -903,6 +903,64 @@ input.panel-plate::placeholder {
     grid-column: 1 / -1;
 }
 
+.panel-form-grid.is-detail .panel-form-group-body {
+    gap: 0;
+}
+
+.panel-form-grid.is-detail .panel-field {
+    display: grid;
+    grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding: 8px 0;
+}
+
+.panel-form-grid.is-detail .panel-field + .panel-field {
+    border-top: 1px solid var(--ui-border-soft);
+}
+
+.panel-form-grid.is-detail .panel-field-name {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.panel-form-grid.is-detail .panel-field-name::after {
+    content: ":";
+}
+
+.panel-form-grid.is-detail .panel-field > :not(.panel-field-name) {
+    grid-column: 2;
+    overflow-wrap: anywhere;
+}
+
+.panel-detail-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: hidden;
+}
+
+/* Çizgi alt kenarda: yarım kalan son satırın üstündeki hücreler de çizgi alır; son satırın çizgisi -1px ile taşıp kırpılır. */
+.panel-form-grid.is-detail .panel-detail-columns > .panel-field {
+    margin-bottom: -1px;
+    border-top: 0;
+    border-bottom: 1px solid var(--ui-border-soft);
+}
+
+/* 48px, geniş kartın ikinci sütununu alttaki yarım kartların içerik başlangıcıyla hizalar (16px grid aralığı + 2 × 16px kart iç boşluğu). */
+@media (min-width: 768px) {
+    .panel-detail-columns {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 48px;
+    }
+}
+
+@media (max-width: 480px) {
+    .panel-form-grid.is-detail .panel-field {
+        grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+    }
+}
+
 .panel-money {
     position: relative;
 }

@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Fiş" icon="fa-solid fa-file-lines" description="Fiş numarası, araç, tarih ve vardiya">
         <x-form.field label="Fiş No">
             <div>{{ $haul->ticket_no }}</div>

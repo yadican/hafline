@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Fiş" icon="fa-solid fa-file-lines" description="Fiş numarası, araç ve tarih">
         <x-form.field label="Fiş No">
             <div>{{ $receipt->ticket_no ?: '—' }}</div>

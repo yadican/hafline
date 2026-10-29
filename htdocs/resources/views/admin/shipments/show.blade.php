@@ -19,7 +19,7 @@
             @endcan
         </x-slot:actions>
 
-        <div class="panel-form-grid">
+        <div class="panel-form-grid is-detail">
             <x-form.group legend="1. Nakliyeci" icon="fa-solid fa-truck-moving" description="Nakliyeciye yazılan alacak">
                 <x-form.field label="Nakliyeci"><div>{{ $shipment->party?->name }}</div></x-form.field>
                 <x-form.field label="Plaka"><div class="panel-plate-text">{{ $shipment->vehicle?->plate }}</div></x-form.field>
