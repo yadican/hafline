@@ -3,7 +3,7 @@
     $location = collect([$party->neighborhood?->name, $party->district?->name, $party->city?->name])->filter()->join(' / ');
 @endphp
 
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     @if ($isPerson)
         <x-form.group legend="Kişi" icon="fa-solid fa-user" description="Ad, soyad ve kimlik bilgisi">
             <x-form.field label="Ad soyad">
@@ -39,25 +39,6 @@
         </x-form.group>
     @endif
 
-    <x-form.group legend="Roller" icon="fa-solid fa-tags" description="Bu kartın işletmedeki rolleri">
-        <x-form.field label="Roller">
-            <div>
-                @if ($party->roles)
-                    <span class="panel-chips">
-                        @foreach ($party->roles as $role)
-                            <span class="panel-chip">{{ $role->label() }}</span>
-                        @endforeach
-                    </span>
-                @else
-                    —
-                @endif
-            </div>
-        </x-form.field>
-        <x-form.field label="Bakiye">
-            <div><x-ui.balance :value="$totals['balance']" /></div>
-        </x-form.field>
-    </x-form.group>
-
     <x-form.group legend="İletişim" icon="fa-solid fa-phone" description="Telefon, e-posta ve adres">
         <x-form.field label="Cep telefonu">
             <div>{{ $party->mobile ?: '—' }}</div>
@@ -79,5 +60,26 @@
         <x-form.field label="Adres">
             <div>{{ $party->address ?: '—' }}</div>
         </x-form.field>
+    </x-form.group>
+
+    <x-form.group legend="Roller" icon="fa-solid fa-tags" description="Bu kartın işletmedeki rolleri" class="is-wide">
+        <div class="panel-detail-columns">
+            <x-form.field label="Roller">
+                <div>
+                    @if ($party->roles)
+                        <span class="panel-chips">
+                            @foreach ($party->roles as $role)
+                                <span class="panel-chip">{{ $role->label() }}</span>
+                            @endforeach
+                        </span>
+                    @else
+                        —
+                    @endif
+                </div>
+            </x-form.field>
+            <x-form.field label="Bakiye">
+                <div><x-ui.balance :value="$totals['balance']" /></div>
+            </x-form.field>
+        </div>
     </x-form.group>
 </div>

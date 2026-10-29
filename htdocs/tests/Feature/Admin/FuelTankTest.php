@@ -95,15 +95,15 @@ class FuelTankTest extends TestCase
             ->assertSessionHasErrors(['party_id', 'purchase_price']);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.fuel-stations.store'), ['name' => 'MERKEZ DEPO', 'type' => 'tank', 'product' => 'diesel', 'party_id' => $this->supplier->id, 'unit_price' => '50', 'active' => '1'])
+            ->post(route('admin.fuel-stations.store'), ['name' => 'MERKEZ POMPA', 'type' => 'tank', 'product' => 'diesel', 'party_id' => $this->supplier->id, 'unit_price' => '50', 'active' => '1'])
             ->assertSessionHasNoErrors();
 
-        $tank = FuelStation::query()->where('name', 'MERKEZ DEPO')->sole();
+        $tank = FuelStation::query()->where('name', 'MERKEZ POMPA')->sole();
         $this->assertSame(FuelSourceType::Tank, $tank->type);
         $this->assertNull($tank->party_id);
 
         $this->actingAs($this->admin)
-            ->put(route('admin.fuel-stations.update', $tank), ['name' => 'MERKEZ DEPO', 'type' => 'station', 'product' => 'diesel', 'party_id' => $this->supplier->id, 'purchase_price' => '40', 'unit_price' => '50', 'active' => '1'])
+            ->put(route('admin.fuel-stations.update', $tank), ['name' => 'MERKEZ POMPA', 'type' => 'station', 'product' => 'diesel', 'party_id' => $this->supplier->id, 'purchase_price' => '40', 'unit_price' => '50', 'active' => '1'])
             ->assertSessionHasNoErrors();
 
         $this->assertSame(FuelSourceType::Tank, $tank->fresh()->type);

@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Hesap" icon="fa-solid fa-wallet" description="Hesabın türü, adı ve kullanım durumu">
         <x-form.field label="Tür">
             <div><i class="{{ $bank->type->icon() }} panel-muted-icon" aria-hidden="true"></i> {{ $bank->type->label() }}</div>

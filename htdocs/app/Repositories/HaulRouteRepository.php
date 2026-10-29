@@ -24,7 +24,7 @@ class HaulRouteRepository extends Repository
     public function search(array $filters, ?Sort $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $query = $this->query()
-            ->with(['site', 'dumpSite', 'classPrices.vehicleClass'])
+            ->with(['site', 'dumpSite'])
             ->withCount('vehiclePrices')
             ->when($filters['site'] ?? null, fn (Builder $query, string $site) => $query->where('site_id', $site))
             ->when($filters['dump_site'] ?? null, fn (Builder $query, string $dumpSite) => $query->where('dump_site_id', $dumpSite))

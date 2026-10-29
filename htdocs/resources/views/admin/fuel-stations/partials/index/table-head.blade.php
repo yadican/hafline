@@ -1,6 +1,6 @@
 <thead>
     <tr>
-        <x-table.th sort="name">Kaynak</x-table.th>
+        <x-table.th sort="name">Yakıt yeri</x-table.th>
         <th>Tür</th>
         <x-table.th sort="party">Akaryakıt firması</x-table.th>
         <th>Şantiyeler</th>

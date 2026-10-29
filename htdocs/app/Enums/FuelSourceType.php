@@ -18,7 +18,7 @@ enum FuelSourceType: string
     {
         return match ($this) {
             self::Station => 'İstasyon',
-            self::Tank => 'Kendi depomuz',
+            self::Tank => 'Saha pompası',
         };
     }
 }

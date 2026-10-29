@@ -23,7 +23,7 @@ class FuelStationController extends AdminController
         $filters = $request->filters();
 
         return view('admin.fuel-stations.index', [
-            'title' => 'Yakıt kaynakları',
+            'title' => 'Yakıt yerleri',
             'fuelStations' => $this->stations->paginate($filters, $request->sort()),
             'filters' => $filters,
             'sites' => $this->stations->siteOptions(activeOnly: false),

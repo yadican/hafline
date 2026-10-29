@@ -3,7 +3,7 @@
     $apiRoles = $user->roles->where('guard_name', \App\Support\ApiPermissions::GUARD)->sortBy('name');
 @endphp
 
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Hesap" icon="fa-solid fa-id-card" description="Giriş bilgileri">
         <x-form.field label="Ad soyad">
             <div>{{ $user->name }}</div>

@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Döküm yeri" icon="fa-solid fa-dumpster" description="Döküm ücretleri işletmecinin cari hesabına yazılır">
         <x-form.field label="Ad">
             <div>{{ $dumpSite->name }}</div>

@@ -2,10 +2,10 @@
 
 @section('content')
     <x-panel.page
-        heading="Yakıt kaynağını düzenle"
+        heading="Yakıt yerini düzenle"
         icon="fa-solid fa-pen-to-square"
         :description="$fuelStation->name.' bilgilerini güncelleyin.'"
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt' => null, 'Yakıt kaynakları' => route('admin.fuel-stations.index'), 'Düzenle' => null]"
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt' => null, 'Yakıt yerleri' => route('admin.fuel-stations.index'), 'Düzenle' => null]"
         :back="route('admin.fuel-stations.index')"
     >
         @include('admin.fuel-stations.partials.edit.form')

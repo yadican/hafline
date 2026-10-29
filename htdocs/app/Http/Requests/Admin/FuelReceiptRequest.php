@@ -92,11 +92,11 @@ class FuelReceiptRequest extends FormRequest
                 }
 
                 if ($station && $this->input('unit_price') === null && (float) $station->unit_price <= 0) {
-                    $validator->errors()->add('unit_price', 'Bu yakıt yerinin satış fiyatı yok; fiyatı girin veya yakıt kaynağı kartından tanımlayın.');
+                    $validator->errors()->add('unit_price', 'Bu yakıt yerinin satış fiyatı yok; fiyatı girin veya yakıt yeri kartından tanımlayın.');
                 }
 
                 if ($station && ! $station->isTank() && $this->input('purchase_price') === null && (float) $station->purchase_price <= 0) {
-                    $validator->errors()->add('purchase_price', 'Bu istasyonun alış fiyatı yok; fiyatı girin veya yakıt kaynağı kartından tanımlayın.');
+                    $validator->errors()->add('purchase_price', 'Bu istasyonun alış fiyatı yok; fiyatı girin veya yakıt yeri kartından tanımlayın.');
                 }
 
                 $siteId = $this->input('site_id');

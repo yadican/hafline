@@ -76,7 +76,9 @@ class ShipmentTest extends TestCase
         $this->assertTrue($referrer->fresh()->hasRole(PartyRole::Commission));
 
         $this->actingAs($this->admin)->get(route('admin.shipments.index', ['f' => ['from' => '2026-03-01']]))->assertOk()->assertSee('34 NK 100');
-        $this->actingAs($this->admin)->get(route('admin.shipments.show', $shipment))->assertOk()->assertSee('4.060.000,00 TL');
+        $this->actingAs($this->admin)->get(route('admin.shipments.show', $shipment))->assertOk()
+            ->assertSee('₺4.060.000,00')
+            ->assertSee('Sefer kârı (KDV hariç): ₺691.000,00');
         $this->actingAs($this->admin)->get(route('admin.shipments.edit', $shipment))->assertOk()->assertSee('Kartal şantiyesi');
         $this->actingAs($this->admin)
             ->getJson(route('admin.shipments.lookups.addresses', ['party' => $this->customer->id]))

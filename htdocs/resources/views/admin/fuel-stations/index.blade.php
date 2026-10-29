@@ -2,10 +2,10 @@
 
 @section('content')
     <x-panel.page
-        heading="Yakıt kaynakları"
+        heading="Yakıt yerleri"
         icon="fa-solid fa-gas-pump"
-        description="İstasyonları ve kendi depolarımızı, fiyatlarını ve depo stoğunu yönetin."
-        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt' => null, 'Yakıt kaynakları' => null]"
+        description="İstasyonları ve saha pompalarını, fiyatlarını ve pompa stoğunu yönetin."
+        :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt' => null, 'Yakıt yerleri' => null]"
     >
         @include('admin.fuel-stations.partials.index.toolbar')
         <x-table.list>

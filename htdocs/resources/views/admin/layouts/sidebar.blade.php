@@ -10,8 +10,8 @@
         </div>
     @endcan
 
-    @canany(['view-haul', 'view-machine-work'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*', 'admin.machine-works.*')]) id="um-sec-tickets">
+    @canany(['view-haul', 'view-machine-work', 'view-shipment', 'view-fuel-receipt'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.hauls.*', 'admin.machine-works.*', 'admin.shipments.*', 'admin.fuel-receipts.*')]) id="um-sec-tickets">
             <button type="button" class="um-title" data-um-toggle="um-sec-tickets">
                 <span class="um-title-text">
                     <i class="fa-solid fa-file-invoice um-title-icon" aria-hidden="true"></i>
@@ -26,40 +26,11 @@
                 @can('view-machine-work')
                     <a href="{{ route('admin.machine-works.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.machine-works.*')])>Makine çalışma fişleri</a>
                 @endcan
-            </div>
-        </div>
-    @endcanany
-
-    @can('view-shipment')
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.shipments.*')]) id="um-sec-transport">
-            <button type="button" class="um-title" data-um-toggle="um-sec-transport">
-                <span class="um-title-text">
-                    <i class="fa-solid fa-truck-moving um-title-icon" aria-hidden="true"></i>
-                    <span class="um-title-label">Nakliye</span>
-                </span>
-                <span class="um-caret" aria-hidden="true"></span>
-            </button>
-            <div class="um-items">
-                <a href="{{ route('admin.shipments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.shipments.*')])>Seferler</a>
-            </div>
-        </div>
-    @endcan
-
-    @canany(['view-fuel-receipt', 'view-fuel-station'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.fuel-receipts.*', 'admin.fuel-stations.*')]) id="um-sec-fuel">
-            <button type="button" class="um-title" data-um-toggle="um-sec-fuel">
-                <span class="um-title-text">
-                    <i class="fa-solid fa-gas-pump um-title-icon" aria-hidden="true"></i>
-                    <span class="um-title-label">Yakıt</span>
-                </span>
-                <span class="um-caret" aria-hidden="true"></span>
-            </button>
-            <div class="um-items">
+                @can('view-shipment')
+                    <a href="{{ route('admin.shipments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.shipments.*')])>Nakliye sefer fişleri</a>
+                @endcan
                 @can('view-fuel-receipt')
                     <a href="{{ route('admin.fuel-receipts.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.fuel-receipts.*')])>Yakıt fişleri</a>
-                @endcan
-                @can('view-fuel-station')
-                    <a href="{{ route('admin.fuel-stations.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.fuel-stations.*')])>Yakıt kaynakları ve depo</a>
                 @endcan
             </div>
         </div>
@@ -132,8 +103,8 @@
         </div>
     @endcanany
 
-    @canany(['view-site', 'view-dump-site', 'view-haul-route'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.sites.*', 'admin.dump-sites.*', 'admin.haul-routes.*')]) id="um-sec-field">
+    @canany(['view-site', 'view-dump-site', 'view-fuel-station', 'view-haul-route'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.sites.*', 'admin.dump-sites.*', 'admin.fuel-stations.*', 'admin.haul-routes.*')]) id="um-sec-field">
             <button type="button" class="um-title" data-um-toggle="um-sec-field">
                 <span class="um-title-text">
                     <i class="fa-solid fa-map-location-dot um-title-icon" aria-hidden="true"></i>
@@ -147,6 +118,9 @@
                 @endcan
                 @can('view-dump-site')
                     <a href="{{ route('admin.dump-sites.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.dump-sites.*')])>Döküm yerleri</a>
+                @endcan
+                @can('view-fuel-station')
+                    <a href="{{ route('admin.fuel-stations.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.fuel-stations.*')])>Yakıt yerleri</a>
                 @endcan
                 @can('view-haul-route')
                     <a href="{{ route('admin.haul-routes.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.haul-routes.*')])>Güzergahlar ve fiyatlar</a>

@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Güzergah" icon="fa-solid fa-route" description="Şantiye, döküm yeri ve kullanım durumu">
         <x-form.field label="Şantiye">
             <div>{{ $haulRoute->site?->name ?: '—' }}</div>

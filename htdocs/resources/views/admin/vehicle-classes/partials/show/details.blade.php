@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Araç sınıfı" icon="fa-solid fa-layer-group" description="Sınıf adı ve kullanım durumu">
         <x-form.field label="Ad">
             <div>{{ $vehicleClass->name }}</div>

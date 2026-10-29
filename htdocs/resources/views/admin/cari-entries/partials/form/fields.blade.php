@@ -27,7 +27,7 @@
     </div>
     <p class="panel-hint" x-show="kind === 'site_bill'" x-cloak>Şantiyenin dönem hakedişi: şantiye carisini bu tutarla borçlandırır. Ödeme değildir; tahsilat "Şantiye Gelir / Gider" ile alacak olarak girilir.</p>
     <p class="panel-hint" x-show="kind === 'site'" x-cloak>Alacak: şantiyeden alınan ödeme; şantiyenin carisi varsa ona yazılır. Borç: şantiyede yapılan gider; hiçbir cariye yazılmaz.</p>
-    <p class="panel-hint" x-show="kind === 'fuel'" x-cloak>Yakıt fişleri istasyonu alış fiyatıyla kendiliğinden alacaklandırır; depo dolumu da depo kartından girilir. Buraya sadece fişe bağlı olmayan alımları ve istasyona yapılan ödemeleri girin, yoksa aynı litre iki kez yazılır.</p>
+    <p class="panel-hint" x-show="kind === 'fuel'" x-cloak>Yakıt fişleri istasyonu alış fiyatıyla kendiliğinden alacaklandırır; saha pompasının yakıt dolumu da pompa kartından girilir. Buraya sadece fişe bağlı olmayan alımları ve istasyona yapılan ödemeleri girin, yoksa aynı litre iki kez yazılır.</p>
     <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Carinin sisteme geçmeden önceki bakiyesi. Her cari için bir kez girilir; para hareketi değildir, kasayı etkilemez.</p>
     <p class="panel-hint" x-show="kind === 'party_transfer'" x-cloak>Mahsup: borçlanan carinin bakiyesi artar, alacaklanan carinin bakiyesi aynı tutarda azalır. Kasa ve banka etkilenmez.</p>
     <x-form.input name="description" label="Açıklama" maxlength="255" />

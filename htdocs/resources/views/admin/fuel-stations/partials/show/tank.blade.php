@@ -2,8 +2,8 @@
     $litres = fn ($value): string => rtrim(rtrim(number_format((float) $value, 2, ',', '.'), '0'), ',');
 @endphp
 
-<div class="panel-form-grid panel-form-grid-after" id="depo">
-    <x-form.group legend="Depo stoğu" icon="fa-solid fa-oil-well" description="Dolumlar girer, yakıt fişleri çıkar, sayım farkı düzeltir; maliyet dolumların ağırlıklı ortalamasıdır">
+<div class="panel-form-grid panel-form-grid-after" id="stok">
+    <x-form.group legend="Pompa stoğu" icon="fa-solid fa-oil-well" description="Dolumlar girer, yakıt fişleri çıkar, sayım farkı düzeltir; maliyet dolumların ağırlıklı ortalamasıdır">
         <x-form.field label="Stok">
             <div><strong>{{ $litres($tank['stock']['quantity']) }} lt</strong></div>
         </x-form.field>
@@ -17,7 +17,7 @@
 </div>
 
 <div class="panel-form-grid panel-form-grid-after">
-    <x-form.group legend="Dolumlar" icon="fa-solid fa-truck-droplet" description="Tedarikçi carisine alış tutarı kadar alacak yazılır" class="is-wide">
+    <x-form.group legend="Yakıt dolumları" icon="fa-solid fa-truck-droplet" description="Tedarikçi carisine alış tutarı kadar alacak yazılır" class="is-wide">
         @if ($tank['fills']->isNotEmpty())
             <table class="panel-subtable">
                 <thead>
@@ -43,7 +43,7 @@
                             @can('delete-fuel-tank')
                                 <x-table.actions
                                     :delete="route('admin.fuel-stations.fills.destroy', [$fuelStation, $fill])"
-                                    confirm="Dolum silinsin mi?"
+                                    confirm="Yakıt dolumu silinsin mi?"
                                     :confirm-text="$fill->party?->name.' carisine yazılan alacak geri alınır ve stok düşer.'"
                                 />
                             @else
@@ -54,7 +54,7 @@
                 </tbody>
             </table>
         @else
-            <p class="panel-hint">Henüz dolum girilmedi.</p>
+            <p class="panel-hint">Henüz yakıt dolumu girilmedi.</p>
         @endif
 
         @can('create-fuel-tank')
@@ -72,7 +72,7 @@
 </div>
 
 <div class="panel-form-grid panel-form-grid-after">
-    <x-form.group legend="Sayımlar" icon="fa-solid fa-ruler-vertical" description="Sayılan litre ile o günkü kayıtlı stok arasındaki fark stoğu düzeltir; cariye yazılmaz" class="is-wide">
+    <x-form.group legend="Yakıt sayımları" icon="fa-solid fa-ruler-vertical" description="Sayılan litre ile o günkü kayıtlı stok arasındaki fark stoğu düzeltir; cariye yazılmaz" class="is-wide">
         @if ($tank['counts']->isNotEmpty())
             <table class="panel-subtable">
                 <thead>
@@ -94,7 +94,7 @@
                             @can('delete-fuel-tank')
                                 <x-table.actions
                                     :delete="route('admin.fuel-stations.counts.destroy', [$fuelStation, $count])"
-                                    confirm="Sayım silinsin mi?"
+                                    confirm="Yakıt sayımı silinsin mi?"
                                     confirm-text="Sayım farkı stoktan geri alınır."
                                 />
                             @else
@@ -105,7 +105,7 @@
                 </tbody>
             </table>
         @else
-            <p class="panel-hint">Henüz sayım girilmedi.</p>
+            <p class="panel-hint">Henüz yakıt sayımı girilmedi.</p>
         @endif
 
         @can('create-fuel-tank')

@@ -4,7 +4,7 @@
     <x-panel.page
         heading="Yeni yakıt fişi"
         icon="fa-solid fa-plus"
-        description="Litre × birim fiyat araç sahibinin carisine borç yazılır. Akaryakıt firmasına ödeme bu fişten yapılmaz."
+        description="Veren yakıt yeri alış fiyatıyla alacaklanır, aracın sahibi satış fiyatıyla borçlanır; aradaki fark komisyondur."
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt fişleri' => route('admin.fuel-receipts.index'), 'Yeni fiş' => null]"
         :back="route('admin.fuel-receipts.index')"
     >

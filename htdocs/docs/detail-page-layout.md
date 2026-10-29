@@ -59,18 +59,18 @@ Uygulanmış sayfalar (örnek olarak bakılabilir):
 
 ## Kalan sayfalar
 
-- [ ] `banks/partials/show/details.blade.php`
-- [ ] `cari-entries/partials/show/details.blade.php`
-- [ ] `cash-categories/partials/show/details.blade.php`
-- [ ] `dump-sites/partials/show/details.blade.php`
-- [ ] `employees/partials/show/details.blade.php`
-- [ ] `employee-bonuses/show.blade.php` (grid doğrudan show dosyasında)
-- [ ] `employee-payments/show.blade.php` (grid doğrudan show dosyasında)
-- [ ] `fuel-stations/partials/show/details.blade.php` (yukarıdaki uyarıya bak)
-- [ ] `haul-routes/partials/show/details.blade.php` (yalnızca ilk grid; ikinci grid tablo)
-- [ ] `parties/partials/show/details.blade.php`
-- [ ] `roles/partials/show/details.blade.php` (izin grubu etiketlerinin uzunluğunu kontrol et)
-- [ ] `sites/partials/show/details.blade.php` (iki grid var; ikincisinin içeriğine bak)
-- [ ] `users/partials/show/details.blade.php`
-- [ ] `vehicle-classes/partials/show/details.blade.php`
-- [ ] `vehicles/partials/show/details.blade.php` (yalnızca details; ownerships ve rates tablo)
+- [x] `banks/partials/show/details.blade.php`
+- [x] `cari-entries/partials/show/details.blade.php`
+- [x] `cash-categories/partials/show/details.blade.php`
+- [x] `dump-sites/partials/show/details.blade.php`
+- [x] `employees/partials/show/details.blade.php`
+- [x] `employee-bonuses/show.blade.php` (grid doğrudan show dosyasında)
+- [x] `employee-payments/show.blade.php` (grid doğrudan show dosyasında)
+- [x] `fuel-stations/partials/show/details.blade.php` (yukarıdaki uyarıya bak)
+- [x] `haul-routes/partials/show/details.blade.php` (yalnızca ilk grid; ikinci grid tablo)
+- [x] `parties/partials/show/details.blade.php`
+- [x] `roles/partials/show/details.blade.php` (izin grubu etiketlerinin uzunluğunu kontrol et)
+- [x] `sites/partials/show/details.blade.php` (iki grid var; ikincisinin içeriğine bak)
+- [x] `users/partials/show/details.blade.php`
+- [x] `vehicle-classes/partials/show/details.blade.php`
+- [x] `vehicles/partials/show/details.blade.php` (yalnızca details; ownerships ve rates tablo)

@@ -47,7 +47,7 @@
                                 @elseif ($entry->source_type === 'shipment' && $entry->source && ! $entry->source->trashed())
                                     <a href="{{ route('admin.shipments.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'fuel_tank_fill' && $entry->source && ! $entry->source->trashed())
-                                    <a href="{{ route('admin.fuel-stations.show', $entry->source->fuel_station_id) }}#depo">{{ $entry->description }}</a>
+                                    <a href="{{ route('admin.fuel-stations.show', $entry->source->fuel_station_id) }}#stok">{{ $entry->description }}</a>
                                 @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction'], true) && $entry->source && ! $entry->source->trashed())
                                     @php
                                         $cariKind = match ($entry->source_type) {

@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Hareket" icon="fa-solid fa-right-left" description="İşlem türü, yön, tutar ve tarih">
         <x-form.field label="İşlem">
             <div>{{ $kind->label() }}</div>

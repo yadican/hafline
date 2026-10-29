@@ -14,7 +14,7 @@
             @endcan
         </x-slot:actions>
 
-        <div class="panel-form-grid">
+        <div class="panel-form-grid is-detail">
             <x-form.group legend="Ödeme" icon="fa-solid fa-money-bill-transfer" description="Personel, tutar ve dönem">
                 <x-form.field label="Personel">
                     <div>

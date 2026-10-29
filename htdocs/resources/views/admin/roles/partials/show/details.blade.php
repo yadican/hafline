@@ -2,7 +2,7 @@
     use App\Support\PermissionGroups;
 @endphp
 
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Rol" icon="fa-solid fa-user-shield" description="Rol adı ve guard">
         <x-form.field label="Ad">
             <div>{{ $role->name }}</div>
@@ -16,16 +16,20 @@
     </x-form.group>
 
     <x-form.group legend="İzinler" icon="fa-solid fa-key" description="Bu role verilmiş yetkiler" class="is-wide">
-        @forelse ($permissionGroups as $groupKey => $permissions)
-            <x-form.field :label="PermissionGroups::labelFor($groupKey)">
-                <div class="panel-chips">
-                    @foreach ($permissions as $permission)
-                        <span class="panel-chip">{{ $permission->name }}</span>
-                    @endforeach
-                </div>
-            </x-form.field>
-        @empty
+        @if ($permissionGroups->isNotEmpty())
+            <div class="panel-detail-columns">
+                @foreach ($permissionGroups as $groupKey => $permissions)
+                    <x-form.field :label="PermissionGroups::labelFor($groupKey)">
+                        <div class="panel-chips">
+                            @foreach ($permissions as $permission)
+                                <span class="panel-chip">{{ $permission->name }}</span>
+                            @endforeach
+                        </div>
+                    </x-form.field>
+                @endforeach
+            </div>
+        @else
             <p class="panel-hint">Bu role henüz izin verilmemiş.</p>
-        @endforelse
+        @endif
     </x-form.group>
 </div>

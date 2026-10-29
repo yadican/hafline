@@ -18,14 +18,14 @@
                 :show="route('admin.fuel-stations.show', $fuelStation)"
                 :edit="auth()->user()->can('edit-fuel-station') ? route('admin.fuel-stations.edit', $fuelStation) : null"
                 :delete="auth()->user()->can('delete-fuel-station') ? route('admin.fuel-stations.destroy', $fuelStation) : null"
-                confirm="Yakıt kaynağı silinsin mi?"
+                confirm="Yakıt yeri silinsin mi?"
                 :confirm-text="$fuelStation->name.' listeden kaldırılacak. Geçmiş yakıt fişleri etkilenmez.'"
             />
         </tr>
     @empty
         @if (empty($filters))
-            <x-table.empty colspan="8" icon="fa-solid fa-gas-pump" title="Henüz yakıt kaynağı yok." text="Yakıt fişlerinde seçmek için istasyon ya da depo ekleyin.">
-                <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.fuel-stations.create')">Yeni kaynak</x-ui.button>
+            <x-table.empty colspan="8" icon="fa-solid fa-gas-pump" title="Henüz yakıt yeri yok." text="Yakıt fişlerinde seçmek için istasyon ya da saha pompası ekleyin.">
+                <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.fuel-stations.create')">Yeni yakıt yeri</x-ui.button>
             </x-table.empty>
         @else
             <x-table.no-results colspan="8" :reset="route('admin.fuel-stations.index')" />

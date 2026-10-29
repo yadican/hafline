@@ -38,7 +38,7 @@ class FuelStationFactory extends Factory
     public function tank(): static
     {
         return $this->state([
-            'name' => mb_strtoupper(fake()->unique()->city(), 'UTF-8').' DEPO',
+            'name' => mb_strtoupper(fake()->unique()->city(), 'UTF-8').' POMPA',
             'type' => FuelSourceType::Tank,
             'party_id' => null,
             'purchase_price' => 0,

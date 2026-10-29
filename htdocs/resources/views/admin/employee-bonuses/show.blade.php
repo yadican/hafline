@@ -14,7 +14,7 @@
             @endcan
         </x-slot:actions>
 
-        <div class="panel-form-grid">
+        <div class="panel-form-grid is-detail">
             <x-form.group legend="Prim" icon="fa-solid fa-gift" description="Personel, tutar ve tarih">
                 <x-form.field label="Personel">
                     <div>

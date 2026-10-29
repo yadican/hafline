@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Kişi" icon="fa-solid fa-user" description="Ad ve iletişim bilgisi cari karttan yönetilir">
         <x-form.field label="Ad soyad">
             <div>{{ $employee->name ?: '—' }}</div>

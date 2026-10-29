@@ -1,5 +1,5 @@
-<div class="panel-form-grid">
-    <x-form.group legend="Yakıt kaynağı" icon="fa-solid fa-gas-pump" :description="$fuelStation->isTank() ? 'Kendi depomuz; yakıt bizimdir, stok tutulur' : 'İstasyon; fişler firmaya alış fiyatıyla alacak yazar'">
+<div class="panel-form-grid is-detail">
+    <x-form.group legend="Yakıt yeri" icon="fa-solid fa-gas-pump" :description="$fuelStation->isTank() ? 'Saha pompası; yakıt bizimdir, stok tutulur' : 'İstasyon; fişler firmaya alış fiyatıyla alacak yazar'">
         <x-form.field label="Ad">
             <div>{{ $fuelStation->name }}</div>
         </x-form.field>
@@ -12,7 +12,17 @@
             </x-form.field>
         @endunless
         <x-form.field label="Şantiyeler">
-            <div>{{ $fuelStation->sites->pluck('name')->join(', ') ?: '—' }}</div>
+            <div>
+                @if ($fuelStation->sites->isNotEmpty())
+                    <span class="panel-chips">
+                        @foreach ($fuelStation->sites as $site)
+                            <span class="panel-chip">{{ $site->name }}</span>
+                        @endforeach
+                    </span>
+                @else
+                    —
+                @endif
+            </div>
         </x-form.field>
         <x-form.field label="Durum">
             <div><x-ui.active-badge :active="$fuelStation->active" /></div>

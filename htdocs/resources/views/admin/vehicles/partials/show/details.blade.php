@@ -2,7 +2,7 @@
     $currentOwner = $vehicle->ownerships->firstWhere('ended_on', null)?->party;
 @endphp
 
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Araç" icon="fa-solid fa-truck" description="Plaka, sınıf ve kullanım durumu">
         <x-form.field label="Plaka">
             <div><span class="panel-plate-text">{{ $vehicle->plate }}</span></div>

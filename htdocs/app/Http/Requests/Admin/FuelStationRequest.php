@@ -80,7 +80,7 @@ class FuelStationRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name' => 'kaynak adı',
+            'name' => 'yakıt yeri adı',
             'type' => 'tür',
             'product' => 'ürün',
             'party_id' => 'akaryakıt firması',

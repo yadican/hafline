@@ -65,7 +65,7 @@ class HaulRouteTest extends TestCase
         $this->assertSame(['5000.00'], $route->sitePrices()->pluck('price')->all());
 
         $this->actingAs($this->admin)
-            ->get(route('admin.haul-routes.index'))
+            ->get(route('admin.haul-routes.show', $route))
             ->assertSee('4.200,50 TL');
     }
 

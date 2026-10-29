@@ -5,7 +5,7 @@
         class="haul-list"
         heading="Yakıt fişleri"
         icon="fa-solid fa-gas-pump"
-        description="Araçlara alınan yakıtı görüntüleyin. Tutar, araç sahibinin carisine borç yazılır."
+        description="Araçlara verilen yakıtı görüntüleyin. Araç sahibi satış fiyatıyla borçlanır, istasyon alış fiyatıyla alacaklanır."
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Yakıt fişleri' => null]"
     >
         <div x-data="{ searchOpen: false }">

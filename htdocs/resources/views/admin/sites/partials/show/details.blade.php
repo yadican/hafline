@@ -4,7 +4,7 @@
     $dumpSites = $site->routes->pluck('dumpSite')->filter()->unique('id')->sortBy('name');
 @endphp
 
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Şantiye" icon="fa-solid fa-helmet-safety" description="Şantiye adı ve kullanım durumu">
         <x-form.field label="Ad">
             <div>{{ $site->name }}</div>

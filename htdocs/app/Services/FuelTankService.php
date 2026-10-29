@@ -90,7 +90,7 @@ class FuelTankService extends Service
                     $fill->party_id,
                     $fill->filled_on,
                     $fill->total(),
-                    sprintf('Depo dolumu%s · %s · %s lt', $fill->document_no ? ' '.$fill->document_no : '', $tank->name, rtrim(rtrim(number_format((float) $fill->quantity, 2, ',', '.'), '0'), ',')),
+                    sprintf('Yakıt dolumu%s · %s · %s lt', $fill->document_no ? ' '.$fill->document_no : '', $tank->name, rtrim(rtrim(number_format((float) $fill->quantity, 2, ',', '.'), '0'), ',')),
                 ),
             ]);
 
@@ -135,7 +135,7 @@ class FuelTankService extends Service
     private function assertTank(FuelStation $tank): void
     {
         if (! $tank->isTank()) {
-            throw new OperationRejectedException('Dolum ve sayım sadece kendi depomuz için girilir.');
+            throw new OperationRejectedException('Dolum ve sayım sadece saha pompası için girilir.');
         }
     }
 }

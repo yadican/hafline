@@ -1,4 +1,4 @@
-<div class="panel-form-grid">
+<div class="panel-form-grid is-detail">
     <x-form.group legend="Kasa kategorisi" icon="fa-solid fa-tags" description="Kategori adı, yönü ve kullanım durumu">
         <x-form.field label="Ad">
             <div>{{ $cashCategory->name }}</div>

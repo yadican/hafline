@@ -28,7 +28,7 @@ class FuelTankController extends AdminController
         return $this->complete(
             fn () => $this->tanks->addFill($fuelStation, $request->validated(), $request->user()?->id),
             'admin.fuel-stations.show',
-            'Depo dolumu kaydedildi.',
+            'Yakıt dolumu kaydedildi.',
             [$fuelStation],
         );
     }
@@ -38,7 +38,7 @@ class FuelTankController extends AdminController
         return $this->complete(
             fn () => $this->tanks->deleteFill($fill),
             'admin.fuel-stations.show',
-            'Depo dolumu silindi.',
+            'Yakıt dolumu silindi.',
             [$fuelStation],
         );
     }
@@ -48,7 +48,7 @@ class FuelTankController extends AdminController
         return $this->complete(
             fn () => $this->tanks->addCount($fuelStation, $request->validated(), $request->user()?->id),
             'admin.fuel-stations.show',
-            'Depo sayımı kaydedildi.',
+            'Yakıt sayımı kaydedildi.',
             [$fuelStation],
         );
     }
@@ -58,7 +58,7 @@ class FuelTankController extends AdminController
         return $this->complete(
             fn () => $this->tanks->deleteCount($count),
             'admin.fuel-stations.show',
-            'Depo sayımı silindi.',
+            'Yakıt sayımı silindi.',
             [$fuelStation],
         );
     }

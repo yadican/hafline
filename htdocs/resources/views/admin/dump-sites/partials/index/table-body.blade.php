@@ -3,7 +3,6 @@
         <tr>
             <td>{{ $dumpSite->name }}</td>
             <td>{{ $dumpSite->party?->name ?? '—' }}</td>
-            <td><x-ui.class-prices :prices="$dumpSite->classPrices" empty="Ücret yok" /></td>
             <td class="is-center">
                 @if ($dumpSite->routes_count)
                     <a href="{{ route('admin.haul-routes.index', ['dump_site' => $dumpSite->id]) }}" title="Bu döküm yerinin güzergahlarını göster">{{ $dumpSite->routes_count }}</a>
@@ -22,11 +21,11 @@
         </tr>
     @empty
         @if (empty($filters))
-            <x-table.empty colspan="6" icon="fa-solid fa-dumpster" title="Henüz döküm yeri yok." text="Taşıma fişlerinde seçmek için döküm yerlerini ekleyin.">
+            <x-table.empty colspan="5" icon="fa-solid fa-dumpster" title="Henüz döküm yeri yok." text="Taşıma fişlerinde seçmek için döküm yerlerini ekleyin.">
                 <x-ui.button variant="create" icon="fa-solid fa-plus" :href="route('admin.dump-sites.create')">Yeni döküm yeri</x-ui.button>
             </x-table.empty>
         @else
-            <x-table.no-results colspan="6" :reset="route('admin.dump-sites.index')" />
+            <x-table.no-results colspan="5" :reset="route('admin.dump-sites.index')" />
         @endif
     @endforelse
 </tbody>

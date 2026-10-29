@@ -50,9 +50,9 @@ function setSelect(select, value) {
     }
 }
 
-// Yakıt kaynağı değişince fiyatlar kaynağın kartından gelir ve tek şantiyesi varsa o seçilir.
-// Kendi depomuzda alış fiyatı yoktur (dolumda tedarikçiye yazıldı). Düzenlemede kayıtlı fiyatlar,
-// kaynak değişmedikçe korunur.
+// Yakıt yeri değişince fiyatlar yakıt yerinin kartından gelir ve tek şantiyesi varsa o seçilir.
+// Saha pompasında alış fiyatı yoktur (dolumda tedarikçiye yazıldı). Düzenlemede kayıtlı fiyatlar,
+// yakıt yeri değişmedikçe korunur.
 function bindStation(form) {
     const station = form.querySelector('[data-fuel-station]');
     const hint = form.querySelector('[data-fuel-station-hint]');
@@ -60,40 +60,52 @@ function bindStation(form) {
     const quantity = form.querySelector('[data-fuel-quantity]');
     const price = form.querySelector('[data-fuel-price]');
     const purchase = form.querySelector('[data-fuel-purchase-price]');
-    const total = form.querySelector('[data-fuel-total]');
+    const purchaseField = form.querySelector('[data-fuel-purchase-field]');
+    const costLabel = form.querySelector('[data-fuel-cost-label]');
+    const costNote = form.querySelector('[data-fuel-cost-note]');
+    const cost = form.querySelector('[data-fuel-cost]');
+    const sale = form.querySelector('[data-fuel-sale]');
+    const marginRow = form.querySelector('[data-fuel-margin-row]');
+    const margin = form.querySelector('[data-fuel-margin]');
 
-    if (! station || ! hint || ! price || ! total || ! quantity || ! form.dataset.stationUrl) {
+    if (! station || ! hint || ! price || ! quantity || ! cost || ! sale || ! margin || ! form.dataset.stationUrl) {
         return;
     }
 
     let request = 0;
     let tank = false;
 
+    const line = (litres, rate) => `${formatQuantity(litres)} lt × ${money.format(rate)} = ₺${money.format(litres * rate)}`;
+
     const renderTotal = () => {
-        if (price.value === '' || quantity.value === '') {
-            setStatus(total, 'idle', 'Litre × satış fiyatı araç sahibine borç yazılır');
-
-            return;
-        }
-
         const litres = parseNumber(quantity.value);
-        const sale = litres * parseNumber(price.value);
-        let text = `${formatQuantity(litres)} lt × ${money.format(parseNumber(price.value))} TL = ${money.format(sale)} TL borç`;
+        const hasLitres = quantity.value !== '' && litres > 0;
+        const hasSale = hasLitres && price.value !== '';
+        const hasCost = hasLitres && ! tank && Boolean(purchase?.value);
 
-        if (! tank && purchase && purchase.value !== '') {
-            const cost = litres * parseNumber(purchase.value);
+        sale.textContent = hasSale ? line(litres, parseNumber(price.value)) : '—';
 
-            text += ` · istasyona ${money.format(cost)} TL alacak · fark ${money.format(sale - cost)} TL`;
+        if (tank) {
+            costLabel.textContent = 'SAHA POMPASI:';
+            cost.textContent = hasLitres ? `${formatQuantity(litres)} lt stoktan düşer` : '—';
+            costNote.textContent = 'Yakıt bizim; cariye alacak yazılmaz, maliyet pompa stoğundan gelir';
+        } else {
+            costLabel.textContent = 'İSTASYONA ALACAK:';
+            cost.textContent = hasCost ? line(litres, parseNumber(purchase.value)) : '—';
+            costNote.textContent = 'Litre × alış fiyatı istasyonun carisine alacak yazılır';
         }
 
-        setStatus(total, 'ok', text);
+        marginRow.hidden = tank;
+        margin.textContent = hasSale && hasCost
+            ? `₺${money.format(litres * parseNumber(price.value) - litres * parseNumber(purchase.value))}`
+            : '—';
     };
 
     const refresh = async (keepPrice) => {
         const current = ++request;
 
         if (! station.value) {
-            setStatus(hint, 'idle', 'Seçilince kaynağın fiyatları gelir');
+            setStatus(hint, 'idle', 'Seçilince yakıt yerinin fiyatları gelir');
             renderTotal();
 
             return;
@@ -107,12 +119,16 @@ function bindStation(form) {
             }
 
             tank = Boolean(info.tank);
-            setStatus(hint, 'ok', tank ? 'Kendi depomuz; stoktan düşer' : `Akaryakıt firması: ${info.party ?? ''}`);
+            setStatus(hint, 'ok', tank ? 'Saha pompası; stoktan düşer' : `Akaryakıt firması: ${info.party ?? ''}`);
 
             if (! keepPrice || price.value === '') {
                 const rate = Number(info.unit_price);
 
                 price.value = rate > 0 ? rate.toFixed(4) : '';
+            }
+
+            if (purchaseField) {
+                purchaseField.hidden = tank;
             }
 
             if (purchase) {
