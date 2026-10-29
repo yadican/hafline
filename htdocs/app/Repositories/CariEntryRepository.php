@@ -2,8 +2,13 @@
 
 namespace App\Repositories;
 
+use App\Models\LedgerEntry;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CariEntryRepository
@@ -25,6 +30,34 @@ class CariEntryRepository
             ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Newest first, each change of the entry that moved a balance: the lines it posted before
+     * (cari, amount, side) and the lines it posts now. The first posting is not a change.
+     *
+     * @return Collection<int, array{changed_at: Carbon, user: ?User, before: Collection<int, LedgerEntry>, after: Collection<int, LedgerEntry>}>
+     */
+    public function corrections(Model $entry): Collection
+    {
+        return LedgerEntry::query()
+            ->with(['party', 'creator', 'reversed.party'])
+            ->where('source_type', $entry->getMorphClass())
+            ->where('source_id', $entry->getKey())
+            ->whereNotNull('revision_id')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('revision_id')
+            ->filter(fn (Collection $rows) => $rows->whereNotNull('reversal_of')->isNotEmpty())
+            ->map(fn (Collection $rows): array => [
+                'changed_at' => $rows->last()->created_at,
+                'user' => $rows->first()->creator,
+                'before' => $rows->whereNotNull('reversal_of')->map(fn (LedgerEntry $reversal) => $reversal->reversed)->values(),
+                'after' => $rows->whereNull('reversal_of')->values(),
+            ])
+            ->reverse()
+            ->values();
     }
 
     /**

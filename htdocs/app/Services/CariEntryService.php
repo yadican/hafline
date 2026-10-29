@@ -37,6 +37,7 @@ use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class CariEntryService extends Service
 {
@@ -187,7 +188,7 @@ class CariEntryService extends Service
     /**
      * Read-only labels for the detail screen; links holds only the fields this kind uses.
      *
-     * @return array{direction: string, amount: string, occurred_on: Carbon, payment_method: ?PaymentMethod, category: ?string, description: ?string, links: array<string, string>, instrument: ?FinancialInstrument}
+     * @return array{direction: string, amount: string, occurred_on: Carbon, payment_method: ?PaymentMethod, category: ?string, description: ?string, links: array<string, string>, instrument: ?FinancialInstrument, corrections: ?Collection<int, array<string, mixed>>}
      */
     public function details(CariEntryKind $kind, string $id): array
     {
@@ -222,6 +223,7 @@ class CariEntryService extends Service
             'description' => $form['description'],
             'links' => $links,
             'instrument' => $form['instrument'],
+            'corrections' => $kind->postsLedger() ? $this->entries->corrections($this->find($kind, $id)) : null,
         ];
     }
 

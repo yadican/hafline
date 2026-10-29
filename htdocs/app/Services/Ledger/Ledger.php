@@ -5,6 +5,7 @@ namespace App\Services\Ledger;
 use App\Models\LedgerEntry;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * Keeps a source document's postings in step with what it says now. Posted rows are never
@@ -26,6 +27,7 @@ class Ledger
             ->map(fn (LedgerLine $line) => $line->postedBy($source))
             ->values();
         $stale = [];
+        $revision = (string) Str::uuid();
 
         foreach ($this->live($source) as $entry) {
             $key = $this->lineOf($entry)->key();
@@ -38,7 +40,7 @@ class Ledger
             }
         }
 
-        $this->reverse($stale);
+        $this->reverse($stale, $revision);
 
         foreach ($wanted as $line) {
             LedgerEntry::query()->create([
@@ -55,6 +57,7 @@ class Ledger
                 'module' => $line->module,
                 'site_id' => $line->siteId,
                 'bank_id' => $line->bankId,
+                'revision_id' => $revision,
                 'created_by' => auth()->id(),
             ]);
         }
@@ -62,7 +65,7 @@ class Ledger
 
     public function void(Model $source): void
     {
-        $this->reverse($this->live($source));
+        $this->reverse($this->live($source), (string) Str::uuid());
     }
 
     /**
@@ -102,7 +105,7 @@ class Ledger
     /**
      * @param  iterable<LedgerEntry>  $entries
      */
-    private function reverse(iterable $entries): void
+    private function reverse(iterable $entries, string $revision): void
     {
         foreach ($entries as $entry) {
             LedgerEntry::query()->create([
@@ -120,6 +123,7 @@ class Ledger
                 'site_id' => $entry->site_id,
                 'bank_id' => $entry->bank_id,
                 'reversal_of' => $entry->id,
+                'revision_id' => $revision,
                 'created_by' => auth()->id(),
             ]);
         }

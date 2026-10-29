@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'site_id',
     'bank_id',
     'reversal_of',
+    'revision_id',
     'created_by',
 ])]
 class LedgerEntry extends Model
@@ -82,6 +83,14 @@ class LedgerEntry extends Model
     public function source(): MorphTo
     {
         return $this->morphTo()->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by')->withTrashed();
     }
 
     /**

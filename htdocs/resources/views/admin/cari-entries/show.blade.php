@@ -15,5 +15,8 @@
         </x-slot:actions>
 
         @include('admin.cari-entries.partials.show.details')
+        @if ($details['corrections'] !== null)
+            @include('admin.cari-entries.partials.show.corrections', ['corrections' => $details['corrections']])
+        @endif
     </x-panel.page>
 @endsection

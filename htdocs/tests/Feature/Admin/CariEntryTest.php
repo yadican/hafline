@@ -94,6 +94,46 @@ class CariEntryTest extends TestCase
             ->assertSee('Malzeme');
     }
 
+    public function test_show_page_lists_each_change_of_the_cari_and_amount(): void
+    {
+        $this->travelTo('2026-10-30 09:15:00');
+        $first = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => 'ESKİ SATICI']);
+        $second = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => 'YENİ SATICI']);
+        $payload = [
+            'kind' => 'supplier',
+            'direction' => 'credit',
+            'party_id' => $first->id,
+            'amount' => '1000',
+            'occurred_on' => '2026-10-01',
+            'payment_method' => 'cash',
+            'bank_id' => $this->cashBox->id,
+        ];
+        $this->actingAs($this->admin)->post(route('admin.cari-entries.store'), $payload)->assertSessionHasNoErrors();
+        $show = route('admin.cari-entries.show', ['kind' => 'supplier', 'entry' => CompanyTransaction::query()->sole()->id]);
+        $update = route('admin.cari-entries.update', ['kind' => 'supplier', 'entry' => CompanyTransaction::query()->sole()->id]);
+
+        $this->actingAs($this->admin)->get($show)
+            ->assertOk()
+            ->assertSee('Bu hareket kaydedildiğinden beri cari, tutar veya yönü değiştirilmedi.');
+
+        $this->actingAs($this->admin)->put($update, [...$payload, 'party_id' => $second->id])->assertSessionHasNoErrors();
+        $this->travelTo('2026-10-30 10:40:00');
+        $this->actingAs($this->admin)->put($update, [...$payload, 'party_id' => $second->id, 'amount' => '1200'])->assertSessionHasNoErrors();
+        $this->actingAs($this->admin)->put($update, [...$payload, 'party_id' => $second->id, 'amount' => '1200', 'description' => 'Not'])->assertSessionHasNoErrors();
+
+        $response = $this->actingAs($this->admin)->get($show)->assertOk();
+
+        $corrections = $response->viewData('details')['corrections'];
+        $this->assertCount(2, $corrections);
+        $this->assertSame('1000.00', $corrections[0]['before']->sole()->credit);
+        $this->assertSame('1200.00', $corrections[0]['after']->sole()->credit);
+        $this->assertSame($first->id, $corrections[1]['before']->sole()->party_id);
+        $this->assertSame($second->id, $corrections[1]['after']->sole()->party_id);
+        $this->assertSame($this->admin->id, $corrections[1]['user']->id);
+        $response->assertSeeInOrder(['Düzeltme geçmişi', '30.10.2026 10:40', '30.10.2026 09:15', 'ESKİ SATICI', 'YENİ SATICI'])
+            ->assertSee($this->admin->name);
+    }
+
     public function test_view_permission_can_show_an_entry_but_cannot_edit(): void
     {
         (new RolePermissionSeeder)->run();

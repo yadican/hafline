@@ -86,6 +86,28 @@ class LedgerTest extends TestCase
         $this->assertSame(0.0, (float) LedgerEntry::query()->where('party_id', $second->id)->get()->sum(fn ($e) => $e->debit - $e->credit));
     }
 
+    public function test_each_change_writes_its_reversals_and_new_lines_under_one_revision(): void
+    {
+        $haul = Haul::factory()->create();
+        $first = Party::factory()->create();
+        $second = Party::factory()->create();
+        $ledger = app(Ledger::class);
+        $day = Carbon::parse('2026-05-01');
+        $ledger->sync($haul, [LedgerLine::credit($first->id, $day, 1000, 'A')]);
+        $posted = LedgerEntry::query()->sole();
+
+        $ledger->sync($haul, [LedgerLine::credit($second->id, $day, 1000, 'A')]);
+        $ledger->void($haul);
+
+        $switch = LedgerEntry::query()->where('reversal_of', $posted->id)->sole();
+        $moved = LedgerEntry::query()->where('party_id', $second->id)->whereNull('reversal_of')->sole();
+        $voided = LedgerEntry::query()->where('reversal_of', $moved->id)->sole();
+        $this->assertNotNull($switch->revision_id);
+        $this->assertSame($switch->revision_id, $moved->revision_id);
+        $this->assertNotSame($posted->revision_id, $switch->revision_id);
+        $this->assertNotSame($switch->revision_id, $voided->revision_id);
+    }
+
     public function test_only_the_changed_line_is_reversed_and_reposted(): void
     {
         $haul = Haul::factory()->create();
