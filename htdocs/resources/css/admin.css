@@ -908,7 +908,7 @@ input.panel-plate::placeholder {
 }
 
 .panel-form-grid .panel-money input.slct {
-    padding-right: 44px;
+    padding-right: calc(var(--money-suffix, 2ch) + 24px);
 }
 
 .panel-money-suffix {

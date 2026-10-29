@@ -5,7 +5,7 @@
 @endphp
 
 <div @class([
-    'mt-3 rounded-lg border px-4 py-3 text-sm',
+    'mt-auto rounded-lg border px-4 py-3 text-sm',
     'border-red-300 bg-red-50' => $carrier,
     'border-green-300 bg-green-50' => ! $carrier,
 ]) data-shipment-totals="{{ $side }}">

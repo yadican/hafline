@@ -10,7 +10,7 @@
 @endphp
 
 <x-form.field :label="$label" :for="$id" :name="$name">
-    <div class="panel-money">
+    <div class="panel-money" style="--money-suffix: {{ mb_strlen($suffix) }}ch">
         <input
             id="{{ $id }}"
             name="{{ $field }}"
