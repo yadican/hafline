@@ -105,6 +105,15 @@ enum CariEntryKind: string
     }
 
     /**
+     * Kinds whose cheque or note goes into the portfolio. A plate receivable records what the plate
+     * earned, not a payment; Kasa Nakit has no payment method.
+     */
+    public function tracksInstruments(): bool
+    {
+        return $this->movesMoney() && ! in_array($this, [self::Cash, self::VehicleReceivable], true);
+    }
+
+    /**
      * A site entry posts only a collection, and only when the site has its own cari.
      */
     public function postsLedger(): bool

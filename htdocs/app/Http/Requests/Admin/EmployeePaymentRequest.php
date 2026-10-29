@@ -34,7 +34,7 @@ class EmployeePaymentRequest extends FormRequest
         return [
             'employee_id' => ['required', 'uuid', Rule::exists('employees', 'id')->withoutTrashed()],
             'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
-            'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)->except([PaymentMethod::Cheque, PaymentMethod::PromissoryNote])],
             'bank_id' => ['nullable', 'uuid'],
             'year' => ['required', 'integer', 'min:2000', 'max:2100'],
             'month' => ['required', 'integer', 'min:1', 'max:12'],

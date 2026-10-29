@@ -2,6 +2,7 @@
 
 namespace App\Services\Ledger;
 
+use App\Models\FinancialInstrument;
 use App\Models\VehicleOwnership;
 use App\Repositories\Reports\OwnerBalanceReportRepository;
 use App\Repositories\Reports\VehicleBalanceReportRepository;
@@ -47,6 +48,9 @@ class LedgerAudit
         union all select 'opening_balance', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), debit, credit from opening_balances where deleted_at is null
         union all select 'party_transfer', cast(id as text), cast(debit_party_id as text), substr(cast(occurred_on as text), 1, 10), amount, 0 from party_transfers where deleted_at is null
         union all select 'party_transfer', cast(id as text), cast(credit_party_id as text), substr(cast(occurred_on as text), 1, 10), 0, amount from party_transfers where deleted_at is null
+        union all select 'financial_instrument_movement', cast(m.id as text), cast(m.party_id as text), substr(cast(m.occurred_on as text), 1, 10), i.amount, 0 from financial_instrument_movements m join financial_instruments i on i.id = m.financial_instrument_id where m.deleted_at is null and m.type = 'endorse'
+        union all select 'financial_instrument_movement', cast(m.id as text), cast(i.party_id as text), substr(cast(m.occurred_on as text), 1, 10), case when i.direction = 'received' then i.amount else 0 end, case when i.direction = 'given' then i.amount else 0 end from financial_instrument_movements m join financial_instruments i on i.id = m.financial_instrument_id where m.deleted_at is null and m.type = 'bounce'
+        union all select 'financial_instrument_movement', cast(m.id as text), cast(m.party_id as text), substr(cast(m.occurred_on as text), 1, 10), 0, i.amount from financial_instrument_movements m join financial_instruments i on i.id = m.financial_instrument_id where m.deleted_at is null and m.type = 'bounce' and m.party_id is not null
     SQL;
 
     /**
@@ -75,11 +79,68 @@ class LedgerAudit
             $this->postingsMatchDocuments(),
             $this->postingsCarryTheirModuleAndSite(),
             $this->workSitsWithTheOwnerOfItsDate(),
+            $this->platePaymentsSitWithAnOwner(),
             $this->transfersCloseThePreviousOwner(),
             $this->ownerBalanceReportMatchesCari(),
             $this->plateBalanceReportMatchesCari(),
             $this->cashDrawerMatchesCashMovements(),
+            $this->instrumentsMatchTheirEntries(),
         ];
+    }
+
+    /**
+     * A cheque or note in the portfolio must be the one its cari entry says: same amount and kind,
+     * on the party the entry is posted to, with the entry still there, and a status that follows its last step.
+     *
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function instrumentsMatchTheirEntries(): array
+    {
+        $rows = DB::select(<<<'SQL'
+            select cast(i.id as text) id, i.number, i.amount, i.payment_method, cast(i.party_id as text) party,
+                   s.sid, s.amount source_amount, s.method source_method, s.deleted_at source_deleted, lp.party posted_party
+            from financial_instruments i
+            left join (
+                select 'company_transaction' st, cast(id as text) sid, debit + credit amount, payment_method method, deleted_at from company_transactions
+                union all select 'vehicle_payment', cast(id as text), amount, payment_method, deleted_at from vehicle_payments
+                union all select 'party_payment', cast(id as text), amount, payment_method, deleted_at from party_payments
+                union all select 'dump_site_payment', cast(id as text), amount, payment_method, deleted_at from dump_site_payments
+                union all select 'site_transaction', cast(id as text), debit + credit, payment_method, deleted_at from site_transactions
+            ) s on s.st = i.source_type and s.sid = cast(i.source_id as text)
+            left join (
+                select le.source_type, cast(le.source_id as text) sid, min(cast(le.party_id as text)) party
+                from ledger_entries le
+                where le.reversal_of is null and not exists (select 1 from ledger_entries r where r.reversal_of = le.id)
+                group by le.source_type, cast(le.source_id as text)
+            ) lp on lp.source_type = i.source_type and lp.sid = cast(i.source_id as text)
+            where i.deleted_at is null
+              and (s.sid is null or s.deleted_at is not null or s.amount <> i.amount or s.method <> i.payment_method
+                   or coalesce(lp.party, '') <> coalesce(cast(i.party_id as text), ''))
+        SQL);
+
+        $failures = array_map(fn (object $row): string => sprintf(
+            'Çek/senet %s: tutar %s / belge %s, tür %s / belge %s, cari %s / belge %s%s',
+            $row->number ?: $row->id,
+            $row->amount,
+            $row->source_amount ?? 'yok',
+            $row->payment_method,
+            $row->source_method ?? 'yok',
+            $row->party ?? '—',
+            $row->posted_party ?? '—',
+            $row->sid === null || $row->source_deleted !== null ? ' (cari hareketi silinmiş)' : '',
+        ), $rows);
+
+        $statuses = FinancialInstrument::query()->with('movements')->get();
+
+        foreach ($statuses as $instrument) {
+            $expected = $instrument->movements->last()?->type->resultingStatus() ?? $instrument->direction->initialStatus();
+
+            if ($instrument->status !== $expected) {
+                $failures[] = sprintf('Çek/senet %s: durum %s, son adıma göre %s olmalı', $instrument->number ?: $instrument->id, $instrument->status->label(), $expected->label());
+            }
+        }
+
+        return $this->result('Çek / senet portföyü cari hareketleriyle aynı', $statuses->count(), $failures);
     }
 
     /**
@@ -140,6 +201,7 @@ class LedgerAudit
                 union all select 'party_transfer', cast(id as text), 'general', null, null from party_transfers
                 union all select 'site_bill', cast(id as text), 'excavation', cast(site_id as text), null from site_bills
                 union all select 'site_transaction', cast(id as text), 'excavation', cast(site_id as text), cast(bank_id as text) from site_transactions
+                union all select 'financial_instrument_movement', cast(id as text), 'general', null, null from financial_instrument_movements
             ) x on x.st = le.source_type and x.sid = cast(le.source_id as text)
             where le.reversal_of is null and not exists (select 1 from ledger_entries r where r.reversal_of = le.id)
               and (le.module <> x.module
@@ -188,6 +250,29 @@ class LedgerAudit
     }
 
     /**
+     * A plate payment stays with whoever was paid, even after a back-dated transfer, but that party
+     * must have owned the plate at some point; otherwise the money is invisible on every plate report.
+     *
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function platePaymentsSitWithAnOwner(): array
+    {
+        $rows = DB::select(<<<'SQL'
+            select cast(x.id as text) id, v.plate, p.name from vehicle_payments x
+            join vehicles v on v.id = x.vehicle_id
+            join parties p on p.id = x.party_id
+            where x.deleted_at is null
+              and not exists (select 1 from vehicle_ownerships o where o.vehicle_id = x.vehicle_id and o.party_id = x.party_id)
+        SQL);
+
+        return $this->result(
+            'Plaka ödemeleri plakanın sahiplerinden birinde',
+            (int) DB::table('vehicle_payments')->whereNull('deleted_at')->count(),
+            array_map(fn (object $row): string => "{$row->plate}: ödeme {$row->id}, plakanın hiç sahibi olmamış {$row->name} carisinde", $rows),
+        );
+    }
+
+    /**
      * @return array{check: string, checked: int, failures: list<string>}
      */
     private function transfersCloseThePreviousOwner(): array
@@ -196,6 +281,17 @@ class LedgerAudit
         $failures = [];
 
         foreach ($ownerships as $ownership) {
+            // An owner who takes the plate back holds its balance again; that period is checked at its own transfer.
+            $ownsItAgain = VehicleOwnership::query()
+                ->where('vehicle_id', $ownership->vehicle_id)
+                ->where('party_id', $ownership->carried_from_party_id)
+                ->where('started_on', '>', $ownership->started_on)
+                ->exists();
+
+            if ($ownsItAgain) {
+                continue;
+            }
+
             $left = $this->accounts->balance($ownership->vehicle_id, $ownership->carried_from_party_id);
 
             if ($left !== 0.0) {
@@ -214,7 +310,7 @@ class LedgerAudit
         $cari = collect(DB::select(<<<'SQL'
             select le.party_id, sum(le.credit - le.debit) net from ledger_entries le
             where le.party_id in (select party_id from vehicle_ownerships)
-              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction', 'fuel_tank_fill', 'shipment')
+              and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction', 'fuel_tank_fill', 'shipment', 'financial_instrument_movement')
               and not (le.source_type = 'haul' and not exists (select 1 from hauls h where h.id = le.source_id and h.party_id = le.party_id))
               and not (le.source_type = 'fuel_receipt' and le.vehicle_id is null)
             group by le.party_id
@@ -296,7 +392,14 @@ class LedgerAudit
                 ->whereIn('source_type', ['vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'company_transaction'])
                 ->sum(DB::raw('credit - debit'))
             - (float) DB::table('employee_payments')->whereNull('deleted_at')->where('payment_method', 'cash')->where('occurred_on', '<=', $today->toDateString())->sum('amount')
-            - (float) DB::table('other_payments')->whereNull('deleted_at')->where('payment_method', 'cash')->where('occurred_on', '<=', $today->toDateString())->sum('amount'),
+            - (float) DB::table('other_payments')->whereNull('deleted_at')->where('payment_method', 'cash')->where('occurred_on', '<=', $today->toDateString())->sum('amount')
+            + (float) DB::table('financial_instrument_movements as m')
+                ->join('financial_instruments as i', 'i.id', '=', 'm.financial_instrument_id')
+                ->join('banks as b', 'b.id', '=', 'm.bank_id')
+                ->whereNull('m.deleted_at')
+                ->where('b.type', 'cash')
+                ->where('m.occurred_on', '<=', $today->toDateString())
+                ->sum(DB::raw("case when m.type = 'collect' then i.amount when m.type = 'pay' then -i.amount else 0 end")),
             2,
         );
 

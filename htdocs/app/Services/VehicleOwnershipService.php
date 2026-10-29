@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Cache\FormOptionsCache;
 use App\Enums\PartyRole;
 use App\Exceptions\OperationRejectedException;
+use App\Models\CompanyTransaction;
 use App\Models\Party;
 use App\Models\Vehicle;
 use App\Models\VehicleOwnership;
@@ -44,6 +45,7 @@ class VehicleOwnershipService extends Service
         private OwnershipTransferLedger $transferLedger,
         private ShipmentRepository $shipments,
         private ShipmentLedger $shipmentLedger,
+        private FinancialInstrumentService $instruments,
     ) {}
 
     /**
@@ -94,8 +96,15 @@ class VehicleOwnershipService extends Service
                 if ($payment->party_id !== $party->id) {
                     $payment->update(['party_id' => $party->id]);
                     $this->postings->moveTo($payment, $party->id);
+                    $this->instruments->followEntry($payment, $party->id);
                 }
             }
+
+            CompanyTransaction::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->where('owner_party_id', '<>', $party->id)
+                ->whereDate('occurred_on', '>=', $current->started_on->toDateString())
+                ->update(['owner_party_id' => $party->id]);
 
             return $current;
         });
@@ -171,6 +180,20 @@ class VehicleOwnershipService extends Service
 
             if ($ownership->ended_on !== null || ! $previous) {
                 throw new OperationRejectedException('Yalnızca son devir geri alınabilir; aracın ilk sahipliği silinemez.');
+            }
+
+            // Payments stay with whoever was paid; once the period is gone they would sit on a party that never owned the plate.
+            $paid = VehiclePayment::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->where('party_id', $ownership->party_id)
+                ->whereDate('occurred_on', '>=', $ownership->started_on->toDateString())
+                ->count();
+
+            if ($paid > 0) {
+                throw new OperationRejectedException(sprintf(
+                    'Bu devirden sonra yeni sahibe %d plaka ödemesi yapılmış; devir geri alınırsa bu ödemeler plakanın sahibi olmayan bir caride kalır. Önce ödemeleri silin ya da düzeltin.',
+                    $paid,
+                ));
             }
 
             $from = $ownership->started_on;

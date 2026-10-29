@@ -34,4 +34,30 @@
             <p class="panel-hint">Bu harekete bağlı cari, plaka veya yer yok.</p>
         @endforelse
     </x-form.group>
+
+    @if ($instrument = $details['instrument'])
+        <x-form.group :legend="$instrument->payment_method->label()" :icon="$instrument->payment_method->icon()" description="Portföydeki durumu">
+            <x-form.field label="Durum">
+                <div>
+                    <x-ui.enum-badge :value="$instrument->status" text />
+                    @can('view-financial-instrument')
+                        <a href="{{ route('admin.financial-instruments.show', $instrument) }}">Portföyde aç</a>
+                    @endcan
+                </div>
+            </x-form.field>
+            <x-form.field label="Vade">
+                <div>{{ $instrument->due_on->format('d.m.Y') }}</div>
+            </x-form.field>
+            @if ($instrument->bank_name)
+                <x-form.field label="Çekin bankası">
+                    <div>{{ $instrument->bank_name }}</div>
+                </x-form.field>
+            @endif
+            @if ($instrument->drawer)
+                <x-form.field label="Keşideci">
+                    <div>{{ $instrument->drawer }}</div>
+                </x-form.field>
+            @endif
+        </x-form.group>
+    @endif
 </div>

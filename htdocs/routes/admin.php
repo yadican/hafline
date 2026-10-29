@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeePaymentController;
 use App\Http\Controllers\Admin\EmployeeSalaryController;
 use App\Http\Controllers\Admin\ExampleController;
+use App\Http\Controllers\Admin\FinancialInstrumentController;
 use App\Http\Controllers\Admin\FuelReceiptController;
 use App\Http\Controllers\Admin\FuelReceiptLookupController;
 use App\Http\Controllers\Admin\FuelStationController;
@@ -116,6 +117,18 @@ Route::middleware('auth')->group(function () {
         Route::get('cari-entries/{kind}/{entry}/edit', [CariEntryController::class, 'edit'])->name('cari-entries.edit');
         Route::put('cari-entries/{kind}/{entry}', [CariEntryController::class, 'update'])->name('cari-entries.update');
         Route::delete('cari-entries/{kind}/{entry}', [CariEntryController::class, 'destroy'])->name('cari-entries.destroy');
+    });
+
+    Route::middleware('can:view-financial-instrument')->group(function () {
+        Route::get('financial-instruments', [FinancialInstrumentController::class, 'index'])->name('financial-instruments.index');
+        Route::get('financial-instruments/create', [FinancialInstrumentController::class, 'create'])->name('financial-instruments.create');
+        Route::post('financial-instruments', [FinancialInstrumentController::class, 'store'])->name('financial-instruments.store');
+        Route::get('financial-instruments/{financialInstrument}', [FinancialInstrumentController::class, 'show'])->name('financial-instruments.show');
+        Route::post('financial-instruments/{financialInstrument}/movements', [FinancialInstrumentController::class, 'storeMovement'])->name('financial-instruments.movements.store');
+        Route::delete('financial-instruments/{financialInstrument}/movements/last', [FinancialInstrumentController::class, 'undoMovement'])->name('financial-instruments.movements.undo');
+        Route::post('financial-instruments/{financialInstrument}/photos', [FinancialInstrumentController::class, 'storePhotos'])->name('financial-instruments.photos.store');
+        Route::get('financial-instruments/{financialInstrument}/photos/{photo}', [FinancialInstrumentController::class, 'showPhoto'])->scopeBindings()->name('financial-instruments.photos.show');
+        Route::delete('financial-instruments/{financialInstrument}/photos/{photo}', [FinancialInstrumentController::class, 'destroyPhoto'])->scopeBindings()->name('financial-instruments.photos.destroy');
     });
 
     Route::middleware('can:view-vehicle')->group(function () {

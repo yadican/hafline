@@ -313,7 +313,7 @@ class CariEntryTest extends TestCase
             ->assertSee('3.500,00 TL');
 
         $this->actingAs($this->admin)
-            ->post(route('admin.cari-entries.store'), [...$payload, 'payment_method' => 'cheque', 'bank_id' => $bank->id])
+            ->post(route('admin.cari-entries.store'), [...$payload, 'payment_method' => 'cheque', 'bank_id' => $bank->id, 'due_on' => '2026-07-04'])
             ->assertSessionHasNoErrors();
 
         $this->assertNull(CompanyTransaction::query()->where('payment_method', 'cheque')->sole()->bank_id);
@@ -332,6 +332,7 @@ class CariEntryTest extends TestCase
                 'amount' => '800',
                 'occurred_on' => '2026-06-02',
                 'payment_method' => 'cheque',
+                'due_on' => '2026-07-02',
             ])
             ->assertSessionHasNoErrors();
 

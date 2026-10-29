@@ -42,8 +42,8 @@
             : \App\Enums\PartyType::tryFrom((string) request('type'));
         $onParty = request()->routeIs('admin.parties.*');
     @endphp
-    @canany(['view-party', 'view-cari-entry'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*', 'admin.cari-entries.*')]) id="um-sec-accounts">
+    @canany(['view-party', 'view-cari-entry', 'view-financial-instrument'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.parties.*', 'admin.persons.*', 'admin.companies.*', 'admin.cari-entries.*', 'admin.financial-instruments.*')]) id="um-sec-accounts">
             <button type="button" class="um-title" data-um-toggle="um-sec-accounts">
                 <span class="um-title-text">
                     <i class="fa-solid fa-address-card um-title-icon" aria-hidden="true"></i>
@@ -54,6 +54,9 @@
             <div class="um-items">
                 @can('view-cari-entry')
                     <a href="{{ route('admin.cari-entries.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cari-entries.*')])>Cari hareketleri</a>
+                @endcan
+                @can('view-financial-instrument')
+                    <a href="{{ route('admin.financial-instruments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.financial-instruments.*')])>Çek / Senet</a>
                 @endcan
                 @can('view-party')
                     <a href="{{ route('admin.persons.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.persons.*') || ($onParty && $partyType === \App\Enums\PartyType::Person)])>Kişiler</a>

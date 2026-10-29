@@ -31,8 +31,12 @@ class CariEntryRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $kind = CariEntryKind::tryFrom((string) $this->input('kind'));
+        $tracksInstrument = $this->tracksInstrument();
 
         $this->merge([
+            'due_on' => $tracksInstrument ? ($this->input('due_on') ?: null) : null,
+            'instrument_bank' => $tracksInstrument ? (trim((string) $this->input('instrument_bank')) ?: null) : null,
+            'instrument_drawer' => $tracksInstrument ? (trim((string) $this->input('instrument_drawer')) ?: null) : null,
             'plate' => trim((string) $this->input('plate')) !== '' ? mb_strtoupper((string) $this->input('plate'), 'UTF-8') : null,
             'amount' => $this->decimal('amount'),
             'liters' => $this->decimal('liters'),
@@ -75,6 +79,11 @@ class CariEntryRequest extends FormRequest
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
             'document_no' => ['nullable', 'string', 'max:40'],
             'cheque_no' => ['nullable', 'string', 'max:20'],
+            'due_on' => [Rule::requiredIf(fn (): bool => $this->tracksInstrument()), 'nullable', 'date', 'after_or_equal:occurred_on'],
+            'photos' => ['nullable', 'array', 'max:4'],
+            'photos.*' => ['image', 'mimes:jpeg,png,webp', 'max:15360'],
+            'instrument_bank' => ['nullable', 'string', 'max:100'],
+            'instrument_drawer' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:255'],
             'liters' => ['nullable', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999'],
             'unit_price' => ['nullable', 'numeric', 'decimal:0,4', 'gt:0', 'max:9999'],
@@ -114,6 +123,12 @@ class CariEntryRequest extends FormRequest
                     $validator->errors()->add('party_id', 'Cari seçin.');
                 }
 
+                foreach (['party_id', 'counter_party_id'] as $field) {
+                    if ($this->input($field) && Party::query()->whereKey($this->input($field))->whereNotNull('system_key')->exists()) {
+                        $validator->errors()->add($field, 'Sistem carisine (Geçici Cari) doğrudan hareket yazılamaz; plakaya bağlı ödeme Plaka Ödeme ile girilir.');
+                    }
+                }
+
                 if ($kind === CariEntryKind::Opening && $this->input('party_id')) {
                     $taken = OpeningBalance::query()
                         ->where('party_id', $this->input('party_id'))
@@ -151,6 +166,10 @@ class CariEntryRequest extends FormRequest
                             $validator->errors()->add('receiver_national_id', 'Plaka Geçici Cari\'de; teslim alanın TC kimlik numarasını girin.');
                         }
                     }
+                }
+
+                if (PaymentMethod::tryFrom((string) $this->input('payment_method'))?->hasDueDate() && ! $kind->tracksInstruments()) {
+                    $validator->errors()->add('payment_method', 'Çek ve senet bu işlemde kullanılamaz; portföye girmeyen çek / senet takip edilemez.');
                 }
 
                 $this->checkAccount($validator, $kind);
@@ -204,6 +223,12 @@ class CariEntryRequest extends FormRequest
             'cash_category_id' => 'kasa kategorisi',
             'payment_method' => 'ödeme tipi',
             'document_no' => 'belge no',
+            'cheque_no' => 'çek / senet no',
+            'due_on' => 'vade',
+            'instrument_bank' => 'banka',
+            'instrument_drawer' => 'keşideci',
+            'photos' => 'çek / senet resmi',
+            'photos.*' => 'çek / senet resmi',
             'description' => 'açıklama',
             'liters' => 'litre',
             'unit_price' => 'birim fiyat',
@@ -236,6 +261,15 @@ class CariEntryRequest extends FormRequest
                 ? AccountType::cases()
                 : PaymentMethod::from($this->input('payment_method'))->accountTypes());
         }
+    }
+
+    /**
+     * A cheque or note on a kind that pays a party goes into the portfolio and needs its due date.
+     */
+    private function tracksInstrument(): bool
+    {
+        return (bool) CariEntryKind::tryFrom((string) $this->input('kind'))?->tracksInstruments()
+            && (bool) PaymentMethod::tryFrom((string) $this->input('payment_method'))?->hasDueDate();
     }
 
     private function decimal(string $key): ?string

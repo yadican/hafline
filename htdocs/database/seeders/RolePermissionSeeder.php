@@ -23,6 +23,7 @@ class RolePermissionSeeder extends Seeder
             'fuel-receipt',
             'party',
             'cari-entry',
+            'financial-instrument',
             'cash-category',
             'bank',
             'vehicle',

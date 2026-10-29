@@ -34,7 +34,8 @@ class EmployeeMonthlyReportRepository
 
         $bonuses = EmployeeBonus::query()
             ->select('employee_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
-            ->whereBetween('occurred_on', [$period, $periodEnd])
+            ->whereDate('occurred_on', '>=', $period)
+            ->whereDate('occurred_on', '<=', $periodEnd)
             ->groupBy('employee_id')
             ->pluck('total', 'employee_id');
 

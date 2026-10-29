@@ -122,7 +122,7 @@ class CashMovementReportTest extends TestCase
             ->assertSee('Kasa Nakit', false)
             ->assertSee('BAKIRKÖY Ödeme', false)
             ->assertSee('34 ABR 69 Plaka Ödeme', false)
-            ->assertDontSee('Çek', false)
+            ->assertDontSee('999,00', false)
             ->viewData('report');
 
         $this->assertSame(5000.0, $report['opening']);

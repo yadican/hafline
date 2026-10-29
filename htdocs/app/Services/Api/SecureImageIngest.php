@@ -35,6 +35,45 @@ class SecureImageIngest
      */
     public function ingest(UploadedFile $file, string $fieldSessionId): array
     {
+        [$encoded, $extension, $mime] = $this->process($file, self::STORE_EDGE);
+
+        $checksum = hash('sha256', $encoded);
+        $path = $this->datedPath(
+            'haul-scans',
+            $this->uniqueFilename($fieldSessionId, $extension),
+        );
+
+        Storage::disk(self::DISK)->put($path, $encoded);
+
+        return [
+            'path' => $path,
+            'checksum' => $checksum,
+            'absolute_path' => Storage::disk(self::DISK)->path($path),
+            'mime' => $mime,
+        ];
+    }
+
+    /**
+     * Same checks and clean re-encode as field photos, kept larger so the writing on a paper
+     * document stays readable; stored as {folder}/Y/m/d/H/{name}.jpg.
+     */
+    public function storeDocument(UploadedFile $file, string $folder, string $name, int $edge = 1600): string
+    {
+        [$encoded, $extension] = $this->process($file, $edge);
+        $path = $this->datedPath($folder, $name.'.'.$extension);
+
+        Storage::disk(self::DISK)->put($path, $encoded);
+
+        return $path;
+    }
+
+    /**
+     * Security checks first (nothing written on failure), then downscale and re-encode.
+     *
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function process(UploadedFile $file, int $edge): array
+    {
         $this->assertAcceptable($file);
 
         $binary = file_get_contents($file->getRealPath());
@@ -65,7 +104,7 @@ class SecureImageIngest
         imagealphablending($image, true);
         imagesavealpha($image, false);
 
-        $image = $this->downscale($image, $width, $height);
+        $image = $this->downscale($image, $width, $height, $edge);
 
         [$encoded, $extension, $mime] = $this->encode($image);
         imagedestroy($image);
@@ -78,20 +117,7 @@ class SecureImageIngest
             throw ValidationException::withMessages(['file' => 'Görüntü çok büyük.']);
         }
 
-        $checksum = hash('sha256', $encoded);
-        $path = $this->datedPath(
-            'haul-scans',
-            $this->uniqueFilename($fieldSessionId, $extension),
-        );
-
-        Storage::disk(self::DISK)->put($path, $encoded);
-
-        return [
-            'path' => $path,
-            'checksum' => $checksum,
-            'absolute_path' => Storage::disk(self::DISK)->path($path),
-            'mime' => $mime,
-        ];
+        return [$encoded, $extension, $mime];
     }
 
     public function absolutePath(string $path): string
@@ -173,15 +199,15 @@ class SecureImageIngest
         return $filename;
     }
 
-    private function downscale(\GdImage $image, int $width, int $height): \GdImage
+    private function downscale(\GdImage $image, int $width, int $height, int $edge): \GdImage
     {
         $longest = max($width, $height);
 
-        if ($longest <= self::STORE_EDGE) {
+        if ($longest <= $edge) {
             return $image;
         }
 
-        $scale = self::STORE_EDGE / $longest;
+        $scale = $edge / $longest;
         $targetW = max(1, (int) round($width * $scale));
         $targetH = max(1, (int) round($height * $scale));
 

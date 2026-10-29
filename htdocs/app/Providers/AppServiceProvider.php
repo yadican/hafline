@@ -7,6 +7,7 @@ use App\Models\DumpSitePayment;
 use App\Models\EmployeeBonus;
 use App\Models\EmployeePayment;
 use App\Models\EmployeeSalary;
+use App\Models\FinancialInstrumentMovement;
 use App\Models\FuelReceipt;
 use App\Models\FuelTankFill;
 use App\Models\Haul;
@@ -58,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
             'site_bill' => SiteBill::class,
             'site_transaction' => SiteTransaction::class,
             'shipment' => Shipment::class,
+            'financial_instrument_movement' => FinancialInstrumentMovement::class,
         ]);
     }
 }

@@ -200,6 +200,17 @@ class PartyRepository extends Repository
         return collect($roles)->unique(fn (PartyRole $role) => $role->value)->values()->all();
     }
 
+    /**
+     * Options a money entry may pick: system caris (Geçici Cari) only take postings through a plate.
+     *
+     * @param  array<string, string>  $options
+     * @return array<string, string>
+     */
+    public function withoutSystem(array $options): array
+    {
+        return array_diff_key($options, array_flip(Party::query()->whereNotNull('system_key')->pluck('id')->all()));
+    }
+
     public function isReferenced(Party $party): bool
     {
         return $party->ownerships()->exists()

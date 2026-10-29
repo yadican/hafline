@@ -60,6 +60,8 @@
                                         };
                                     @endphp
                                     <a href="{{ route('admin.cari-entries.show', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $entry->description }}</a>
+                                @elseif ($entry->source_type === 'financial_instrument_movement' && $entry->source && ! $entry->source->trashed())
+                                    <a href="{{ route('admin.financial-instruments.show', $entry->source->financial_instrument_id) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'employee_payment' && $entry->source && ! $entry->source->trashed())
                                     <a href="{{ route('admin.employee-payments.show', $entry->source) }}">{{ $entry->description }}</a>
                                 @elseif ($entry->source_type === 'employee_bonus' && $entry->source && ! $entry->source->trashed())

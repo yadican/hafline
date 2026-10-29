@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Cache\BankCache;
 use App\Cache\FormOptionsCache;
+use App\Exceptions\OperationRejectedException;
 use App\Models\Bank;
 use App\Repositories\BankRepository;
 use App\Support\Sort;
@@ -66,6 +67,10 @@ class BankService extends Service
 
     public function delete(Bank $bank): void
     {
+        if ($this->banks->hasMovements($bank)) {
+            throw new OperationRejectedException('Bu hesapta para hareketi ya da açılış bakiyesi var; silinirse bakiyesi listelerden kaybolur. Kullanılmayacaksa pasife alın.');
+        }
+
         $this->transaction(function () use ($bank): void {
             $this->banks->delete($bank);
             $this->flushCaches();

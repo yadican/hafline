@@ -2,6 +2,8 @@
 
 namespace App\Repositories\Reports;
 
+use App\Enums\AccountType;
+use App\Enums\InstrumentMovementType;
 use App\Enums\PaymentMethod;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
@@ -159,6 +161,31 @@ class CashMovementReportRepository
                 le.debit as cikis
             ");
         $branches[] = $ledger;
+
+        // Cheques and notes collected into or paid from a cash box (no ledger: the cari was settled when the paper changed hands)
+        $instruments = DB::table('financial_instrument_movements as t')
+            ->join('financial_instruments as i', 'i.id', '=', 't.financial_instrument_id')
+            ->join('banks as b', 'b.id', '=', 't.bank_id')
+            ->leftJoin('parties as p', 'p.id', '=', 'i.party_id')
+            ->whereNull('t.deleted_at')
+            ->where('b.type', AccountType::Cash->value)
+            ->whereIn('t.type', [InstrumentMovementType::Collect->value, InstrumentMovementType::Pay->value])
+            ->when($fromInclusive !== null && $toExclusive !== null, function ($q) use ($fromInclusive, $toExclusive): void {
+                $q->where('t.occurred_on', '>=', $fromInclusive)
+                    ->where('t.occurred_on', '<', $toExclusive);
+            })
+            ->when($fromInclusive !== null && $toExclusive === null, fn ($q) => $q->where('t.occurred_on', '<', $fromInclusive))
+            ->selectRaw("
+                t.occurred_on,
+                t.created_at,
+                t.id,
+                COALESCE(p.name, 'Çek / Senet') || CASE WHEN t.type = 'collect' THEN ' Tahsilat' ELSE ' Ödeme' END as kind_label,
+                COALESCE(t.description, i.number) as description,
+                CASE WHEN i.payment_method = 'cheque' THEN 'Çek' ELSE 'Senet' END as payment_label,
+                CASE WHEN t.type = 'collect' THEN i.amount ELSE 0 END as giris,
+                CASE WHEN t.type = 'pay' THEN i.amount ELSE 0 END as cikis
+            ");
+        $branches[] = $instruments;
 
         // employee_payments (no ledger): cash paid to staff = çıkış
         $employeePayments = DB::table('employee_payments as t')

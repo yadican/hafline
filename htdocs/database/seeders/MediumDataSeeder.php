@@ -45,7 +45,7 @@ class MediumDataSeeder extends Seeder
             return;
         }
 
-        $banks = $this->banks();
+        $this->banks();
         $this->companyGroups();
         $markets = $this->markets($sites);
         $staff = $this->staff();
@@ -53,7 +53,6 @@ class MediumDataSeeder extends Seeder
         $this->cari($entries, $sites, $vehicles, $dumpSites, $categories, $markets);
         $this->payroll($staff);
         $this->operations($vehicles);
-        $this->instruments($banks, $categories);
         $this->notes();
     }
 
@@ -467,109 +466,6 @@ class MediumDataSeeder extends Seeder
                 'created_by' => $this->userId,
             ];
         })->filter(fn (array $row) => $row['party_id'] !== null)->all());
-    }
-
-    private function instruments($banks, $categories): void
-    {
-        $parties = Party::query()->where('type', 'company')->limit(6)->get();
-        $cheque = null;
-
-        foreach (range(1, 6) as $n) {
-            $id = (string) Str::uuid7();
-            $amount = fake()->numberBetween(5000, 40000);
-            $received = $n % 2 === 1;
-
-            DB::table('financial_instruments')->insert([
-                'id' => $id,
-                'kind' => 'cheque',
-                'status' => $n === 6 ? 'closed' : 'active',
-                'debit' => $received ? $amount : 0,
-                'credit' => $received ? 0 : $amount,
-                'issued_on' => today()->subDays(20)->toDateString(),
-                'due_on' => today()->addDays(15 * $n)->toDateString(),
-                'party_id' => $parties->random()->id,
-                'description' => $received ? 'Alınan çek' : 'Verilen çek',
-                'bank_id' => $banks->random()->id,
-                'document_no' => 'CEK-'.str_pad((string) $n, 4, '0', STR_PAD_LEFT),
-                'received_no' => $received ? 'AL-'.$n : null,
-                'given_no' => $received ? null : 'VR-'.$n,
-                'cash_category_id' => $categories->random()->id,
-                'endorsed_from_id' => $n === 5 ? $cheque : null,
-                'created_by' => $this->userId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $cheque ??= $id;
-
-            if ($n === 1) {
-                DB::table('financial_instrument_attachments')->insert([
-                    'id' => (string) Str::uuid7(),
-                    'financial_instrument_id' => $id,
-                    'path' => 'instruments/cek-1.pdf',
-                    'secondary_path' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
-        foreach (range(1, 4) as $n) {
-            DB::table('financial_instruments')->insert([
-                'id' => (string) Str::uuid7(),
-                'kind' => 'promissory_note',
-                'status' => 'active',
-                'debit' => $n % 2 === 0 ? 0 : fake()->numberBetween(3000, 15000),
-                'credit' => $n % 2 === 0 ? fake()->numberBetween(3000, 15000) : 0,
-                'issued_on' => today()->subDays(10)->toDateString(),
-                'due_on' => today()->addDays(30 * $n)->toDateString(),
-                'party_id' => $parties->random()->id,
-                'description' => 'Senet',
-                'document_no' => 'SNT-'.str_pad((string) $n, 4, '0', STR_PAD_LEFT),
-                'created_by' => $this->userId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        $loanId = (string) Str::uuid7();
-
-        DB::table('financial_instruments')->insert([
-            'id' => $loanId,
-            'kind' => 'loan',
-            'status' => 'active',
-            'debit' => 0,
-            'credit' => 120000,
-            'issued_on' => '2026-06-01',
-            'due_on' => '2026-11-01',
-            'party_id' => null,
-            'related_party' => 'Ziraat Bankası',
-            'description' => 'İşletme kredisi',
-            'installment_count' => 3,
-            'bank_id' => $banks->first()->id,
-            'account_no' => $banks->first()->account_no,
-            'document_no' => 'KRD-0001',
-            'cash_category_id' => $categories->random()->id,
-            'created_by' => $this->userId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        foreach ([1, 2, 3] as $installment) {
-            $paid = $installment === 1;
-
-            DB::table('financial_instrument_installments')->insert([
-                'id' => (string) Str::uuid7(),
-                'financial_instrument_id' => $loanId,
-                'amount' => 40000,
-                'due_on' => today()->addMonths($installment - 1)->startOfMonth()->toDateString(),
-                'paid_on' => $paid ? today()->subMonth()->toDateString() : null,
-                'status' => $paid ? 'paid' : 'active',
-                'receipt_no' => $paid ? 'DK-1001' : null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
     }
 
     private function notes(): void

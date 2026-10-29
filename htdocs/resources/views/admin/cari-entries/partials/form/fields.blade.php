@@ -25,8 +25,24 @@
     </div>
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
-    <div x-show="! ['cash', 'opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
-        <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" />
+    @php($method = old('payment_method', ($form['payment_method'] ?? null) instanceof \BackedEnum ? $form['payment_method']->value : ($form['payment_method'] ?? '')))
+    <div x-show="! ['cash', 'opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak x-data="{ method: @js((string) $method) }">
+        <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" x-model="method" />
+        <div x-show="['cheque', 'promissory_note'].includes(method) && kind !== 'vehicle_receivable'" x-cloak>
+            <x-form.input name="cheque_no" label="Çek / senet no" maxlength="20" />
+            <x-form.input name="due_on" label="Vade" type="date" x-bind:required="['cheque', 'promissory_note'].includes(method) && kind !== 'vehicle_receivable'" />
+            <div x-show="method === 'cheque'">
+                <x-form.input name="instrument_bank" label="Çekin bankası" maxlength="100" />
+            </div>
+            <x-form.input name="instrument_drawer" label="Keşideci" maxlength="120" />
+            <x-form.field label="Resim" for="instrument-photos" name="photos">
+                <input id="instrument-photos" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple class="panel-file">
+            </x-form.field>
+            <p class="panel-hint">Cari bu kayıtla hemen kapanır, çek / senet portföye girer. Tahsil, ciro, ödeme ve karşılıksız işlemleri Çek / Senet ekranından yapılır.</p>
+            @if ($instrument = $form['instrument'] ?? null)
+                <p class="panel-hint">Portföy durumu: <a href="{{ route('admin.financial-instruments.show', $instrument) }}">{{ $instrument->status->label() }}</a>. İşlem görmüş bir çek / senedin tutarı, yönü, carisi ve ödeme tipi değiştirilemez.</p>
+            @endif
+        </div>
     </div>
     <div x-show="! ['opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="bank_id" label="Hesap" placeholder="Hesap seçin" :options="$options['banks']" />
@@ -93,7 +109,6 @@
     </div>
     <div x-show="kind === 'dump_payment'" x-cloak>
         <x-form.select searchable name="dump_site_id" label="Döküm yeri" placeholder="Döküm yeri seçin" :options="$options['dumpSites']" />
-        <x-form.input name="cheque_no" label="Çek no" maxlength="20" />
     </div>
     <div x-show="['supplier', 'customer', 'fuel', 'market', 'site', 'site_bill'].includes(kind)" x-cloak>
         <x-form.select searchable name="site_id" label="Şantiye" placeholder="Şantiye yok" :options="$options['sites']" />
@@ -108,5 +123,5 @@
     <div x-show="['supplier', 'customer', 'fuel', 'market'].includes(kind)" x-cloak>
         <x-form.input name="document_no" label="Belge no" maxlength="40" />
     </div>
-    <p class="panel-hint">Fiş teslimi, yakıt kontrolü, döküm kontrolü, plaka cezası ve personel maaş/pirim bu ekranda yok; kendi kayıtlarıdır. Çek ve senet, ödeme tipi olarak seçilir.</p>
+    <p class="panel-hint">Fiş teslimi, yakıt kontrolü, döküm kontrolü, plaka cezası ve personel maaş/pirim bu ekranda yok; kendi kayıtlarıdır. Çek ve senet, ödeme tipi olarak seçilir ve Çek / Senet portföyünden takip edilir.</p>
 </x-form.group>

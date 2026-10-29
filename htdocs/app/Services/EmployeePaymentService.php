@@ -40,7 +40,7 @@ class EmployeePaymentService extends Service
             'employees' => $this->employees->options($includeEmployee),
             'years' => $years,
             'months' => SiteExitReportService::MONTHS,
-            'payment_methods' => PaymentMethod::options(),
+            'payment_methods' => array_diff_key(PaymentMethod::options(), array_flip([PaymentMethod::Cheque->value, PaymentMethod::PromissoryNote->value])),
             'accounts' => $this->banks->accountOptions($includeAccount),
         ];
     }

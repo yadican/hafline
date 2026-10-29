@@ -100,7 +100,8 @@ class EmployeeSalaryRepository extends Repository
         return EmployeeBonus::query()
             ->select('employee_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
             ->whereIn('employee_id', $employeeIds)
-            ->whereBetween('occurred_on', [$period, $periodEnd])
+            ->whereDate('occurred_on', '>=', $period)
+            ->whereDate('occurred_on', '<=', $periodEnd)
             ->groupBy('employee_id')
             ->pluck('total', 'employee_id')
             ->map(fn ($total) => round((float) $total, 2))
@@ -145,7 +146,8 @@ class EmployeeSalaryRepository extends Repository
 
         $bonus = (float) EmployeeBonus::query()
             ->where('employee_id', $employeeId)
-            ->whereBetween('occurred_on', [$period, $periodEnd])
+            ->whereDate('occurred_on', '>=', $period)
+            ->whereDate('occurred_on', '<=', $periodEnd)
             ->sum('amount');
 
         $paid = (float) EmployeePayment::query()

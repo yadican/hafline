@@ -57,7 +57,8 @@ class EmployeeAnnualReportRepository
     {
         return EmployeeBonus::query()
             ->where('employee_id', $employeeId)
-            ->whereBetween('occurred_on', [$from, $to])
+            ->whereDate('occurred_on', '>=', $from)
+            ->whereDate('occurred_on', '<=', $to)
             ->orderBy('occurred_on')
             ->orderBy('created_at')
             ->get();

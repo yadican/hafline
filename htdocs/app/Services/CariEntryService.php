@@ -12,6 +12,7 @@ use App\Models\CashEntry;
 use App\Models\CompanyTransaction;
 use App\Models\DumpSite;
 use App\Models\DumpSitePayment;
+use App\Models\FinancialInstrument;
 use App\Models\FuelStation;
 use App\Models\OpeningBalance;
 use App\Models\Party;
@@ -49,6 +50,7 @@ class CariEntryService extends Service
         private CashCategoryRepository $categories,
         private Ledger $ledger,
         private VehicleOwnershipService $ownerships,
+        private FinancialInstrumentService $instruments,
     ) {}
 
     /**
@@ -68,9 +70,9 @@ class CariEntryService extends Service
 
         foreach (CariEntryKind::cases() as $kind) {
             if ($role = $kind->partyRole()) {
-                $parties[$kind->value] = $this->parties->options($role, $current['party_id'] ?? null);
+                $parties[$kind->value] = $this->parties->withoutSystem($this->parties->options($role, $current['party_id'] ?? null));
             } elseif ($kind->takesAnyParty()) {
-                $parties[$kind->value] = $this->parties->options(include: array_filter([$current['party_id'] ?? null, $current['counter_party_id'] ?? null]));
+                $parties[$kind->value] = $this->parties->withoutSystem($this->parties->options(include: array_filter([$current['party_id'] ?? null, $current['counter_party_id'] ?? null])));
             }
         }
 
@@ -96,6 +98,7 @@ class CariEntryService extends Service
             $this->assertPlateOpen($this->kind($data), null, $data);
             $entry = $this->persist($this->kind($data), $data, $userId);
             $this->post($entry, $data);
+            $this->instruments->syncEntry($this->kind($data), $entry, $data, $this->postedParty($entry), $userId);
         });
     }
 
@@ -113,6 +116,7 @@ class CariEntryService extends Service
 
             $entry = $this->persist($kind, $data, $entry->created_by, $entry);
             $this->post($entry, $data, $postedParty);
+            $this->instruments->syncEntry($kind, $entry, $data, $this->postedParty($entry), $entry->created_by);
         });
     }
 
@@ -121,6 +125,7 @@ class CariEntryService extends Service
         $this->transaction(function () use ($kind, $id): void {
             $entry = $this->find($kind, $id);
             $this->assertPlateOpen($kind, $entry, null);
+            $this->instruments->releaseEntry($entry);
 
             if ($kind->postsLedger()) {
                 $this->ledger->void($entry);
@@ -149,6 +154,8 @@ class CariEntryService extends Service
             $credit = (float) $entry->amount;
         }
 
+        $instrument = $this->instruments->forEntry($entry);
+
         return [
             'kind' => $kind->value,
             'party_id' => $entry->party_id ?? $entry->debit_party_id ?? $entry->dumpSite?->party_id,
@@ -167,7 +174,11 @@ class CariEntryService extends Service
             'plate' => method_exists($entry, 'vehicle') ? $entry->vehicle?->plate : null,
             'dump_site_id' => $entry->dump_site_id ?? null,
             'bank_id' => $entry->bank_id ?? null,
-            'cheque_no' => $entry->cheque_no ?? null,
+            'cheque_no' => $entry->cheque_no ?? $instrument?->number,
+            'due_on' => $instrument?->due_on->toDateString(),
+            'instrument_bank' => $instrument?->bank_name,
+            'instrument_drawer' => $instrument?->drawer,
+            'instrument' => $instrument,
             'receiver_name' => $entry->receiver_name ?? null,
             'receiver_national_id' => $entry->receiver_national_id ?? null,
         ];
@@ -176,7 +187,7 @@ class CariEntryService extends Service
     /**
      * Read-only labels for the detail screen; links holds only the fields this kind uses.
      *
-     * @return array{direction: string, amount: string, occurred_on: Carbon, payment_method: ?PaymentMethod, category: ?string, description: ?string, links: array<string, string>}
+     * @return array{direction: string, amount: string, occurred_on: Carbon, payment_method: ?PaymentMethod, category: ?string, description: ?string, links: array<string, string>, instrument: ?FinancialInstrument}
      */
     public function details(CariEntryKind $kind, string $id): array
     {
@@ -189,7 +200,7 @@ class CariEntryService extends Service
             'Alacaklanan cari' => $name(Party::class, $form['counter_party_id']),
             'Plaka' => $form['plate'],
             'Döküm yeri' => $name(DumpSite::class, $form['dump_site_id']),
-            'Çek no' => $form['cheque_no'],
+            ($form['instrument'] ? $form['instrument']->payment_method->label().' no' : 'Çek no') => $form['cheque_no'],
             'Şantiye' => $name(Site::class, $form['site_id']),
             'Yakıt yeri' => $name(FuelStation::class, $form['fuel_station_id']),
             'Litre' => $form['liters'] !== null ? number_format((float) $form['liters'], 2, ',', '.') : null,
@@ -210,6 +221,7 @@ class CariEntryService extends Service
             'category' => $name(CashCategory::class, $form['cash_category_id']),
             'description' => $form['description'],
             'links' => $links,
+            'instrument' => $form['instrument'],
         ];
     }
 
@@ -293,13 +305,13 @@ class CariEntryService extends Service
             CariEntryKind::Site => [
                 ...$shared,
                 'site_id' => $data['site_id'],
-                'party_id' => $direction === 'credit' ? Site::query()->find($data['site_id'])?->party_id : null,
+                'party_id' => $direction === 'credit' ? $this->siteParty($data, $existing) : null,
                 'debit' => $direction === 'debit' ? $amount : 0,
                 'credit' => $direction === 'credit' ? $amount : 0,
             ],
             CariEntryKind::SiteBill => [
                 'site_id' => $data['site_id'],
-                'party_id' => Site::query()->findOrFail($data['site_id'])->party_id,
+                'party_id' => $this->siteParty($data, $existing),
                 'amount' => $amount,
                 'occurred_on' => $date,
                 'description' => $data['description'] ?? null,
@@ -396,6 +408,31 @@ class CariEntryService extends Service
         $method = isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null;
 
         $this->ledger->sync($entry, [$line->paidBy($method, $data['cash_category_id'] ?? null, $entry->bank_id ?? null)]);
+    }
+
+    /**
+     * A site entry stays on the cari it was posted to, even if the site has changed cari since;
+     * only moving the entry to another site picks that site's current cari.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function siteParty(array $data, ?Model $existing): ?string
+    {
+        $wasPosted = $existing instanceof SiteBill || (float) ($existing->credit ?? 0) > 0;
+
+        if ($existing && $existing->site_id === $data['site_id'] && $wasPosted) {
+            return $existing->party_id;
+        }
+
+        return Site::query()->find($data['site_id'])?->party_id;
+    }
+
+    /**
+     * The party the entry settled on the cari: the one a cheque or note came from or went to.
+     */
+    private function postedParty(Model $entry): ?string
+    {
+        return $this->ledger->live($entry)->first()?->party_id;
     }
 
     /**
