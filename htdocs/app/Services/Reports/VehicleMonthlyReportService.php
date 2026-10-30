@@ -50,6 +50,7 @@ class VehicleMonthlyReportService extends Service
      *         type: string,
      *         date: string|null,
      *         description: string,
+     *         invoice_id?: string,
      *         quantity: float|null,
      *         quantity_unit: string|null,
      *         unit_price: float|null,
@@ -130,6 +131,26 @@ class VehicleMonthlyReportService extends Service
                 'quantity' => $liters,
                 'quantity_unit' => 'lt',
                 'unit_price' => $unitPrice,
+                'debit' => $amount,
+                'credit' => null,
+            ];
+
+            $totalDebit += $amount;
+        }
+
+        foreach ($this->reports->materialTotals($vehicle->id, $from, $toExclusive) as $invoice) {
+            $amount = round((float) $invoice->total, 2);
+
+            $rows[] = [
+                'type' => 'material',
+                'date' => Carbon::parse($invoice->issued_on)->toDateString(),
+                'description' => filled($invoice->description)
+                    ? (string) $invoice->description
+                    : 'Malzeme · '.$invoice->invoice_no,
+                'invoice_id' => (string) $invoice->id,
+                'quantity' => null,
+                'quantity_unit' => null,
+                'unit_price' => null,
                 'debit' => $amount,
                 'credit' => null,
             ];

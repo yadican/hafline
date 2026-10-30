@@ -45,14 +45,16 @@ class OwnerPeriodicReportService extends Service
      *     to: string,
      *     vehicles: list<array{
      *         plate: string,
-     *         rows: list<array{type: 'haul'|'fuel', description: string, trips: ?int, liters: ?float, tonnage: ?float}>,
+     *         rows: list<array{type: 'haul'|'fuel'|'material', description: string, invoice_id?: string, trips: ?int, liters: ?float, tonnage: ?float, amount: ?float}>,
      *         total_trips: int,
      *         total_liters: float,
-     *         total_tonnage: float
+     *         total_tonnage: float,
+     *         total_material: float
      *     }>,
      *     total_trips: int,
      *     total_liters: float,
-     *     total_tonnage: float
+     *     total_tonnage: float,
+     *     total_material: float
      * }|null
      */
     public function report(array $filters): ?array
@@ -77,6 +79,7 @@ class OwnerPeriodicReportService extends Service
                     'total_trips' => 0,
                     'total_liters' => 0.0,
                     'total_tonnage' => 0.0,
+                    'total_material' => 0.0,
                 ];
             }
 
@@ -88,6 +91,7 @@ class OwnerPeriodicReportService extends Service
                 'trips' => $trips,
                 'liters' => null,
                 'tonnage' => $tonnage,
+                'amount' => null,
             ];
             $vehicles[$vehicleId]['total_trips'] += $trips;
             $vehicles[$vehicleId]['total_tonnage'] = round($vehicles[$vehicleId]['total_tonnage'] + $tonnage, 2);
@@ -103,6 +107,7 @@ class OwnerPeriodicReportService extends Service
                     'total_trips' => 0,
                     'total_liters' => 0.0,
                     'total_tonnage' => 0.0,
+                    'total_material' => 0.0,
                 ];
             }
 
@@ -113,8 +118,38 @@ class OwnerPeriodicReportService extends Service
                 'trips' => null,
                 'liters' => $liters,
                 'tonnage' => null,
+                'amount' => null,
             ];
             $vehicles[$vehicleId]['total_liters'] = round($vehicles[$vehicleId]['total_liters'] + $liters, 2);
+        }
+
+        foreach ($this->reports->ownerMaterialTotals($owner->id, $from, $toExclusive) as $row) {
+            $vehicleId = (string) $row->vehicle_id;
+
+            if (! isset($vehicles[$vehicleId])) {
+                $vehicles[$vehicleId] = [
+                    'plate' => (string) $row->plate,
+                    'rows' => [],
+                    'total_trips' => 0,
+                    'total_liters' => 0.0,
+                    'total_tonnage' => 0.0,
+                    'total_material' => 0.0,
+                ];
+            }
+
+            $amount = round((float) $row->total, 2);
+            $vehicles[$vehicleId]['rows'][] = [
+                'type' => 'material',
+                'description' => filled($row->description)
+                    ? (string) $row->description
+                    : 'Malzeme · '.$row->invoice_no,
+                'invoice_id' => (string) $row->id,
+                'trips' => null,
+                'liters' => null,
+                'tonnage' => null,
+                'amount' => $amount,
+            ];
+            $vehicles[$vehicleId]['total_material'] = round($vehicles[$vehicleId]['total_material'] + $amount, 2);
         }
 
         uasort($vehicles, fn (array $a, array $b): int => strcasecmp($a['plate'], $b['plate']));
@@ -123,11 +158,13 @@ class OwnerPeriodicReportService extends Service
         $totalTrips = 0;
         $totalLiters = 0.0;
         $totalTonnage = 0.0;
+        $totalMaterial = 0.0;
 
         foreach ($list as $vehicle) {
             $totalTrips += $vehicle['total_trips'];
             $totalLiters += $vehicle['total_liters'];
             $totalTonnage += $vehicle['total_tonnage'];
+            $totalMaterial += $vehicle['total_material'];
         }
 
         return [
@@ -144,6 +181,7 @@ class OwnerPeriodicReportService extends Service
             'total_trips' => $totalTrips,
             'total_liters' => round($totalLiters, 2),
             'total_tonnage' => round($totalTonnage, 2),
+            'total_material' => round($totalMaterial, 2),
         ];
     }
 
@@ -164,7 +202,7 @@ class OwnerPeriodicReportService extends Service
             $handle = fopen('php://output', 'w');
 
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Plaka', 'Sıra', 'Açıklama', 'Döküm Sayısı', 'Toplam Lt', 'Toplam Ton'], ';');
+            fputcsv($handle, ['Plaka', 'Sıra', 'Açıklama', 'Döküm Sayısı', 'Toplam Lt', 'Toplam Ton', 'Malzeme'], ';');
 
             foreach ($report['vehicles'] as $vehicle) {
                 foreach ($vehicle['rows'] as $index => $row) {
@@ -175,6 +213,7 @@ class OwnerPeriodicReportService extends Service
                         $row['trips'] ?? '',
                         $row['liters'] !== null ? number_format($row['liters'], 2, ',', '.') : '',
                         $row['tonnage'] !== null ? number_format($row['tonnage'], 2, ',', '.') : '',
+                        $row['amount'] !== null ? number_format($row['amount'], 2, ',', '.') : '',
                     ], ';');
                 }
 
@@ -185,6 +224,7 @@ class OwnerPeriodicReportService extends Service
                     $vehicle['total_trips'],
                     number_format($vehicle['total_liters'], 2, ',', '.'),
                     number_format($vehicle['total_tonnage'], 2, ',', '.'),
+                    number_format($vehicle['total_material'], 2, ',', '.'),
                 ], ';');
             }
 
@@ -195,6 +235,7 @@ class OwnerPeriodicReportService extends Service
                 $report['total_trips'],
                 number_format($report['total_liters'], 2, ',', '.'),
                 number_format($report['total_tonnage'], 2, ',', '.'),
+                number_format($report['total_material'], 2, ',', '.'),
             ], ';');
 
             fclose($handle);

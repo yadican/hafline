@@ -257,13 +257,15 @@ class MediumDataSeeder extends Seeder
         }
 
         foreach ($dumpSites as $dumpSite) {
+            $occurred = $day();
             $entries->create([
                 'kind' => 'dump_payment',
                 'dump_site_id' => $dumpSite->id,
                 'amount' => fake()->numberBetween(4000, 20000),
-                'occurred_on' => $day(),
+                'occurred_on' => $occurred,
                 'payment_method' => PaymentMethod::Cheque->value,
                 'cheque_no' => fake()->unique()->numerify('CK####'),
+                'due_on' => Carbon::parse($occurred)->addDays(fake()->numberBetween(7, 60))->toDateString(),
                 'description' => 'Döküm bedeli',
             ], $this->userId);
         }

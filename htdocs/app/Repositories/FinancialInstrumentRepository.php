@@ -5,10 +5,12 @@ namespace App\Repositories;
 use App\Enums\InstrumentDirection;
 use App\Enums\InstrumentStatus;
 use App\Models\FinancialInstrument;
+use App\Models\FinancialInstrumentMovement;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 class FinancialInstrumentRepository extends Repository
@@ -88,6 +90,19 @@ class FinancialInstrumentRepository extends Repository
             'received' => round((float) ($received->total_amount ?? 0), 2),
             'given' => round((float) ($given->total_amount ?? 0), 2),
         ];
+    }
+
+    /**
+     * Whether the payment's paper returned unpaid: the cheque or note taken or given on the entry,
+     * or the one an endorsement passed on.
+     */
+    public function bouncedFor(Model $payment): bool
+    {
+        $query = $payment instanceof FinancialInstrumentMovement
+            ? $this->query()->whereKey($payment->financial_instrument_id)
+            : $this->query()->where('source_type', $payment->getMorphClass())->where('source_id', $payment->getKey());
+
+        return $query->where('status', InstrumentStatus::Bounced)->exists();
     }
 
     /**

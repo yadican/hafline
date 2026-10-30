@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Reports;
 
+use App\Enums\InvoiceDirection;
 use App\Models\Party;
 use App\Repositories\FuelStationRepository;
 use App\Repositories\SiteRepository;
@@ -45,6 +46,7 @@ class OwnerBalanceReportRepository
      *     credit_receivables: string,
      *     debit_payments: string,
      *     debit_fuel: string,
+     *     debit_material: string,
      *     debit_fines: string,
      *     credit_transfers: string,
      *     debit_transfers: string,
@@ -102,6 +104,17 @@ class OwnerBalanceReportRepository
             ->when($fuelStationId, fn ($q) => $q->where('fuel_station_id', $fuelStationId))
             ->groupBy('party_id');
 
+        $material = DB::table('invoices')
+            ->select('party_id', DB::raw('COALESCE(SUM(total), 0) as total'))
+            ->whereNull('deleted_at')
+            ->where('is_draft', false)
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->whereNotNull('party_id')
+            ->whereNotNull('vehicle_id')
+            ->when($dateFrom, fn ($q) => $q->where('issued_on', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->where('issued_on', '<', $dateTo))
+            ->groupBy('party_id');
+
         $payments = DB::table('vehicle_payments')
             ->select('party_id', DB::raw('COALESCE(SUM(amount), 0) as total'))
             ->whereNull('deleted_at')
@@ -147,6 +160,7 @@ class OwnerBalanceReportRepository
             ->leftJoinSub($hauls, 'hauls_sum', 'hauls_sum.party_id', '=', 'parties.id')
             ->leftJoinSub($machineWorks, 'machine_sum', 'machine_sum.party_id', '=', 'parties.id')
             ->leftJoinSub($fuel, 'fuel_sum', 'fuel_sum.party_id', '=', 'parties.id')
+            ->leftJoinSub($material, 'material_sum', 'material_sum.party_id', '=', 'parties.id')
             ->leftJoinSub($payments, 'payments_sum', 'payments_sum.party_id', '=', 'parties.id')
             ->leftJoinSub($receivables, 'receivables_sum', 'receivables_sum.party_id', '=', 'parties.id')
             ->leftJoinSub($transfers, 'transfers_sum', 'transfers_sum.party_id', '=', 'parties.id')
@@ -160,6 +174,7 @@ class OwnerBalanceReportRepository
                 DB::raw('COALESCE(receivables_sum.total, 0) as credit_receivables'),
                 DB::raw('COALESCE(payments_sum.total, 0) as debit_payments'),
                 DB::raw('COALESCE(fuel_sum.total, 0) as debit_fuel'),
+                DB::raw('COALESCE(material_sum.total, 0) as debit_material'),
                 DB::raw('COALESCE(fines_sum.total, 0) as debit_fines'),
                 DB::raw('COALESCE(transfers_sum.credit, 0) as credit_transfers'),
                 DB::raw('COALESCE(transfers_sum.debit, 0) as debit_transfers'),
@@ -185,7 +200,7 @@ class OwnerBalanceReportRepository
                     return;
                 }
 
-                $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(fines_sum.total, 0) + COALESCE(transfers_sum.credit, 0) + COALESCE(transfers_sum.debit, 0) + COALESCE(owner_payments_sum.total, 0)) <> 0');
+                $query->whereRaw('(COALESCE(hauls_sum.total, 0) + COALESCE(machine_sum.total, 0) + COALESCE(receivables_sum.total, 0) + COALESCE(payments_sum.total, 0) + COALESCE(fuel_sum.total, 0) + COALESCE(material_sum.total, 0) + COALESCE(fines_sum.total, 0) + COALESCE(transfers_sum.credit, 0) + COALESCE(transfers_sum.debit, 0) + COALESCE(owner_payments_sum.total, 0)) <> 0');
             })
             ->orderBy('parties.name')
             ->get();

@@ -11,6 +11,7 @@ use App\Models\FinancialInstrumentMovement;
 use App\Models\FuelReceipt;
 use App\Models\FuelTankFill;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\MachineWork;
 use App\Models\OpeningBalance;
 use App\Models\PartyPayment;
@@ -60,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
             'site_transaction' => SiteTransaction::class,
             'shipment' => Shipment::class,
             'financial_instrument_movement' => FinancialInstrumentMovement::class,
+            'invoice' => Invoice::class,
         ]);
     }
 }

@@ -28,11 +28,25 @@ final class DashboardCache
         return 'finance-reminders:'.$day->toDateString();
     }
 
+    public static function invoiceRemindersKey(CarbonInterface $day): string
+    {
+        return 'invoice-reminders:'.$day->toDateString();
+    }
+
     /**
      * A cheque or note was added, moved on or taken back: its due reminder must not wait for the TTL.
      */
     public static function forgetFinanceReminders(): void
     {
         Cache::forget(self::PREFIX.self::financeRemindersKey(today()));
+    }
+
+    /**
+     * An invoice or its payment changed (or a due reminder was closed by hand): Alacaklar / Borçlar
+     * must not wait for the TTL.
+     */
+    public static function forgetInvoiceReminders(): void
+    {
+        Cache::forget(self::PREFIX.self::invoiceRemindersKey(today()));
     }
 }

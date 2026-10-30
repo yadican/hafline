@@ -142,8 +142,10 @@ class DashboardTest extends TestCase
             ->assertViewHas('recentHauls', null)
             ->assertViewHas('cashSummary', null)
             ->assertViewHas('financeReminders', null)
+            ->assertViewHas('invoiceReminders', null)
             ->assertDontSee('Bugünkü son taşımalar', false)
             ->assertDontSee('Finans hatırlatıcıları', false)
+            ->assertDontSee('Alacaklar', false)
             ->assertSee('Aktif şantiye', false);
     }
 

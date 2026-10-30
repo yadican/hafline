@@ -9,7 +9,7 @@
             @if (! empty($filters))
                 <x-ui.button icon="fa-solid fa-xmark" :href="route('admin.banks.index')" class="w-full justify-center sm:w-auto">Temizle</x-ui.button>
             @endif
-            @can('create-cari-entry')
+            @can('create-account-transfer-cari-entry')
                 <x-ui.button icon="fa-solid fa-right-left" :href="route('admin.cari-entries.create', ['kind' => 'account_transfer'])" class="w-full justify-center sm:w-auto">Hesaplar arası virman</x-ui.button>
             @endcan
             <x-ui.button variant="create" icon="fa-solid fa-wallet" :href="route('admin.banks.create')" class="w-full justify-center sm:w-auto">Yeni hesap</x-ui.button>

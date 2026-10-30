@@ -110,14 +110,17 @@ final class PayrollStage
                         ? round($earned * fake()->randomFloat(2, 0.4, 0.7), 2)
                         : $earned;
 
+                    $method = fake()->randomElement([
+                        PaymentMethod::BankTransfer,
+                        PaymentMethod::Cash,
+                        PaymentMethod::BankTransfer,
+                    ]);
+
                     $payments[] = [
                         'id' => (string) Str::uuid7(),
                         'employee_id' => $employeeId,
-                        'payment_method' => fake()->randomElement([
-                            PaymentMethod::BankTransfer->value,
-                            PaymentMethod::Cash->value,
-                            PaymentMethod::BankTransfer->value,
-                        ]),
+                        'payment_method' => $method->value,
+                        'bank_id' => $catalog->bankFor($method)?->id,
                         'amount' => max(100, $amount),
                         'period' => $period,
                         'occurred_on' => $payDate->toDateString(),
@@ -132,10 +135,12 @@ final class PayrollStage
 
                     if ($amount < $earned && $restDate->lte($to) && fake()->boolean(60)) {
                         $rest = round($earned - $amount, 2);
+                        $cash = PaymentMethod::Cash;
                         $payments[] = [
                             'id' => (string) Str::uuid7(),
                             'employee_id' => $employeeId,
-                            'payment_method' => PaymentMethod::Cash->value,
+                            'payment_method' => $cash->value,
+                            'bank_id' => $catalog->bankFor($cash)?->id,
                             'amount' => max(100, $rest),
                             'period' => $period,
                             'occurred_on' => $restDate->toDateString(),

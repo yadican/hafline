@@ -1,3 +1,4 @@
+{{-- iç içe alan nokta notasyonuyla verilir (payment.due_on); input adı köşeli paranteze çevrilir --}}
 @aware(['model' => null])
 
 @props(['name', 'label', 'type' => 'text', 'value' => null])
@@ -28,6 +29,8 @@
     }
 
     $current = old($name, $raw);
+    $id = str_replace('.', '_', $name);
+    $field = preg_replace('/\.([^.]+)/', '[$1]', $name);
 
     $pickerIcon = match ($type) {
         'time' => 'fa-solid fa-clock',
@@ -40,13 +43,13 @@
     $control = $attributes->except('class')->merge(['class' => 'slct']);
 @endphp
 
-<x-form.field :label="$label" :for="$name" {{ $attributes->only('class') }}>
+<x-form.field :label="$label" :for="$id" :name="$name" {{ $attributes->only('class') }}>
     @if ($pickerIcon)
         <div class="panel-date" data-picker-wrap>
             <i class="{{ $pickerIcon }} panel-date-icon" aria-hidden="true"></i>
             <input
-                id="{{ $name }}"
-                name="{{ $name }}"
+                id="{{ $id }}"
+                name="{{ $field }}"
                 type="text"
                 value="{{ $current }}"
                 data-picker="{{ $type }}"
@@ -59,8 +62,8 @@
         </div>
     @else
         <input
-            id="{{ $name }}"
-            name="{{ $name }}"
+            id="{{ $id }}"
+            name="{{ $field }}"
             type="{{ $type }}"
             value="{{ $current }}"
             {{ $control }}

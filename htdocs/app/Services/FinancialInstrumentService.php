@@ -39,6 +39,7 @@ class FinancialInstrumentService extends Service
         private PartyRepository $parties,
         private Ledger $ledger,
         private SecureImageIngest $images,
+        private InvoicePaymentService $invoicePayments,
     ) {}
 
     /**
@@ -293,6 +294,12 @@ class FinancialInstrumentService extends Service
             $instrument->update(['status' => $type->resultingStatus()]);
             DashboardCache::forgetFinanceReminders();
 
+            if ($type === InstrumentMovementType::Bounce) {
+                foreach ($this->payments($instrument, $last) as $payment) {
+                    $this->invoicePayments->releasePayment($payment, $movement);
+                }
+            }
+
             return $movement;
         });
     }
@@ -315,7 +322,25 @@ class FinancialInstrumentService extends Service
                 'status' => $movements->last()?->type->resultingStatus() ?? $instrument->direction->initialStatus(),
             ]);
             DashboardCache::forgetFinanceReminders();
+
+            if ($last->type === InstrumentMovementType::Bounce) {
+                $this->invoicePayments->restoreBounced($last);
+            }
         });
+    }
+
+    /**
+     * The payments the paper stood for: the entry it was taken or given on and, when it bounced
+     * after being endorsed, the endorsement that passed it on.
+     *
+     * @return list<Model>
+     */
+    private function payments(FinancialInstrument $instrument, ?FinancialInstrumentMovement $last): array
+    {
+        return array_values(array_filter([
+            $instrument->source,
+            $last?->type === InstrumentMovementType::Endorse ? $last : null,
+        ]));
     }
 
     /**

@@ -2,8 +2,10 @@
 
 namespace App\Repositories\Reports;
 
+use App\Enums\InvoiceDirection;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\MachineWork;
 use App\Models\Vehicle;
@@ -96,6 +98,26 @@ class VehicleMonthlyReportRepository
                 DB::raw('SUM(fuel_receipts.amount) as amount'),
                 DB::raw('COUNT(*) as receipts'),
             ]);
+    }
+
+    /**
+     * Live plate-sale invoices for one vehicle in [from, to).
+     *
+     * @return Collection<int, object{id: string, issued_on: string, invoice_no: string, description: string|null, total: string}>
+     */
+    public function materialTotals(string $vehicleId, Carbon $from, Carbon $to): Collection
+    {
+        return Invoice::query()
+            ->toBase()
+            ->where('vehicle_id', $vehicleId)
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->where('is_draft', false)
+            ->where('issued_on', '>=', $from->toDateString())
+            ->where('issued_on', '<', $to->toDateString())
+            ->whereNull('deleted_at')
+            ->orderBy('issued_on')
+            ->orderBy('invoice_no')
+            ->get(['id', 'issued_on', 'invoice_no', 'description', 'total']);
     }
 
     /**
@@ -203,6 +225,15 @@ class VehicleMonthlyReportRepository
             ->whereNull('deleted_at')
             ->sum('amount');
 
+        $material = (float) Invoice::query()
+            ->toBase()
+            ->where('vehicle_id', $vehicleId)
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->where('is_draft', false)
+            ->where('issued_on', '<', $beforeDate)
+            ->whereNull('deleted_at')
+            ->sum('total');
+
         $payments = (float) VehiclePayment::query()
             ->toBase()
             ->where('vehicle_id', $vehicleId)
@@ -224,7 +255,7 @@ class VehicleMonthlyReportRepository
             ->where('occurred_on', '<', $beforeDate)
             ->sum(DB::raw('debit - credit'));
 
-        return round($fuel + $payments + $fines + $transfers - $hauls - $machineWorks - $receivables, 2);
+        return round($fuel + $material + $payments + $fines + $transfers - $hauls - $machineWorks - $receivables, 2);
     }
 
     /**

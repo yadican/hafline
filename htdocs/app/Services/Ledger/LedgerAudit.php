@@ -5,11 +5,17 @@ namespace App\Services\Ledger;
 use App\Enums\AccountType;
 use App\Models\Bank;
 use App\Models\FinancialInstrument;
+use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use App\Models\StockCount;
+use App\Models\StockItem;
 use App\Models\VehicleOwnership;
 use App\Repositories\BankRepository;
 use App\Repositories\Reports\OwnerBalanceReportRepository;
 use App\Repositories\Reports\VehicleBalanceReportRepository;
+use App\Repositories\StockRepository;
 use App\Repositories\VehicleAccountRepository;
+use App\Services\InvoicePaymentService;
 use App\Services\Reports\CashMovementReportService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +42,7 @@ class LedgerAudit
         union all select 'shipment', cast(id as text), cast(party_id as text), substr(cast(shipped_on as text), 1, 10), 0, carrier_net_amount from shipments where deleted_at is null and carrier_net_amount <> 0
         union all select 'shipment', cast(id as text), cast(party_id as text), substr(cast(shipped_on as text), 1, 10), 0, driver_amount from shipments where deleted_at is null and driver_amount <> 0
         union all select 'shipment', cast(id as text), cast(commission_party_id as text), substr(cast(shipped_on as text), 1, 10), 0, commission_amount from shipments where deleted_at is null and commission_party_id is not null and commission_amount <> 0
+        union all select 'invoice', cast(id as text), cast(party_id as text), substr(cast(issued_on as text), 1, 10), case when direction in ('sale', 'purchase_return') then total else 0 end, case when direction in ('purchase', 'sale_return') then total else 0 end from invoices where deleted_at is null and is_draft = false and total <> 0
         union all select 'machine_work', cast(id as text), cast(party_id as text), substr(cast(worked_on as text), 1, 10), 0, amount from machine_works where deleted_at is null and amount <> 0
         union all select 'machine_work', cast(id as text), cast(operator_id as text), substr(cast(worked_on as text), 1, 10), 0, operator_amount from machine_works where deleted_at is null and operator_amount is not null and operator_amount <> 0
         union all select 'vehicle_payment', cast(id as text), cast(party_id as text), substr(cast(occurred_on as text), 1, 10), amount, 0 from vehicle_payments where deleted_at is null
@@ -72,6 +79,8 @@ class LedgerAudit
         private VehicleBalanceReportRepository $vehicleBalances,
         private CashMovementReportService $cash,
         private BankRepository $banks,
+        private InvoicePaymentService $invoicePayments,
+        private StockRepository $stock,
     ) {}
 
     /**
@@ -90,7 +99,225 @@ class LedgerAudit
             $this->cashDrawerMatchesCashMovements(),
             $this->cashDrawerMatchesCashAccounts(),
             $this->instrumentsMatchTheirEntries(),
+            $this->invoicesMatchTheirLinesAndPayments(),
+            $this->stockItemsMatchTheirMovements(),
         ];
+    }
+
+    /**
+     * Tracked stock walks the same movement order as StockRepository (entries in, exits out, counts
+     * last). No day may run negative; remaining quantity must equal entries − exits ± counts; entry
+     * value must equal exit costs + remaining value + count difference value (downward counts cost,
+     * upward counts credit). A count's stored counted quantity must equal book before it + difference.
+     *
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function stockItemsMatchTheirMovements(): array
+    {
+        $items = StockItem::query()->where('tracks_stock', true)->orderBy('name')->get();
+        $counts = StockCount::query()->get()->keyBy('id');
+        $failures = [];
+
+        foreach ($items as $item) {
+            $quantity = 0.0;
+            $value = 0.0;
+            $average = 0.0;
+            $in = 0.0;
+            $out = 0.0;
+            $countQty = 0.0;
+            $entryValue = 0.0;
+            $exitCosts = 0.0;
+            $countDiffValue = 0.0;
+
+            foreach ($this->stock->movements($item) as $movement) {
+                $delta = (float) $movement['quantity'];
+                $amount = (float) $movement['amount'];
+
+                if (in_array($movement['kind'], ['purchase', 'sale_return'], true)) {
+                    $in += $delta;
+                    $entryValue += $amount;
+                    $price = $delta > 0 ? $amount / $delta : 0.0;
+                    $wasEmpty = $quantity <= 0;
+                    $quantity += $delta;
+                    $value = $wasEmpty ? $quantity * $price : $value + $amount;
+                    $average = $quantity > 0 ? $value / $quantity : $price;
+                } elseif ($movement['kind'] === 'purchase_return') {
+                    $out += -$delta;
+                    $exitCosts += $amount;
+                    $quantity += $delta;
+                    $value -= $amount;
+                    $average = $quantity > 0 ? $value / $quantity : 0.0;
+                } elseif ($movement['kind'] === 'count') {
+                    $countQty += $delta;
+                    $bookBefore = $quantity;
+                    $valueChange = $delta * $average;
+                    $countDiffValue -= $valueChange;
+                    $quantity += $delta;
+                    $value = $quantity * $average;
+
+                    $count = $counts->get($movement['stock_count_id']);
+                    $expectedCounted = round($bookBefore + $delta, 3);
+
+                    if ($count !== null && abs((float) $count->quantity - $expectedCounted) >= 0.0005) {
+                        $failures[] = sprintf(
+                            'Stok %s: sayım %s sayılan %s, defter+fark %s',
+                            $item->name,
+                            $movement['date'],
+                            $count->quantity,
+                            number_format($expectedCounted, 3, '.', ''),
+                        );
+                    }
+                } else {
+                    $out += -$delta;
+                    $exitCosts += $amount;
+                    $quantity += $delta;
+                    $value = $quantity * $average;
+                }
+
+                if (round($quantity, 3) < 0) {
+                    $failures[] = sprintf(
+                        'Stok %s: %s tarihinde miktar eksiye düştü (%s)',
+                        $item->name,
+                        $movement['date'],
+                        number_format(round($quantity, 3), 3, '.', ''),
+                    );
+                }
+            }
+
+            $expectedQty = round($in - $out + $countQty, 3);
+            $actualQty = round($quantity, 3);
+
+            if (abs($actualQty - $expectedQty) >= 0.0005) {
+                $failures[] = sprintf(
+                    'Stok %s: miktar giriş %s − çıkış %s ± sayım %s = %s, kalan %s',
+                    $item->name,
+                    number_format($in, 3, '.', ''),
+                    number_format($out, 3, '.', ''),
+                    number_format($countQty, 3, '.', ''),
+                    number_format($expectedQty, 3, '.', ''),
+                    number_format($actualQty, 3, '.', ''),
+                );
+            }
+
+            $remaining = round($value, 2);
+            $expectedValue = round($exitCosts + $remaining + $countDiffValue, 2);
+
+            if (abs(round($entryValue, 2) - $expectedValue) >= 0.005) {
+                $failures[] = sprintf(
+                    'Stok %s: giriş değeri %s, çıkış %s + kalan %s + sayım farkı %s',
+                    $item->name,
+                    number_format(round($entryValue, 2), 2, '.', ''),
+                    number_format(round($exitCosts, 2), 2, '.', ''),
+                    number_format($remaining, 2, '.', ''),
+                    number_format(round($countDiffValue, 2), 2, '.', ''),
+                );
+            }
+        }
+
+        return $this->result('Stok miktarı ve değeri hareketlerle tutarlı', $items->count(), $failures);
+    }
+
+    /**
+     * An invoice's header totals must equal its lines; live matches must stay within the invoice total
+     * and within what the payment still pays (a bounced cheque pays nothing), so the derived payment
+     * status stays consistent with the matches. Soft-deleted matches are ignored. The cari posting
+     * (= total) is checked by postingsMatchDocuments.
+     *
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function invoicesMatchTheirLinesAndPayments(): array
+    {
+        $failures = [];
+
+        $lineMismatches = DB::select(<<<'SQL'
+            select cast(i.id as text) id, i.invoice_no, i.subtotal, i.vat_amount, i.total,
+                   coalesce(l.subtotal, 0) line_subtotal, coalesce(l.vat_amount, 0) line_vat, coalesce(l.total, 0) line_total
+            from invoices i
+            left join (
+                select invoice_id, sum(subtotal) subtotal, sum(vat_amount) vat_amount, sum(total) total
+                from invoice_lines
+                group by invoice_id
+            ) l on l.invoice_id = i.id
+            where i.deleted_at is null
+              and (i.subtotal <> coalesce(l.subtotal, 0)
+                   or i.vat_amount <> coalesce(l.vat_amount, 0)
+                   or i.total <> coalesce(l.total, 0))
+        SQL);
+
+        foreach ($lineMismatches as $row) {
+            $failures[] = sprintf(
+                'Fatura %s: başlık %s/%s/%s, satırlar %s/%s/%s',
+                $row->invoice_no ?: $row->id,
+                $row->subtotal,
+                $row->vat_amount,
+                $row->total,
+                $row->line_subtotal,
+                $row->line_vat,
+                $row->line_total,
+            );
+        }
+
+        $overpaid = DB::select(<<<'SQL'
+            select cast(i.id as text) id, i.invoice_no, i.total,
+                   coalesce(p.paid, 0) + coalesce(r.returned, 0) paid
+            from invoices i
+            left join (
+                select invoice_id, sum(amount) paid
+                from invoice_payments
+                where deleted_at is null
+                group by invoice_id
+            ) p on p.invoice_id = i.id
+            left join (
+                select returns_invoice_id, sum(total) returned
+                from invoices
+                where deleted_at is null and is_draft = false and returns_invoice_id is not null
+                group by returns_invoice_id
+            ) r on r.returns_invoice_id = i.id
+            where i.deleted_at is null and coalesce(p.paid, 0) + coalesce(r.returned, 0) > i.total
+        SQL);
+
+        foreach ($overpaid as $row) {
+            $failures[] = sprintf(
+                'Fatura %s: eşleşmeler %s, fatura toplamı %s',
+                $row->invoice_no ?: $row->id,
+                $row->paid,
+                $row->total,
+            );
+        }
+
+        $matches = InvoicePayment::query()
+            ->with(['invoice', 'payment'])
+            ->whereHas('invoice')
+            ->get()
+            ->groupBy(fn (InvoicePayment $match): string => $match->payment_type.'|'.$match->payment_id);
+
+        foreach ($matches as $group) {
+            /** @var InvoicePayment $first */
+            $first = $group->first();
+            $invoice = $first->invoice;
+            $payment = $first->payment;
+            $matched = round((float) $group->sum('amount'), 2);
+            $label = $invoice->invoice_no ?: $invoice->id;
+
+            if ($payment === null) {
+                $failures[] = sprintf('Fatura %s: eşleşme ödeme belgesi silinmiş', $label);
+
+                continue;
+            }
+
+            $available = $this->invoicePayments->paymentAmount($payment, $invoice);
+
+            if ($matched > $available) {
+                $failures[] = sprintf(
+                    'Fatura %s: eşleşmeler %s, ödeme tutarı %s',
+                    $label,
+                    number_format($matched, 2, '.', ''),
+                    number_format($available, 2, '.', ''),
+                );
+            }
+        }
+
+        return $this->result('Faturalar satırlar ve ödemelerle tutarlı', Invoice::query()->count(), $failures);
     }
 
     /**
@@ -193,6 +420,7 @@ class LedgerAudit
                 union all select 'fuel_receipt', cast(id as text), 'fuel', cast(site_id as text), null from fuel_receipts
                 union all select 'fuel_tank_fill', cast(id as text), 'fuel', null, null from fuel_tank_fills
                 union all select 'shipment', cast(id as text), 'transport', null, null from shipments
+                union all select 'invoice', cast(id as text), 'general', cast(site_id as text), null from invoices
                 union all select 'company_transaction', cast(id as text), case when role = 'fuel' then 'fuel' else 'general' end, cast(site_id as text), cast(bank_id as text) from company_transactions
                 union all select 'dump_site_payment', cast(id as text), 'excavation', null, cast(bank_id as text) from dump_site_payments
                 union all select 'vehicle_payment', cast(id as text), 'general', null, cast(bank_id as text) from vehicle_payments
@@ -249,6 +477,18 @@ class LedgerAudit
             SQL) as $row) {
                 $failures[] = "{$table} {$row->id}: o tarihteki araç sahibinin carisinde değil";
             }
+        }
+
+        // Plate sales store the day's owner as party_id; a drifted party is invisible on every plate report.
+        $checked += (int) DB::table('invoices')->whereNull('deleted_at')->whereNotNull('vehicle_id')->count();
+
+        foreach (DB::select(<<<'SQL'
+            select x.id from invoices x where x.deleted_at is null and x.vehicle_id is not null and not exists (
+                select 1 from vehicle_ownerships o where o.vehicle_id = x.vehicle_id and o.party_id = x.party_id
+                  and substr(cast(o.started_on as text), 1, 10) <= substr(cast(x.issued_on as text), 1, 10)
+                  and (o.ended_on is null or substr(cast(o.ended_on as text), 1, 10) >= substr(cast(x.issued_on as text), 1, 10)))
+        SQL) as $row) {
+            $failures[] = "invoices {$row->id}: o tarihteki araç sahibinin carisinde değil";
         }
 
         return $this->result('İş belgeleri o tarihteki araç sahibinde', $checked, $failures);
@@ -318,6 +558,7 @@ class LedgerAudit
               and le.source_type not in ('company_transaction', 'dump_site_payment', 'employee_salary', 'employee_bonus', 'employee_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction', 'fuel_tank_fill', 'shipment', 'financial_instrument_movement')
               and not (le.source_type = 'haul' and not exists (select 1 from hauls h where h.id = le.source_id and h.party_id = le.party_id))
               and not (le.source_type = 'fuel_receipt' and le.vehicle_id is null)
+              and not (le.source_type = 'invoice' and le.vehicle_id is null)
             group by le.party_id
         SQL))->mapWithKeys(fn (object $row) => [$row->party_id => round((float) $row->net, 2)]);
 
@@ -328,7 +569,7 @@ class LedgerAudit
             $row = $report->get($partyId);
             $balance = $row ? round(
                 $row->credit_hauls + $row->credit_machine_works + $row->credit_receivables + $row->credit_transfers
-                - $row->debit_payments - $row->debit_fuel - $row->debit_fines - $row->debit_transfers - $row->debit_owner_payments,
+                - $row->debit_payments - $row->debit_fuel - $row->debit_material - $row->debit_fines - $row->debit_transfers - $row->debit_owner_payments,
                 2,
             ) : 0.0;
             $expected = $cari->get($partyId, 0.0);
@@ -354,7 +595,7 @@ class LedgerAudit
                 where le.vehicle_id is not null and (
                     (le.source_type = 'haul' and exists (select 1 from hauls h where h.id = le.source_id and h.party_id = le.party_id))
                     or (le.source_type = 'machine_work' and exists (select 1 from machine_works m where m.id = le.source_id and m.party_id = le.party_id))
-                    or le.source_type in ('fuel_receipt', 'vehicle_payment', 'vehicle_receivable', 'vehicle_ownership'))
+                    or le.source_type in ('fuel_receipt', 'vehicle_payment', 'vehicle_receivable', 'vehicle_ownership', 'invoice'))
                 union all
                 select vehicle_id, -operator_amount from machine_works
                 where deleted_at is null and operator_amount is not null and operator_id = party_id
@@ -369,7 +610,7 @@ class LedgerAudit
             $row = $report->get($vehicleId);
             $balance = $row ? round(
                 $row->credit_hauls + $row->credit_machine_works + $row->credit_receivables + $row->credit_transfers
-                - $row->debit_payments - $row->debit_fuel - $row->debit_fines - $row->debit_transfers,
+                - $row->debit_payments - $row->debit_fuel - $row->debit_material - $row->debit_fines - $row->debit_transfers,
                 2,
             ) : 0.0;
             $expected = $cari->get($vehicleId, 0.0);

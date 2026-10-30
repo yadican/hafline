@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\FuelTankController;
 use App\Http\Controllers\Admin\HaulController;
 use App\Http\Controllers\Admin\HaulLookupController;
 use App\Http\Controllers\Admin\HaulRouteController;
+use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MachineWorkController;
 use App\Http\Controllers\Admin\MachineWorkLookupController;
@@ -36,6 +37,7 @@ use App\Http\Controllers\Admin\Reports\EmployeeAnnualReportController;
 use App\Http\Controllers\Admin\Reports\EmployeeMonthlyReportController;
 use App\Http\Controllers\Admin\Reports\FuelStationMonthlyReportController;
 use App\Http\Controllers\Admin\Reports\FuelStationReportController;
+use App\Http\Controllers\Admin\Reports\InvoiceAgingReportController;
 use App\Http\Controllers\Admin\Reports\MonthlyVoucherReportController;
 use App\Http\Controllers\Admin\Reports\OwnerBalanceReportController;
 use App\Http\Controllers\Admin\Reports\OwnerMonthlyReportController;
@@ -55,6 +57,9 @@ use App\Http\Controllers\Admin\RouteVehiclePriceController;
 use App\Http\Controllers\Admin\ShipmentController;
 use App\Http\Controllers\Admin\ShipmentLookupController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\Admin\StockCountController;
+use App\Http\Controllers\Admin\StockItemController;
+use App\Http\Controllers\Admin\StockUsageController;
 use App\Http\Controllers\Admin\User\UserController;
 use App\Http\Controllers\Admin\VehicleClassController;
 use App\Http\Controllers\Admin\VehicleController;
@@ -93,6 +98,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('cash-categories', CashCategoryController::class);
     });
 
+    Route::middleware('can:view-stock-item')->group(function () {
+        Route::resource('stock-items', StockItemController::class);
+    });
+
+    Route::middleware('can:view-stock-usage')->group(function () {
+        Route::resource('stock-usages', StockUsageController::class);
+    });
+
+    Route::middleware('can:view-stock-count')->group(function () {
+        Route::resource('stock-counts', StockCountController::class);
+    });
+
     Route::middleware('can:view-bank')->group(function () {
         Route::resource('banks', BankController::class);
     });
@@ -105,18 +122,30 @@ Route::middleware('auth')->group(function () {
         Route::resource('parties', PartyController::class)->except(['index']);
     });
 
-    Route::middleware('can:view-cari-entry')->group(function () {
-        Route::get('cari-entries/lookups/plates', [CariEntryLookupController::class, 'plate'])->name('cari-entries.lookups.plate');
-        Route::get('cari-entries/lookups/parties/{party}', [CariEntryLookupController::class, 'party'])->name('cari-entries.lookups.party');
-        Route::get('cari-entries', [CariEntryController::class, 'index'])->name('cari-entries.index');
-        Route::get('cari-entries/create', [CariEntryController::class, 'create'])->name('cari-entries.create');
-        Route::post('cari-entries', [CariEntryController::class, 'store'])->name('cari-entries.store');
-        Route::get('cari-entries/{kind}/{entry}', [CariEntryController::class, 'show'])
-            ->whereIn('kind', array_column(CariEntryKind::cases(), 'value'))
-            ->name('cari-entries.show');
-        Route::get('cari-entries/{kind}/{entry}/edit', [CariEntryController::class, 'edit'])->name('cari-entries.edit');
-        Route::put('cari-entries/{kind}/{entry}', [CariEntryController::class, 'update'])->name('cari-entries.update');
-        Route::delete('cari-entries/{kind}/{entry}', [CariEntryController::class, 'destroy'])->name('cari-entries.destroy');
+    Route::get('cari-entries/lookups/plates', [CariEntryLookupController::class, 'plate'])->name('cari-entries.lookups.plate');
+    Route::get('cari-entries/lookups/parties/{party}', [CariEntryLookupController::class, 'party'])->name('cari-entries.lookups.party');
+    Route::get('cari-entries', [CariEntryController::class, 'index'])->name('cari-entries.index');
+    Route::get('cari-entries/create', [CariEntryController::class, 'create'])->name('cari-entries.create');
+    Route::post('cari-entries', [CariEntryController::class, 'store'])->name('cari-entries.store');
+    Route::get('cari-entries/{kind}/{entry}', [CariEntryController::class, 'show'])
+        ->whereIn('kind', array_column(CariEntryKind::cases(), 'value'))
+        ->name('cari-entries.show');
+    Route::get('cari-entries/{kind}/{entry}/edit', [CariEntryController::class, 'edit'])->name('cari-entries.edit');
+    Route::put('cari-entries/{kind}/{entry}', [CariEntryController::class, 'update'])->name('cari-entries.update');
+    Route::delete('cari-entries/{kind}/{entry}', [CariEntryController::class, 'destroy'])->name('cari-entries.destroy');
+
+    Route::middleware('can:view-invoice')->group(function () {
+        Route::get('invoices/lookups/vehicles', [InvoiceController::class, 'vehicles'])->name('invoices.lookups.vehicles');
+        Route::resource('invoices', InvoiceController::class);
+        Route::post('invoices/{invoice}/attachments', [InvoiceController::class, 'storeAttachments'])->name('invoices.attachments.store');
+        Route::get('invoices/{invoice}/attachments/{attachment}', [InvoiceController::class, 'showAttachment'])->scopeBindings()->name('invoices.attachments.show');
+        Route::delete('invoices/{invoice}/attachments/{attachment}', [InvoiceController::class, 'destroyAttachment'])->scopeBindings()->name('invoices.attachments.destroy');
+        Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'storePayment'])->name('invoices.payments.store');
+        Route::post('invoices/{invoice}/matches', [InvoiceController::class, 'matchPayment'])->name('invoices.matches.store');
+        Route::post('invoices/{invoice}/matches/distribute', [InvoiceController::class, 'distributePayments'])->name('invoices.matches.distribute');
+        Route::delete('invoices/{invoice}/matches/{payment}', [InvoiceController::class, 'unmatchPayment'])->scopeBindings()->name('invoices.matches.destroy');
+        Route::post('invoices/{invoice}/reminder/dismiss', [InvoiceController::class, 'dismissReminder'])->name('invoices.reminder.dismiss');
+        Route::post('invoices/{invoice}/approve', [InvoiceController::class, 'approve'])->name('invoices.approve');
     });
 
     Route::middleware('can:view-financial-instrument')->group(function () {
@@ -278,6 +307,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:view-report-company-ledger')->group(function () {
         Route::get('reports/company-ledger', [CompanyLedgerReportController::class, 'index'])->name('reports.company-ledger');
         Route::get('reports/company-ledger/export/{format}', [CompanyLedgerReportController::class, 'export'])->name('reports.company-ledger.export');
+    });
+    Route::middleware('can:view-report-invoice-aging')->group(function () {
+        Route::get('reports/invoice-aging', [InvoiceAgingReportController::class, 'index'])->name('reports.invoice-aging');
+        Route::get('reports/invoice-aging/export/{format}', [InvoiceAgingReportController::class, 'export'])->name('reports.invoice-aging.export');
     });
     Route::middleware('can:view-report-site-cari')->group(function () {
         Route::get('reports/site-cari', [SiteCariReportController::class, 'index'])->name('reports.site-cari');

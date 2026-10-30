@@ -67,17 +67,35 @@ class CariEntryRepository
     private function branches(array $filters): array
     {
         $kind = $filters['kind'] ?? null;
+        /** @var list<string>|null $allowed */
+        $allowed = $filters['kinds'] ?? null;
         $branches = [];
 
-        $keep = function (string ...$kinds) use ($kind, &$branches): bool {
+        $keep = function (string ...$kinds) use ($kind, $allowed): bool {
+            if ($allowed !== null) {
+                $kinds = array_values(array_intersect($kinds, $allowed));
+                if ($kinds === []) {
+                    return false;
+                }
+            }
+
             return $kind === null || in_array($kind, $kinds, true);
         };
 
         if ($keep('supplier', 'customer', 'fuel', 'market')) {
+            $firmKinds = ['supplier', 'customer', 'fuel', 'market'];
+            if ($allowed !== null) {
+                $firmKinds = array_values(array_intersect($firmKinds, $allowed));
+            }
+
             $branches[] = $this->dated(DB::table('company_transactions as t')
                 ->leftJoin('parties as p', 'p.id', '=', 't.party_id')
                 ->whereNull('t.deleted_at')
-                ->when($kind, fn (QueryBuilder $query) => $query->where('t.role', $kind))
+                ->when(
+                    $kind !== null,
+                    fn (QueryBuilder $query) => $query->where('t.role', $kind),
+                    fn (QueryBuilder $query) => $query->whereIn('t.role', $firmKinds),
+                )
                 ->when($filters['party'] ?? null, fn (QueryBuilder $query, string $party) => $query->where('t.party_id', $party))
                 ->selectRaw('t.id, t.role as kind, p.name as label, t.debit, t.credit, t.occurred_on, t.description, t.payment_method'), $filters);
         }

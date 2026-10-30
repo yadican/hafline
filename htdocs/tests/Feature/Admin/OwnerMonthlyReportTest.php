@@ -9,6 +9,7 @@ use App\Models\FuelReceipt;
 use App\Models\FuelStation;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\PartyPayment;
 use App\Models\Site;
@@ -217,6 +218,58 @@ class OwnerMonthlyReportTest extends TestCase
         $this->assertSame(['34 ABR 69', '34 SLD 01'], $plates);
         $this->assertSame(2, $report['trips']);
         $this->assertSame(3500.0, $report['total_credit']);
+    }
+
+    public function test_plate_sale_appears_as_material_debit_and_enters_carryover(): void
+    {
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicleA->id,
+            'invoice_no' => 'OS-200',
+            'issued_on' => '2026-09-12',
+            'description' => 'Plaka malzemesi',
+            'subtotal' => 1200,
+            'vat_amount' => 0,
+            'total' => 1200,
+            'is_draft' => false,
+        ]);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->otherOwner->id,
+            'vehicle_id' => $this->vehicleA->id,
+            'issued_on' => '2026-09-13',
+            'subtotal' => 500,
+            'vat_amount' => 0,
+            'total' => 500,
+        ]);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicleA->id,
+            'issued_on' => '2026-08-15',
+            'subtotal' => 400,
+            'vat_amount' => 0,
+            'total' => 400,
+        ]);
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-monthly', [
+                'owner' => $this->owner->id,
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertSee('Plaka malzemesi', false)
+            ->viewData('report');
+
+        $this->assertCount(1, $report['vehicles']);
+        $this->assertSame('34 ABR 69', $report['vehicles'][0]['plate']);
+
+        $material = collect($report['vehicles'][0]['rows'])->firstWhere('type', 'material');
+        $this->assertSame(1200.0, $material['debit']);
+        $this->assertSame(1600.0, $report['total_debit']);
+        $this->assertSame(400.0, $report['carryover']['debit']);
+        $this->assertSame(-1600.0, $report['balance']);
     }
 
     public function test_carryover_is_the_net_of_prior_period_owner_rows(): void

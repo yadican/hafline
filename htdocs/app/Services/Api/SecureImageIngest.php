@@ -22,6 +22,11 @@ class SecureImageIngest
 
     public const JPEG_QUALITY = 72;
 
+    /** A PDF is kept as uploaded (no re-encode), so it gets a tighter cap than a photo. */
+    public const MAX_PDF_BYTES = 10_485_760;
+
+    public const PDF_MIME = 'application/pdf';
+
     /**
      * @var list<string>
      */
@@ -65,6 +70,26 @@ class SecureImageIngest
         Storage::disk(self::DISK)->put($path, $encoded);
 
         return $path;
+    }
+
+    /**
+     * A PDF is checked by size, sniffed type and its header, then stored unchanged as
+     * {folder}/Y/m/d/H/{name}.pdf.
+     */
+    public function storePdf(UploadedFile $file, string $folder, string $name): string
+    {
+        $this->assertAcceptablePdf($file);
+
+        $path = $this->datedPath($folder, $name.'.pdf');
+
+        Storage::disk(self::DISK)->putFileAs(dirname($path), $file, basename($path));
+
+        return $path;
+    }
+
+    public function isPdf(UploadedFile $file): bool
+    {
+        return $file->getMimeType() === self::PDF_MIME;
     }
 
     /**
@@ -155,6 +180,7 @@ class SecureImageIngest
         return match (strtolower((string) pathinfo($path, PATHINFO_EXTENSION))) {
             'png' => 'image/png',
             'webp' => 'image/webp',
+            'pdf' => self::PDF_MIME,
             default => 'image/jpeg',
         };
     }
@@ -272,6 +298,34 @@ class SecureImageIngest
 
         if ($info === false) {
             throw ValidationException::withMessages(['file' => 'Geçersiz görüntü.']);
+        }
+    }
+
+    /**
+     * Why an uploaded PDF cannot be kept, or null when it can: size, sniffed type and the %PDF- header.
+     */
+    public function pdfProblem(UploadedFile $file): ?string
+    {
+        if (! $file->isValid()) {
+            return 'Dosya yüklenemedi.';
+        }
+
+        if ($file->getSize() === false || $file->getSize() < 1 || $file->getSize() > self::MAX_PDF_BYTES) {
+            return 'PDF en fazla '.(int) (self::MAX_PDF_BYTES / 1024 / 1024).' MB olabilir.';
+        }
+
+        $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath()) ?: '';
+        $header = (string) file_get_contents($file->getRealPath(), false, null, 0, 5);
+
+        return $sniffed === self::PDF_MIME && $header === '%PDF-' ? null : 'Geçersiz PDF dosyası.';
+    }
+
+    private function assertAcceptablePdf(UploadedFile $file): void
+    {
+        $problem = $this->pdfProblem($file);
+
+        if ($problem !== null) {
+            throw ValidationException::withMessages(['file' => $problem]);
         }
     }
 }

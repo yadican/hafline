@@ -1,8 +1,11 @@
+{{-- iç içe alan nokta notasyonuyla verilir (payment.bank_id); select adı köşeli paranteze çevrilir --}}
 @aware(['model' => null])
 
 @props(['name', 'label', 'options' => [], 'value' => null, 'placeholder' => null, 'multiple' => false, 'searchable' => false, 'hideSearch' => false])
 
 @php
+    $id = str_replace('.', '_', $name);
+    $field = preg_replace('/\.([^.]+)/', '[$1]', $name);
     $selected = old($name, $value ?? data_get($model, $name));
     $selected = $selected instanceof \BackedEnum ? $selected->value : $selected;
 
@@ -13,10 +16,10 @@
     }
 @endphp
 
-<x-form.field :label="$label" :for="$name">
+<x-form.field :label="$label" :for="$id" :name="$name">
     <select
-        id="{{ $name }}"
-        name="{{ $multiple ? $name.'[]' : $name }}"
+        id="{{ $id }}"
+        name="{{ $multiple ? $field.'[]' : $field }}"
         @if ($multiple) multiple data-multi-select data-placeholder="{{ $placeholder ?? 'Seçin' }}" @endif
         @if ($searchable && ! $multiple)
             data-searchable-select

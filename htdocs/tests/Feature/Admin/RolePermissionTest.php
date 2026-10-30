@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\CariEntryGroup;
 use App\Models\Bank;
 use App\Models\CashCategory;
 use App\Models\DumpSite;
@@ -20,6 +21,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
+use App\Support\PermissionGroups;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -43,6 +45,56 @@ class RolePermissionTest extends TestCase
         $this->actingAs($user)
             ->get(route('admin.roles.index'))
             ->assertForbidden();
+    }
+
+    public function test_seeder_expands_legacy_cari_entry_into_group_permissions(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $names = RolePermissionSeeder::permissionNames();
+        $groupResources = RolePermissionSeeder::cariEntryGroupResources();
+
+        $this->assertSame(count(CariEntryGroup::cases()), count($groupResources));
+        // Legacy monolithic resource kept until 35a–37 authorize by group.
+        $this->assertContains('view-cari-entry', $names);
+
+        foreach ($groupResources as $resource) {
+            foreach (['view', 'create', 'edit', 'delete'] as $action) {
+                $this->assertContains("{$action}-{$resource}", $names);
+            }
+        }
+
+        $this->assertSame('Cari işlemleri', PermissionGroups::labels()['cari-entries']);
+        $this->assertSame(
+            'cari-entries',
+            PermissionGroups::groupKey('view-party-transfer-cari-entry')
+        );
+        $this->assertSame('parties', PermissionGroups::groupKey('view-party'));
+
+        $role = Role::create([
+            'id' => (string) Str::uuid7(),
+            'name' => 'eski-cari',
+            'guard_name' => 'web',
+        ]);
+        $role->givePermissionTo(['view-cari-entry', 'create-cari-entry']);
+
+        (new RolePermissionSeeder)->run();
+
+        $role->refresh();
+
+        foreach ($groupResources as $resource) {
+            $this->assertTrue($role->hasPermissionTo("view-{$resource}"));
+            $this->assertTrue($role->hasPermissionTo("create-{$resource}"));
+            $this->assertFalse($role->hasPermissionTo("edit-{$resource}"));
+            $this->assertFalse($role->hasPermissionTo("delete-{$resource}"));
+        }
+
+        $yonetici = Role::query()->where('name', 'yonetici')->where('guard_name', 'web')->firstOrFail();
+        foreach ($groupResources as $resource) {
+            foreach (['view', 'create', 'edit', 'delete'] as $action) {
+                $this->assertTrue($yonetici->hasPermissionTo("{$action}-{$resource}"));
+            }
+        }
     }
 
     public function test_yonetici_can_manage_roles_and_users(): void

@@ -4,15 +4,18 @@ namespace App\Services;
 
 use App\Cache\DashboardCache;
 use App\Enums\InstrumentDirection;
+use App\Enums\InvoiceDirection;
 use App\Models\Employee;
 use App\Models\FinancialInstrument;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\MachineWork;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Repositories\FinancialInstrumentRepository;
+use App\Repositories\InvoiceRepository;
 use App\Services\Reports\CashMovementReportService;
 use Illuminate\Support\Carbon;
 
@@ -23,6 +26,7 @@ class DashboardService extends Service
     public function __construct(
         private CashMovementReportService $cashReports,
         private FinancialInstrumentRepository $instruments,
+        private InvoiceRepository $invoices,
     ) {}
 
     /**
@@ -54,6 +58,10 @@ class DashboardService extends Service
      *         active: string,
      *         tabs: list<array{key: string, label: string, empty: string, count: int, received: float, given: float, filters: array<string, string>, items: list<array{id: string, due_on: string, when: string, is_overdue: bool, method: string, method_icon: string, direction: string, direction_label: string, party: string, number: ?string, amount: float}>}>,
      *         route: string
+     *     },
+     *     invoice_reminders: ?array{
+     *         receivables: array{key: string, label: string, active: string, tabs: list<array{key: string, label: string, empty: string, count: int, amount: float, filters: array<string, string>, items: list<array{id: string, due_on: string, when: string, is_overdue: bool, party: string, number: string, amount: float}>}>, route: string},
+     *         payables: array{key: string, label: string, active: string, tabs: list<array{key: string, label: string, empty: string, count: int, amount: float, filters: array<string, string>, items: list<array{id: string, due_on: string, when: string, is_overdue: bool, party: string, number: string, amount: float}>}>, route: string}
      *     }
      * }
      */
@@ -67,6 +75,7 @@ class DashboardService extends Service
             'recent_hauls' => $this->recentHauls($user, $today),
             'cash_summary' => $this->cashSummary($user, $today),
             'finance_reminders' => $this->financeReminders($user, $today),
+            'invoice_reminders' => $this->invoiceReminders($user, $today),
         ];
     }
 
@@ -391,6 +400,140 @@ class DashboardService extends Service
             'active' => $firstWithItems['key'] ?? 'week',
             'tabs' => $tabs,
             'route' => 'admin.financial-instruments.index',
+        ];
+    }
+
+    /**
+     * Unpaid invoices with a due date, split into Alacaklar (sales) and Borçlar (purchases).
+     * InvoiceService / InvoicePaymentService drop the cache on every change, so a paid or dismissed
+     * invoice leaves the reminder at once.
+     *
+     * @return ?array{
+     *     receivables: array{key: string, label: string, active: string, tabs: list<array<string, mixed>>, route: string},
+     *     payables: array{key: string, label: string, active: string, tabs: list<array<string, mixed>>, route: string}
+     * }
+     */
+    private function invoiceReminders(User $user, Carbon $today): ?array
+    {
+        if (! $user->can('view-invoice')) {
+            return null;
+        }
+
+        /** @var array{receivables: list<array<string, mixed>>, payables: list<array<string, mixed>>} $cached */
+        $cached = DashboardCache::remember(
+            DashboardCache::invoiceRemindersKey($today),
+            function () use ($today): array {
+                return [
+                    'receivables' => $this->invoiceReminderTabs(InvoiceDirection::Sale, $today),
+                    'payables' => $this->invoiceReminderTabs(InvoiceDirection::Purchase, $today),
+                ];
+            },
+        );
+
+        return [
+            'receivables' => $this->invoiceReminderPanel('receivables', 'Alacaklar', $cached['receivables']),
+            'payables' => $this->invoiceReminderPanel('payables', 'Borçlar', $cached['payables']),
+        ];
+    }
+
+    /**
+     * @return list<array{key: string, label: string, empty: string, count: int, amount: float, filters: array<string, string>, items: list<array<string, mixed>>}>
+     */
+    private function invoiceReminderTabs(InvoiceDirection $direction, Carbon $today): array
+    {
+        $windows = [
+            [
+                'key' => 'overdue',
+                'label' => 'Vadesi geçen',
+                'empty' => $direction === InvoiceDirection::Sale
+                    ? 'Vadesi geçmiş açık alacak yok.'
+                    : 'Vadesi geçmiş açık borç yok.',
+                'from' => null,
+                'to' => $today->copy()->subDay(),
+                'filters' => ['direction' => $direction->value, 'overdue' => '1'],
+            ],
+            [
+                'key' => 'week',
+                'label' => '7 gün içinde',
+                'empty' => $direction === InvoiceDirection::Sale
+                    ? 'Önümüzdeki 7 günde vadesi gelen alacak yok.'
+                    : 'Önümüzdeki 7 günde vadesi gelen borç yok.',
+                'from' => $today->copy(),
+                'to' => $today->copy()->addDays(6),
+            ],
+            [
+                'key' => 'month',
+                'label' => '30 gün içinde',
+                'empty' => $direction === InvoiceDirection::Sale
+                    ? 'Sonraki 30 günde vadesi gelen alacak yok.'
+                    : 'Sonraki 30 günde vadesi gelen borç yok.',
+                'from' => $today->copy()->addDays(7),
+                'to' => $today->copy()->addDays(30),
+            ],
+        ];
+
+        $tabs = [];
+
+        foreach ($windows as $window) {
+            $due = $this->invoices->openDueBetween($direction, $window['from'], $window['to'], self::REMINDER_LIMIT);
+
+            $tabs[] = [
+                'key' => $window['key'],
+                'label' => $window['label'],
+                'empty' => $window['empty'],
+                'count' => $due['count'],
+                'amount' => $due['amount'],
+                'filters' => $window['filters'] ?? [
+                    'direction' => $direction->value,
+                    'due_from' => $window['from']->toDateString(),
+                    'due_to' => $window['to']->toDateString(),
+                ],
+                'items' => $due['items']
+                    ->map(fn (Invoice $invoice): array => $this->invoiceReminderItem($invoice, $today))
+                    ->all(),
+            ];
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * @param  list<array{key: string, label: string, empty: string, count: int, amount: float, filters: array<string, string>, items: list<array<string, mixed>>}>  $tabs
+     * @return array{key: string, label: string, active: string, tabs: list<array<string, mixed>>, route: string}
+     */
+    private function invoiceReminderPanel(string $key, string $label, array $tabs): array
+    {
+        $firstWithItems = collect($tabs)->first(fn (array $tab): bool => $tab['count'] > 0);
+
+        return [
+            'key' => $key,
+            'label' => $label,
+            'active' => $firstWithItems['key'] ?? 'week',
+            'tabs' => $tabs,
+            'route' => 'admin.invoices.index',
+        ];
+    }
+
+    /**
+     * @return array{id: string, due_on: string, when: string, is_overdue: bool, party: string, number: string, amount: float}
+     */
+    private function invoiceReminderItem(Invoice $invoice, Carbon $today): array
+    {
+        $days = (int) $today->diffInDays($invoice->due_on, false);
+
+        return [
+            'id' => $invoice->getKey(),
+            'due_on' => $invoice->due_on->format('d.m.Y'),
+            'when' => match (true) {
+                $days < 0 => abs($days).' gün geçti',
+                $days === 0 => 'Bugün',
+                $days === 1 => 'Yarın',
+                default => $days.' gün kaldı',
+            },
+            'is_overdue' => $days < 0,
+            'party' => $invoice->party?->name ?? '—',
+            'number' => $invoice->invoice_no,
+            'amount' => $invoice->remainingAmount(),
         ];
     }
 

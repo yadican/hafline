@@ -7,6 +7,7 @@ use App\Models\FuelReceipt;
 use App\Models\FuelStation;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Site;
 use App\Models\User;
@@ -183,6 +184,70 @@ class VehicleMonthlyReportTest extends TestCase
         $this->assertSame(6800.0, $report['total_credit']);
         $this->assertSame(9350.0, $report['total_debit']);
         $this->assertSame(-2550.0, $report['balance']);
+    }
+
+    public function test_plate_sale_appears_as_material_debit_and_enters_carryover(): void
+    {
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-05 08:00:00', 2000);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicle->id,
+            'invoice_no' => 'PS-100',
+            'issued_on' => '2026-09-12',
+            'description' => null,
+            'subtotal' => 1500,
+            'vat_amount' => 0,
+            'total' => 1500,
+            'is_draft' => false,
+        ]);
+
+        Invoice::factory()->sale()->draft()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicle->id,
+            'issued_on' => '2026-09-13',
+            'subtotal' => 400,
+            'vat_amount' => 0,
+            'total' => 400,
+        ]);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => null,
+            'issued_on' => '2026-09-14',
+            'subtotal' => 700,
+            'vat_amount' => 0,
+            'total' => 700,
+        ]);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicle->id,
+            'issued_on' => '2026-08-20',
+            'subtotal' => 300,
+            'vat_amount' => 0,
+            'total' => 300,
+        ]);
+
+        $september = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-monthly', [
+                'plate' => '34 ABR 69',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertSee('Malzeme · PS-100', false)
+            ->viewData('report');
+
+        $material = collect($september['rows'])->firstWhere('type', 'material');
+        $this->assertSame('2026-09-12', $material['date']);
+        $this->assertSame(1500.0, $material['debit']);
+        $this->assertSame(2000.0, $september['total_credit']);
+        $this->assertSame(1800.0, $september['total_debit']);
+        $this->assertSame(200.0, $september['balance']);
+
+        $carryover = collect($september['rows'])->firstWhere('type', 'carryover');
+        $this->assertSame(300.0, $carryover['debit']);
     }
 
     public function test_carryover_is_the_net_of_prior_period_rows(): void

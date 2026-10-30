@@ -2,9 +2,11 @@
 
 namespace App\Repositories\Reports;
 
+use App\Enums\InvoiceDirection;
 use App\Enums\PartyRole;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Vehicle;
 use App\Repositories\PartyRepository;
@@ -85,6 +87,26 @@ class PeriodicMovementReportRepository
     }
 
     /**
+     * Live plate-sale totals for one vehicle in [from, toExclusive).
+     *
+     * @return Collection<int, object{id: string, invoice_no: string, description: string|null, total: string}>
+     */
+    public function vehicleMaterialTotals(string $vehicleId, Carbon $from, Carbon $toExclusive): Collection
+    {
+        return Invoice::query()
+            ->toBase()
+            ->where('vehicle_id', $vehicleId)
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->where('is_draft', false)
+            ->where('issued_on', '>=', $from->toDateString())
+            ->where('issued_on', '<', $toExclusive->toDateString())
+            ->whereNull('deleted_at')
+            ->orderBy('issued_on')
+            ->orderBy('invoice_no')
+            ->get(['id', 'invoice_no', 'description', 'total']);
+    }
+
+    /**
      * Owner-scoped haul totals: GROUP BY vehicle + route in one query.
      *
      * @return Collection<int, object{vehicle_id: string, plate: string, route_id: string, site_name: string, dump_site_name: string, trips: string, tonnage: string}>
@@ -152,6 +174,36 @@ class PeriodicMovementReportRepository
                 'fuel_receipts.fuel_station_id',
                 'fuel_stations.name as station_name',
                 DB::raw('COALESCE(SUM(fuel_receipts.quantity), 0) as liters'),
+            ]);
+    }
+
+    /**
+     * Owner-scoped live plate-sale totals: one row per invoice.
+     *
+     * @return Collection<int, object{vehicle_id: string, plate: string, id: string, invoice_no: string, description: string|null, total: string}>
+     */
+    public function ownerMaterialTotals(string $partyId, Carbon $from, Carbon $toExclusive): Collection
+    {
+        return Invoice::query()
+            ->toBase()
+            ->join('vehicles', 'vehicles.id', '=', 'invoices.vehicle_id')
+            ->where('invoices.party_id', $partyId)
+            ->whereNotNull('invoices.vehicle_id')
+            ->where('invoices.direction', InvoiceDirection::Sale->value)
+            ->where('invoices.is_draft', false)
+            ->where('invoices.issued_on', '>=', $from->toDateString())
+            ->where('invoices.issued_on', '<', $toExclusive->toDateString())
+            ->whereNull('invoices.deleted_at')
+            ->orderBy('vehicles.plate')
+            ->orderBy('invoices.issued_on')
+            ->orderBy('invoices.invoice_no')
+            ->get([
+                'invoices.vehicle_id',
+                'vehicles.plate',
+                'invoices.id',
+                'invoices.invoice_no',
+                'invoices.description',
+                'invoices.total',
             ]);
     }
 }

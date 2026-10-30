@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\AccountType;
 use App\Enums\PartyRole;
 use App\Enums\PartyType;
 use App\Exceptions\OperationRejectedException;
+use App\Models\Bank;
+use App\Models\CompanyTransaction;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\Party;
@@ -13,6 +16,7 @@ use App\Models\Vehicle;
 use App\Services\Ledger\FuelReceiptLedger;
 use App\Services\Ledger\HaulLedger;
 use App\Services\PartyService;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -457,5 +461,47 @@ class PartyTest extends TestCase
             ->assertOk()
             ->assertDontSee('value="employee"', false)
             ->assertDontSee('value="machine_operator"', false);
+    }
+
+    public function test_statement_entry_link_is_plain_text_without_group_view_permission(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+        $cash = Bank::factory()->create(['type' => AccountType::Cash]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '500',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $cash->id,
+                'description' => '37 firma tahsilatı',
+            ])
+            ->assertSessionHas('success');
+
+        $entry = CompanyTransaction::query()->sole();
+        $link = route('admin.cari-entries.show', ['kind' => 'supplier', 'entry' => $entry->id]);
+        $label = 'Satıcı Cari · 37 firma tahsilatı';
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(['view-dashboard', 'view-party', 'view-firm-payment-cari-entry']);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.parties.show', $supplier))
+            ->assertOk()
+            ->assertSee('<a href="'.$link.'">'.$label.'</a>', false);
+
+        $blind = User::factory()->create();
+        $blind->givePermissionTo(['view-dashboard', 'view-party']);
+
+        $this->actingAs($blind)
+            ->get(route('admin.parties.show', $supplier))
+            ->assertOk()
+            ->assertSee($label)
+            ->assertDontSee('<a href="'.$link.'">', false);
     }
 }

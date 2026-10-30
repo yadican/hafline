@@ -109,7 +109,7 @@ class CariLeakTest extends TestCase
 
         $market = Party::factory()->company()->withRole(PartyRole::Market)->create();
         $this->actingAs($this->admin)
-            ->post(route('admin.cari-entries.store'), ['kind' => 'market', 'direction' => 'debit', 'party_id' => $market->id, 'plate' => '06 YB 123', 'amount' => '300', 'occurred_on' => '2026-03-12'])
+            ->post(route('admin.cari-entries.store'), ['kind' => 'market', 'direction' => 'debit', 'party_id' => $market->id, 'plate' => '06 YB 123', 'amount' => '300', 'occurred_on' => '2026-03-12', 'payment_method' => 'offset'])
             ->assertSessionHasNoErrors();
 
         $owner = Party::factory()->create();

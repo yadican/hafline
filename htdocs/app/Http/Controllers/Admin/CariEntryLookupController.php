@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\CariEntryKind;
 use App\Models\Party;
 use App\Models\Vehicle;
 use App\Repositories\VehicleAccountRepository;
@@ -9,16 +10,26 @@ use App\Services\PartyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Throwable;
 
 class CariEntryLookupController extends AdminController
 {
-    protected ?string $permissionAbility = 'view-cari-entry';
-
     public function __construct(
         private PartyService $parties,
         private VehicleAccountRepository $accounts,
     ) {}
+
+    protected function authorizeIncoming(string $method): void
+    {
+        $allowed = array_filter(
+            CariEntryKind::cases(),
+            fn (CariEntryKind $kind) => Gate::allows('view-'.$kind->group()->permissionResource())
+                || Gate::allows('create-'.$kind->group()->permissionResource()),
+        );
+
+        abort_unless($allowed !== [], 403);
+    }
 
     /**
      * Current ledger totals for the selected company, shown beside the new entry.

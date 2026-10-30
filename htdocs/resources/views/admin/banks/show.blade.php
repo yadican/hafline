@@ -10,7 +10,7 @@
     >
         <x-slot:actions>
             @if ($bank->active)
-                @can('create-cari-entry')
+                @can('create-account-transfer-cari-entry')
                     <x-ui.button icon="fa-solid fa-right-left" :href="route('admin.cari-entries.create', ['kind' => 'account_transfer', 'bank_id' => $bank->id])">Bu hesaptan virman</x-ui.button>
                 @endcan
             @endif

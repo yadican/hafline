@@ -20,10 +20,11 @@
             <td>{{ $entry->payment_method ? \App\Enums\PaymentMethod::from($entry->payment_method)->label() : '—' }}</td>
             <td class="is-end">{{ (float) $entry->debit ? number_format((float) $entry->debit, 2, ',', '.') : '' }}</td>
             <td class="is-end">{{ (float) $entry->credit ? number_format((float) $entry->credit, 2, ',', '.') : '' }}</td>
+            @php($entryResource = \App\Enums\CariEntryKind::from($entry->kind)->group()->permissionResource())
             <x-table.actions
                 :show="route('admin.cari-entries.show', ['kind' => $entry->kind, 'entry' => $entry->id])"
-                :edit="auth()->user()->can('edit-cari-entry') ? route('admin.cari-entries.edit', ['kind' => $entry->kind, 'entry' => $entry->id]) : null"
-                :delete="auth()->user()->can('delete-cari-entry') ? route('admin.cari-entries.destroy', ['kind' => $entry->kind, 'entry' => $entry->id]) : null"
+                :edit="auth()->user()->can('edit-'.$entryResource) ? route('admin.cari-entries.edit', ['kind' => $entry->kind, 'entry' => $entry->id]) : null"
+                :delete="auth()->user()->can('delete-'.$entryResource) ? route('admin.cari-entries.destroy', ['kind' => $entry->kind, 'entry' => $entry->id]) : null"
                 confirm="Cari hareketi silinsin mi?"
                 confirm-text="Kayıt silinecek. Cariye yazılmış tutar ters kayıtla kapatılır."
             />

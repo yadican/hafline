@@ -7,6 +7,7 @@ use App\Models\FuelReceipt;
 use App\Models\FuelStation;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\Invoice;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -92,7 +93,48 @@ class VehiclePeriodicReportTest extends TestCase
         $this->assertSame(2, $report['total_trips']);
         $this->assertSame(20.0, $report['total_tonnage']);
         $this->assertSame(55.5, $report['total_liters']);
+        $this->assertSame(0.0, $report['total_material']);
         $this->assertCount(2, $report['rows']);
+    }
+
+    public function test_plate_sale_appears_as_material_row(): void
+    {
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->vehicle->currentOwnership->party_id,
+            'vehicle_id' => $this->vehicle->id,
+            'invoice_no' => 'VP-50',
+            'issued_on' => '2026-09-10',
+            'description' => null,
+            'subtotal' => 850,
+            'vat_amount' => 0,
+            'total' => 850,
+            'is_draft' => false,
+        ]);
+
+        Invoice::factory()->sale()->draft()->create([
+            'party_id' => $this->vehicle->currentOwnership->party_id,
+            'vehicle_id' => $this->vehicle->id,
+            'issued_on' => '2026-09-11',
+            'subtotal' => 100,
+            'vat_amount' => 0,
+            'total' => 100,
+        ]);
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-periodic', [
+                'plate' => '34 AAA 01',
+                'period' => 'month',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertSee('Malzeme · VP-50', false)
+            ->viewData('report');
+
+        $material = collect($report['rows'])->firstWhere('type', 'material');
+        $this->assertSame(850.0, $material['amount']);
+        $this->assertSame(850.0, $report['total_material']);
+        $this->assertCount(1, $report['rows']);
     }
 
     public function test_csv_export(): void

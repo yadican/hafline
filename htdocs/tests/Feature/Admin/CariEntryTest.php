@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Enums\AccountType;
+use App\Enums\CariEntryGroup;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
 use App\Models\AccountTransfer;
@@ -155,7 +156,7 @@ class CariEntryTest extends TestCase
 
         $payment = VehiclePayment::query()->sole();
         $viewer = User::factory()->create();
-        $viewer->givePermissionTo(['view-cari-entry', 'view-dashboard']);
+        $viewer->givePermissionTo(['view-vehicle-payment-cari-entry', 'view-dashboard']);
 
         $this->actingAs($viewer)
             ->get(route('admin.cari-entries.show', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
@@ -169,8 +170,352 @@ class CariEntryTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($viewer)
+            ->put(route('admin.cari-entries.update', ['kind' => 'vehicle_payment', 'entry' => $payment->id]), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 77',
+                'amount' => '800',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->delete(route('admin.cari-entries.destroy', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
             ->get(route('admin.cari-entries.show', ['kind' => 'vehicle_payment', 'entry' => '00000000-0000-0000-0000-000000000000']))
             ->assertNotFound();
+    }
+
+    public function test_edit_and_delete_respect_group_permissions(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $owner = Party::factory()->create();
+        Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 CR 35C']);
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => '35C SATICI']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 35C',
+                'amount' => '600',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+                'description' => '35c plaka ödemesi',
+            ])
+            ->assertSessionHas('success');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '700',
+                'occurred_on' => '2026-06-03',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+                'description' => '35c firma tahsilatı',
+            ])
+            ->assertSessionHas('success');
+
+        $payment = VehiclePayment::query()->sole();
+        $firm = CompanyTransaction::query()->sole();
+
+        $clerk = User::factory()->create();
+        $clerk->givePermissionTo([
+            'view-dashboard',
+            'view-vehicle-payment-cari-entry',
+            'view-firm-payment-cari-entry',
+            'edit-vehicle-payment-cari-entry',
+            'delete-vehicle-payment-cari-entry',
+        ]);
+
+        $indexHtml = $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.index'))
+            ->assertOk()
+            ->assertSee('35c plaka ödemesi')
+            ->assertSee('35c firma tahsilatı')
+            ->getContent();
+
+        $this->assertStringContainsString(
+            route('admin.cari-entries.edit', ['kind' => 'vehicle_payment', 'entry' => $payment->id], absolute: false),
+            $indexHtml,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<form[^>]+action="[^"]*cari-entries/vehicle_payment/'.preg_quote($payment->id, '#').'"[^>]*>[\s\S]*?name="_method" value="DELETE"#',
+            $indexHtml,
+        );
+        $this->assertStringNotContainsString(
+            route('admin.cari-entries.edit', ['kind' => 'supplier', 'entry' => $firm->id], absolute: false),
+            $indexHtml,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '#<form[^>]+action="[^"]*cari-entries/supplier/'.preg_quote($firm->id, '#').'"#',
+            $indexHtml,
+        );
+
+        $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.show', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertOk()
+            ->assertSee('Düzenle');
+
+        $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.show', ['kind' => 'supplier', 'entry' => $firm->id]))
+            ->assertOk()
+            ->assertDontSee('Düzenle');
+
+        $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.edit', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertOk();
+
+        $this->actingAs($clerk)
+            ->put(route('admin.cari-entries.update', ['kind' => 'vehicle_payment', 'entry' => $payment->id]), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 35C',
+                'amount' => '650',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+                'description' => '35c plaka ödemesi güncel',
+            ])
+            ->assertRedirect(route('admin.cari-entries.index'))
+            ->assertSessionHas('success');
+
+        $this->assertSame('650.00', VehiclePayment::query()->sole()->amount);
+
+        $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.edit', ['kind' => 'supplier', 'entry' => $firm->id]))
+            ->assertForbidden();
+
+        $this->actingAs($clerk)
+            ->put(route('admin.cari-entries.update', ['kind' => 'supplier', 'entry' => $firm->id]), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '800',
+                'occurred_on' => '2026-06-03',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+            ])
+            ->assertForbidden();
+
+        $this->assertSame('700.00', CompanyTransaction::query()->sole()->credit);
+
+        $this->actingAs($clerk)
+            ->delete(route('admin.cari-entries.destroy', ['kind' => 'supplier', 'entry' => $firm->id]))
+            ->assertForbidden();
+
+        $this->assertSame(1, CompanyTransaction::query()->count());
+
+        $this->actingAs($clerk)
+            ->delete(route('admin.cari-entries.destroy', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertRedirect(route('admin.cari-entries.index'))
+            ->assertSessionHas('success');
+
+        $this->assertSame(0, VehiclePayment::query()->count());
+    }
+
+    public function test_index_and_show_respect_group_view_permissions(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $owner = Party::factory()->create();
+        Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 CR 35B']);
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create(['name' => '35B SATICI']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 35B',
+                'amount' => '400',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+                'description' => '35b plaka ödemesi',
+            ])
+            ->assertSessionHas('success');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '900',
+                'occurred_on' => '2026-06-03',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+                'description' => '35b firma tahsilatı',
+            ])
+            ->assertSessionHas('success');
+
+        $payment = VehiclePayment::query()->sole();
+        $firm = CompanyTransaction::query()->sole();
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo([
+            'view-dashboard',
+            'view-vehicle-payment-cari-entry',
+        ]);
+
+        $index = $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.index'))
+            ->assertOk()
+            ->assertSee('35b plaka ödemesi')
+            ->assertDontSee('35b firma tahsilatı')
+            ->assertDontSee('Satıcı Cari');
+
+        $kinds = $index->viewData('kinds');
+        $this->assertArrayHasKey('vehicle_payment', $kinds);
+        $this->assertArrayNotHasKey('supplier', $kinds);
+        $this->assertArrayNotHasKey('customer', $kinds);
+        $this->assertArrayNotHasKey('fuel', $kinds);
+        $this->assertArrayNotHasKey('market', $kinds);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.show', ['kind' => 'vehicle_payment', 'entry' => $payment->id]))
+            ->assertOk()
+            ->assertSee('34 CR 35B');
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.show', ['kind' => 'supplier', 'entry' => $firm->id]))
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.index', ['kind' => 'supplier']))
+            ->assertRedirect(route('admin.cari-entries.index'));
+
+        $denied = User::factory()->create();
+        $denied->givePermissionTo(['view-dashboard']);
+
+        $this->actingAs($denied)
+            ->get(route('admin.cari-entries.index'))
+            ->assertForbidden();
+    }
+
+    public function test_cari_group_menu_links_respect_view_permissions_and_open_group_create(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo([
+            'view-dashboard',
+            'view-vehicle-payment-cari-entry',
+            'create-vehicle-payment-cari-entry',
+            'view-cash-category',
+        ]);
+
+        $vehicleIndex = route('admin.cari-entries.index', ['group' => CariEntryGroup::VehiclePayment->value]);
+        $firmIndex = route('admin.cari-entries.index', ['group' => CariEntryGroup::FirmPayment->value]);
+        $vehicleCreate = route('admin.cari-entries.create', ['group' => CariEntryGroup::VehiclePayment->value]);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Cari işlemleri')
+            ->assertSee(e($vehicleIndex), false)
+            ->assertSee('Plaka ödeme')
+            ->assertDontSee(e($firmIndex), false)
+            ->assertDontSee('Firma ödeme/tahsilat');
+
+        $index = $this->actingAs($viewer)
+            ->get($vehicleIndex)
+            ->assertOk()
+            ->assertSee('Plaka ödeme')
+            ->assertSee('Yeni Cari')
+            ->assertSee(e($vehicleCreate), false);
+
+        $this->assertSame(
+            ['vehicle_payment' => 'Plaka Ödeme'],
+            $index->viewData('kinds'),
+        );
+
+        $create = $this->actingAs($viewer)
+            ->get($vehicleCreate)
+            ->assertOk();
+
+        $this->assertSame(
+            ['vehicle_payment' => 'Plaka Ödeme'],
+            $create->viewData('options')['kinds'],
+        );
+        $this->assertSame('vehicle_payment', $create->viewData('form')['kind']);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.cari-entries.create', ['group' => CariEntryGroup::FirmPayment->value]))
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->get($firmIndex)
+            ->assertRedirect(route('admin.cari-entries.index'));
+    }
+
+    public function test_can_create_vehicle_payment_but_not_firm_payment(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $clerk = User::factory()->create();
+        $clerk->givePermissionTo([
+            'view-dashboard',
+            'view-cari-entry',
+            'create-vehicle-payment-cari-entry',
+        ]);
+
+        $owner = Party::factory()->create();
+        Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 CR 35']);
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+
+        $create = $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.create'))
+            ->assertOk();
+
+        $kinds = $create->viewData('options')['kinds'];
+        $this->assertArrayHasKey('vehicle_payment', $kinds);
+        $this->assertArrayNotHasKey('supplier', $kinds);
+        $this->assertArrayNotHasKey('customer', $kinds);
+        $this->assertArrayNotHasKey('fuel', $kinds);
+        $this->assertArrayNotHasKey('market', $kinds);
+        $create->assertSee('Plaka Ödeme')->assertDontSee('Satıcı Cari');
+
+        $this->actingAs($clerk)
+            ->get(route('admin.cari-entries.create', ['kind' => 'supplier']))
+            ->assertOk()
+            ->assertSee('Plaka Ödeme');
+
+        $this->assertSame(
+            'vehicle_payment',
+            $this->actingAs($clerk)->get(route('admin.cari-entries.create', ['kind' => 'supplier']))->viewData('form')['kind']
+        );
+
+        $this->actingAs($clerk)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'vehicle_payment',
+                'plate' => '34 CR 35',
+                'amount' => '500',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+            ])
+            ->assertRedirect(route('admin.cari-entries.index'))
+            ->assertSessionHas('success');
+
+        $this->assertSame(1, VehiclePayment::query()->count());
+
+        $this->actingAs($clerk)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '500',
+                'occurred_on' => '2026-06-02',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(0, CompanyTransaction::query()->count());
     }
 
     public function test_party_filter_returns_only_entries_for_the_selected_party(): void
@@ -186,6 +531,8 @@ class CariEntryTest extends TestCase
                     'party_id' => $party->id,
                     'amount' => '100',
                     'occurred_on' => '2026-06-01',
+                    'payment_method' => 'cash',
+                    'bank_id' => $this->cashBox->id,
                     'description' => $description,
                 ])
                 ->assertSessionHasNoErrors();
@@ -407,6 +754,43 @@ class CariEntryTest extends TestCase
             ->assertSee(e($createUrl), false);
     }
 
+    public function test_account_transfer_buttons_on_bank_screens_require_create_permission(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $bank = Bank::factory()->create(['type' => AccountType::Bank, 'name' => '37 Ziraat']);
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(['view-dashboard', 'view-bank']);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.banks.index'))
+            ->assertOk()
+            ->assertDontSee('Hesaplar arası virman');
+
+        $this->actingAs($viewer)
+            ->get(route('admin.banks.show', $bank))
+            ->assertOk()
+            ->assertDontSee('Bu hesaptan virman');
+
+        $clerk = User::factory()->create();
+        $clerk->givePermissionTo([
+            'view-dashboard',
+            'view-bank',
+            'create-account-transfer-cari-entry',
+        ]);
+
+        $this->actingAs($clerk)
+            ->get(route('admin.banks.index'))
+            ->assertOk()
+            ->assertSee('Hesaplar arası virman');
+
+        $this->actingAs($clerk)
+            ->get(route('admin.banks.show', $bank))
+            ->assertOk()
+            ->assertSee('Bu hesaptan virman');
+    }
+
     public function test_payment_names_an_account_of_its_method_and_moves_that_balance(): void
     {
         $customer = Party::factory()->company()->withRole(PartyRole::Customer)->create();
@@ -532,6 +916,8 @@ class CariEntryTest extends TestCase
                 'party_id' => $supplier->id,
                 'amount' => '1500',
                 'occurred_on' => '2026-06-01',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
             ])
             ->assertSessionHasNoErrors();
 
@@ -611,7 +997,33 @@ class CariEntryTest extends TestCase
                 'party_id' => $party->id,
                 'amount' => '10',
                 'occurred_on' => '2026-06-04',
+                'payment_method' => 'cash',
+                'bank_id' => $this->cashBox->id,
             ])
             ->assertSessionHasErrors('party_id');
+    }
+
+    public function test_firm_entry_rejects_a_missing_payment_method(): void
+    {
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.create', ['kind' => 'supplier']))
+            ->assertOk()
+            ->assertSee('Fatura için', false)
+            ->assertSee(route('admin.invoices.index'), false)
+            ->assertSee('Burada yalnız ödeme / tahsilat girilir', false);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [
+                'kind' => 'supplier',
+                'direction' => 'credit',
+                'party_id' => $supplier->id,
+                'amount' => '1500',
+                'occurred_on' => '2026-06-01',
+            ])
+            ->assertSessionHasErrors(['payment_method' => 'Fatura için Faturalar ekranını kullanın; burada ödeme tipi zorunludur.']);
+
+        $this->assertSame(0, CompanyTransaction::query()->count());
     }
 }

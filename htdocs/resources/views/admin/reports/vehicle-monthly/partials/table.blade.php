@@ -40,7 +40,7 @@
                 <tr>
                     <td class="is-center">{{ $loop->iteration }}</td>
                     <td>{{ $row['date'] ? \Illuminate\Support\Carbon::parse($row['date'])->format('d.m.Y') : '' }}</td>
-                    <td>{{ $row['description'] }}</td>
+                    <td>@include('admin.reports.partials.material-description', ['row' => $row])</td>
                     <td class="is-end">
                         @if ($row['quantity'] !== null)
                             @if (in_array($row['quantity_unit'], ['lt', 'saat'], true))

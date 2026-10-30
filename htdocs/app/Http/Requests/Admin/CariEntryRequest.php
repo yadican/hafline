@@ -25,6 +25,20 @@ class CariEntryRequest extends FormRequest
 
     public function authorize(): bool
     {
+        if ($this->routeIs('admin.cari-entries.store')) {
+            $kind = CariEntryKind::tryFrom((string) $this->input('kind'));
+
+            return $kind !== null
+                && (bool) $this->user()?->can('create-'.$kind->group()->permissionResource());
+        }
+
+        if ($this->routeIs('admin.cari-entries.update')) {
+            $kind = CariEntryKind::tryFrom((string) $this->route('kind'));
+
+            return $kind !== null
+                && (bool) $this->user()?->can('edit-'.$kind->group()->permissionResource());
+        }
+
         return true;
     }
 
@@ -78,7 +92,11 @@ class CariEntryRequest extends FormRequest
             'bank_id' => ['nullable', 'uuid'],
             'counter_bank_id' => ['nullable', 'uuid'],
             'cash_category_id' => ['nullable', 'uuid'],
-            'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'payment_method' => [
+                Rule::requiredIf(fn (): bool => (bool) CariEntryKind::tryFrom((string) $this->input('kind'))?->requiresPaymentMethod()),
+                'nullable',
+                Rule::enum(PaymentMethod::class),
+            ],
             'document_no' => ['nullable', 'string', 'max:40'],
             'cheque_no' => ['nullable', 'string', 'max:20'],
             'due_on' => [Rule::requiredIf(fn (): bool => $this->tracksInstrument()), 'nullable', 'date', 'after_or_equal:occurred_on'],
@@ -245,6 +263,16 @@ class CariEntryRequest extends FormRequest
             'unit_price' => 'birim fiyat',
             'receiver_name' => 'teslim alan',
             'receiver_national_id' => 'teslim alanın TC kimlik no',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'payment_method.required' => 'Fatura için Faturalar ekranını kullanın; burada ödeme tipi zorunludur.',
         ];
     }
 

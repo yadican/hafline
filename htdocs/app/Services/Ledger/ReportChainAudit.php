@@ -250,7 +250,12 @@ class ReportChainAudit
     {
         $checks = new ChainChecks;
 
-        foreach (DB::table('site_transactions')->distinct()->pluck('site_id') as $siteId) {
+        $siteIds = DB::table('site_transactions')->distinct()->pluck('site_id')
+            ->merge(DB::table('stock_usages')->whereNotNull('site_id')->distinct()->pluck('site_id'))
+            ->unique()
+            ->values();
+
+        foreach ($siteIds as $siteId) {
             $name = DB::table('sites')->where('id', $siteId)->value('name');
             $previous = null;
 
@@ -377,6 +382,7 @@ class ReportChainAudit
             DB::table('ledger_entries')->min('occurred_on'),
             DB::table('cash_entries')->min('occurred_on'),
             DB::table('site_transactions')->min('occurred_on'),
+            DB::table('stock_usages')->min('used_on'),
             DB::table('employee_payments')->min('occurred_on'),
             DB::table('employee_salaries')->min('period'),
         ])->filter()->map(fn ($date) => Carbon::parse($date))->min() ?? now();

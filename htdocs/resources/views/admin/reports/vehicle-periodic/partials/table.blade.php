@@ -23,13 +23,14 @@
                 <th class="is-end">Döküm Sayısı</th>
                 <th class="is-end">Toplam Lt</th>
                 <th class="is-end">Toplam Ton</th>
+                <th class="is-end">Malzeme</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($report['rows'] as $row)
                 <tr>
                     <td class="is-center">{{ $loop->iteration }}</td>
-                    <td>{{ $row['description'] }}</td>
+                    <td>@include('admin.reports.partials.material-description', ['row' => $row])</td>
                     <td class="is-end">{{ $row['trips'] ?? '' }}</td>
                     <td class="is-end">
                         {{ $row['liters'] !== null ? number_format($row['liters'], 2, ',', '.') : '' }}
@@ -37,13 +38,16 @@
                     <td class="is-end">
                         {{ $row['tonnage'] !== null ? number_format($row['tonnage'], 2, ',', '.') : '' }}
                     </td>
+                    <td class="panel-tutar is-end">
+                        {{ $row['amount'] !== null ? number_format($row['amount'], 2, ',', '.').' TL' : '' }}
+                    </td>
                 </tr>
             @empty
                 <x-table.empty
-                    colspan="5"
+                    colspan="6"
                     icon="fa-solid fa-chart-simple"
                     title="Bu dönemde hareket yok."
-                    text="Seçilen plaka ve dönem için taşıma veya yakıt fişi bulunamadı."
+                    text="Seçilen plaka ve dönem için taşıma, yakıt veya malzeme hareketi bulunamadı."
                 />
             @endforelse
         </tbody>
@@ -55,6 +59,7 @@
                     <th class="is-end">{{ $report['total_trips'] }}</th>
                     <th class="is-end">{{ number_format($report['total_liters'], 2, ',', '.') }}</th>
                     <th class="is-end">{{ number_format($report['total_tonnage'], 2, ',', '.') }}</th>
+                    <th class="panel-tutar is-end">{{ number_format($report['total_material'], 2, ',', '.') }} TL</th>
                 </tr>
             </tfoot>
         @endif

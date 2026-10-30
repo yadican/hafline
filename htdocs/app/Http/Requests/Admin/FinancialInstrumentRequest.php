@@ -36,11 +36,15 @@ class FinancialInstrumentRequest extends FormRequest
     }
 
     /**
-     * Entering a cheque writes a cari entry, so it needs that right too.
+     * Entering a cheque writes a cari entry, so it needs that group's create right.
      */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->can('create-cari-entry');
+        [$role] = array_pad(explode('|', (string) $this->input('counterparty'), 2), 2, null);
+        $kind = self::kinds()[$role] ?? null;
+
+        return $kind !== null
+            && (bool) $this->user()?->can('create-'.$kind->group()->permissionResource());
     }
 
     protected function prepareForValidation(): void

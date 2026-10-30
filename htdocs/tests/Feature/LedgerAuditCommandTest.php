@@ -201,4 +201,53 @@ class LedgerAuditCommandTest extends TestCase
             ->expectsOutputToContain('34 TR 100: eski sahip')
             ->assertFailed();
     }
+
+    public function test_audit_passes_with_a_plate_sale_on_reports_and_monthly_chain(): void
+    {
+        $this->storePlateSale();
+
+        $this->artisan('ledger:audit')
+            ->expectsOutputToContain('İş belgeleri o tarihteki araç sahibinde · kontrol')
+            ->expectsOutputToContain('Plaka Sahibi Bakiye = cari ekstre · kontrol')
+            ->expectsOutputToContain('Plaka Bakiye = carideki araç hareketleri · kontrol')
+            ->expectsOutputToContain('Plaka Aylık: devir, satırlar, bakiye')
+            ->expectsOutputToContain('Plaka Sahibi Aylık: devir, satırlar, bakiye')
+            ->expectsOutputToContain('Cari, belgeler ve raporlar birebir tutuyor.')
+            ->assertSuccessful();
+    }
+
+    public function test_audit_fails_when_a_plate_sale_sits_with_the_wrong_owner(): void
+    {
+        $this->storePlateSale();
+
+        DB::table('invoices')->update(['party_id' => Party::factory()->create()->id]);
+
+        $this->artisan('ledger:audit', ['--skip-reports' => true])
+            ->expectsOutputToContain('İş belgeleri o tarihteki araç sahibinde')
+            ->expectsOutputToContain('o tarihteki araç sahibinin carisinde değil')
+            ->assertFailed();
+    }
+
+    private function storePlateSale(): void
+    {
+        $this->actingAs(User::query()->firstOrFail())
+            ->post(route('admin.invoices.store'), [
+                'direction' => 'sale',
+                'recipient' => 'plate',
+                'plate' => '34 TR 100',
+                'invoice_no' => 'S-PLATE-1',
+                'issued_on' => '2026-03-20',
+                'is_draft' => false,
+                'payment_status' => 'unpaid',
+                'lines' => [[
+                    'description' => 'Malzeme',
+                    'quantity' => '10',
+                    'unit_price' => '150',
+                    'vat_rate' => '0',
+                ]],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionMissing('error')
+            ->assertRedirect(route('admin.invoices.index'));
+    }
 }

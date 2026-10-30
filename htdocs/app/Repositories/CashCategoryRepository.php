@@ -34,11 +34,12 @@ class CashCategoryRepository extends Repository
     }
 
     /**
-     * Active categories usable for the given side, plus the one already chosen on a record.
+     * Active categories usable for the given side, plus the ones already chosen on a record.
      *
+     * @param  string|list<string>|null  $include
      * @return array<string, string>
      */
-    public function options(?CashDirection $direction = null, ?string $include = null): array
+    public function options(?CashDirection $direction = null, string|array|null $include = null): array
     {
         $options = FormOptionsCache::remember(
             FormOptionsCache::CASH_CATEGORIES,

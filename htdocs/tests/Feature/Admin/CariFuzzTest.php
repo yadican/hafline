@@ -496,7 +496,8 @@ class CariFuzzTest extends TestCase
      */
     private function payload(CariEntryKind $kind): array
     {
-        $method = $this->pick(['cash', 'bank_transfer', 'cheque', 'cheque', 'promissory_note', 'promissory_note', 'offset', null]);
+        $methods = ['cash', 'bank_transfer', 'cheque', 'cheque', 'promissory_note', 'promissory_note', 'offset'];
+        $method = $this->pick($kind->requiresPaymentMethod() ? $methods : [...$methods, null]);
         $occurredOn = $this->date('2026-02-01');
         $plate = $this->pick($this->vehicles)->plate;
 

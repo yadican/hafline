@@ -9,7 +9,7 @@
         :back="route('admin.cari-entries.index')"
     >
         <x-slot:actions>
-            @can('edit-cari-entry')
+            @can('edit-'.$kind->group()->permissionResource())
                 <x-ui.button variant="edit" icon="fa-solid fa-pen" :href="route('admin.cari-entries.edit', ['kind' => $kind->value, 'entry' => $entry])">Düzenle</x-ui.button>
             @endcan
         </x-slot:actions>

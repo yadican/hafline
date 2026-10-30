@@ -46,7 +46,7 @@
                     <tr>
                         <td class="is-center">{{ $rowIndex }}</td>
                         <td>{{ $row['date'] ? \Illuminate\Support\Carbon::parse($row['date'])->format('d.m.Y') : '' }}</td>
-                        <td>{{ $row['description'] }}</td>
+                        <td>@include('admin.reports.partials.material-description', ['row' => $row])</td>
                         <td class="is-end">
                             @if ($row['quantity'] !== null)
                                 @if (in_array($row['quantity_unit'], ['lt', 'saat'], true))
@@ -130,7 +130,7 @@
                     <tr>
                         <td class="is-center">{{ $rowIndex }}</td>
                         <td>{{ $row['date'] ? \Illuminate\Support\Carbon::parse($row['date'])->format('d.m.Y') : '' }}</td>
-                        <td>{{ $row['description'] }}</td>
+                        <td>@include('admin.reports.partials.material-description', ['row' => $row])</td>
                         <td class="is-end">
                             @if ($row['quantity'] !== null)
                                 {{ number_format($row['quantity'], 2, ',', '.') }} {{ $row['quantity_unit'] }}

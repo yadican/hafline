@@ -6,6 +6,8 @@
     <a href="{{ route('admin.fuel-receipts.show', $entry->source) }}">{{ $label }}</a>
 @elseif ($entry->source_type === 'shipment' && $entry->source && ! $entry->source->trashed())
     <a href="{{ route('admin.shipments.show', $entry->source) }}">{{ $label }}</a>
+@elseif ($entry->source_type === 'invoice' && $entry->source && ! $entry->source->trashed())
+    <a href="{{ route('admin.invoices.show', $entry->source) }}">{{ $label }}</a>
 @elseif ($entry->source_type === 'fuel_tank_fill' && $entry->source && ! $entry->source->trashed())
     <a href="{{ route('admin.fuel-stations.show', $entry->source->fuel_station_id) }}#stok">{{ $label }}</a>
 @elseif (in_array($entry->source_type, ['company_transaction', 'vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'opening_balance', 'party_transfer', 'site_bill', 'site_transaction'], true) && $entry->source && ! $entry->source->trashed())
@@ -18,8 +20,14 @@
             'site_transaction' => 'site',
             default => $entry->source_type,
         };
+        $kind = \App\Enums\CariEntryKind::tryFrom($cariKind);
+        $canViewEntry = $kind && auth()->user()?->can('view-'.$kind->group()->permissionResource());
     @endphp
-    <a href="{{ route('admin.cari-entries.show', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $label }}</a>
+    @if ($canViewEntry)
+        <a href="{{ route('admin.cari-entries.show', ['kind' => $cariKind, 'entry' => $entry->source_id]) }}">{{ $label }}</a>
+    @else
+        {{ $label }}
+    @endif
 @elseif ($entry->source_type === 'financial_instrument_movement' && $entry->source && ! $entry->source->trashed())
     <a href="{{ route('admin.financial-instruments.show', $entry->source->financial_instrument_id) }}">{{ $label }}</a>
 @elseif ($entry->source_type === 'employee_payment' && $entry->source && ! $entry->source->trashed())

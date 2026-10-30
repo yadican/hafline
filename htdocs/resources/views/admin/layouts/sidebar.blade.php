@@ -36,27 +36,93 @@
         </div>
     @endcanany
 
-    @canany(['view-cari-entry', 'view-financial-instrument', 'view-bank', 'view-cash-category'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.cari-entries.*', 'admin.financial-instruments.*', 'admin.banks.*', 'admin.cash-categories.*')]) id="um-sec-finance">
-            <button type="button" class="um-title" data-um-toggle="um-sec-finance">
+    @php
+        $cariEntryGroups = \App\Enums\CariEntryGroup::cases();
+        $cariEntryViewPermissions = array_map(
+            fn (\App\Enums\CariEntryGroup $group) => 'view-'.$group->permissionResource(),
+            $cariEntryGroups,
+        );
+        $cariEntryActiveGroup = request('group')
+            ?? \App\Enums\CariEntryKind::tryFrom((string) request()->route('kind'))?->group()->value;
+    @endphp
+    @canany($cariEntryViewPermissions)
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.cari-entries.*')]) id="um-sec-cari">
+            <button type="button" class="um-title" data-um-toggle="um-sec-cari">
                 <span class="um-title-text">
-                    <i class="fa-solid fa-wallet um-title-icon" aria-hidden="true"></i>
-                    <span class="um-title-label">Finans</span>
+                    <i class="fa-solid fa-book um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Cari işlemleri</span>
                 </span>
                 <span class="um-caret" aria-hidden="true"></span>
             </button>
             <div class="um-items">
-                @can('view-cari-entry')
-                    <a href="{{ route('admin.cari-entries.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cari-entries.*')])>Cari hareketleri</a>
+                @foreach ($cariEntryGroups as $cariEntryGroup)
+                    @can('view-'.$cariEntryGroup->permissionResource())
+                        <a
+                            href="{{ route('admin.cari-entries.index', ['group' => $cariEntryGroup->value]) }}"
+                            @class([
+                                'um-link',
+                                'um-active' => request()->routeIs('admin.cari-entries.*')
+                                    && $cariEntryActiveGroup === $cariEntryGroup->value,
+                            ])
+                        >{{ $cariEntryGroup->label() }}</a>
+                    @endcan
+                @endforeach
+            </div>
+        </div>
+    @endcanany
+
+    @can('view-invoice')
+        <div class="um-section" id="um-sec-invoices">
+            <a href="{{ route('admin.invoices.index') }}" @class(['um-title', 'um-active' => request()->routeIs('admin.invoices.*')])>
+                <span class="um-title-text">
+                    <i class="fa-solid fa-file-invoice-dollar um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Faturalar</span>
+                </span>
+            </a>
+        </div>
+    @endcan
+
+    @canany(['view-bank', 'view-cash-category', 'view-financial-instrument'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.banks.*', 'admin.cash-categories.*', 'admin.financial-instruments.*')]) id="um-sec-cash">
+            <button type="button" class="um-title" data-um-toggle="um-sec-cash">
+                <span class="um-title-text">
+                    <i class="fa-solid fa-wallet um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Kasa / Banka</span>
+                </span>
+                <span class="um-caret" aria-hidden="true"></span>
+            </button>
+            <div class="um-items">
+                @can('view-bank')
+                    <a href="{{ route('admin.banks.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.banks.*')])>Hesaplar</a>
+                @endcan
+                @can('view-cash-category')
+                    <a href="{{ route('admin.cash-categories.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cash-categories.*')])>Kasa kategorileri</a>
                 @endcan
                 @can('view-financial-instrument')
                     <a href="{{ route('admin.financial-instruments.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.financial-instruments.*')])>Çek / Senet</a>
                 @endcan
-                @can('view-bank')
-                    <a href="{{ route('admin.banks.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.banks.*')])>Kasa / Banka / POS</a>
+            </div>
+        </div>
+    @endcanany
+
+    @canany(['view-stock-item', 'view-stock-usage', 'view-stock-count'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.stock-items.*', 'admin.stock-usages.*', 'admin.stock-counts.*')]) id="um-sec-stock">
+            <button type="button" class="um-title" data-um-toggle="um-sec-stock">
+                <span class="um-title-text">
+                    <i class="fa-solid fa-boxes-stacked um-title-icon" aria-hidden="true"></i>
+                    <span class="um-title-label">Stok</span>
+                </span>
+                <span class="um-caret" aria-hidden="true"></span>
+            </button>
+            <div class="um-items">
+                @can('view-stock-item')
+                    <a href="{{ route('admin.stock-items.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.stock-items.*')])>Stok kartları</a>
                 @endcan
-                @can('view-cash-category')
-                    <a href="{{ route('admin.cash-categories.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.cash-categories.*')])>Kasa kategorileri</a>
+                @can('view-stock-usage')
+                    <a href="{{ route('admin.stock-usages.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.stock-usages.*')])>Stok kullanımı</a>
+                @endcan
+                @can('view-stock-count')
+                    <a href="{{ route('admin.stock-counts.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.stock-counts.*')])>Stok sayımı</a>
                 @endcan
             </div>
         </div>
@@ -181,6 +247,7 @@
         'view-report-vehicle-cost-owners',
         'view-report-company-balance',
         'view-report-company-ledger',
+        'view-report-invoice-aging',
         'view-report-site-cari',
         'view-report-site-expense',
         'view-report-cash-movements',
@@ -247,6 +314,9 @@
                 @endcan
                 @can('view-report-company-ledger')
                     <a href="{{ route('admin.reports.company-ledger') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.company-ledger*')])>Firma cari</a>
+                @endcan
+                @can('view-report-invoice-aging')
+                    <a href="{{ route('admin.reports.invoice-aging') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.invoice-aging*')])>Fatura yaşlandırma</a>
                 @endcan
                 @can('view-report-site-cari')
                     <a href="{{ route('admin.reports.site-cari') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.reports.site-cari*')])>Şantiye cari</a>

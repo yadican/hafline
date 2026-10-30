@@ -8,6 +8,7 @@ use App\Models\FuelReceipt;
 use App\Models\FuelStation;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Site;
 use App\Models\User;
@@ -118,6 +119,49 @@ class OwnerPeriodicReportTest extends TestCase
         $this->assertSame(1, $byPlate['34 BBB 01']['total_trips']);
         $this->assertSame(2, $report['total_trips']);
         $this->assertSame(15.0, $report['total_tonnage']);
-        $this->assertSame(40.0, $report['total_liters']);
+        $this->assertSame(0.0, $report['total_material']);
+    }
+
+    public function test_plate_sale_appears_as_material_row_for_owner_snapshot(): void
+    {
+        $otherOwner = Party::factory()->person()->withRole(PartyRole::VehicleOwner)->create();
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicleB->id,
+            'invoice_no' => 'OP-70',
+            'issued_on' => '2026-09-12',
+            'description' => 'Sahip malzemesi',
+            'subtotal' => 600,
+            'vat_amount' => 0,
+            'total' => 600,
+            'is_draft' => false,
+        ]);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $otherOwner->id,
+            'vehicle_id' => $this->vehicleB->id,
+            'issued_on' => '2026-09-13',
+            'subtotal' => 900,
+            'vat_amount' => 0,
+            'total' => 900,
+        ]);
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.owner-periodic', [
+                'owner' => $this->owner->id,
+                'period' => 'month',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertSee('Sahip malzemesi', false)
+            ->viewData('report');
+
+        $this->assertCount(1, $report['vehicles']);
+        $this->assertSame('34 BBB 01', $report['vehicles'][0]['plate']);
+        $material = collect($report['vehicles'][0]['rows'])->firstWhere('type', 'material');
+        $this->assertSame(600.0, $material['amount']);
+        $this->assertSame(600.0, $report['total_material']);
     }
 }

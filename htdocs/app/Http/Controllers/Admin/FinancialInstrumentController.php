@@ -16,6 +16,7 @@ use App\Repositories\PartyRepository;
 use App\Services\CariEntryService;
 use App\Services\FinancialInstrumentService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -54,13 +55,18 @@ class FinancialInstrumentController extends AdminController
 
     public function create(): View
     {
-        $this->authorize('create-cari-entry');
         $groups = [];
 
-        foreach (array_keys(FinancialInstrumentRequest::kinds()) as $role) {
+        foreach (FinancialInstrumentRequest::kinds() as $role => $kind) {
+            if (! Gate::allows('create-'.$kind->group()->permissionResource())) {
+                continue;
+            }
+
             $role = PartyRole::from($role);
             $groups[$role->value] = ['label' => $role->label(), 'parties' => $this->parties->withoutSystem($this->parties->options($role))];
         }
+
+        abort_unless($groups !== [], 403);
 
         return view('admin.financial-instruments.create', [
             'title' => 'Yeni çek / senet',

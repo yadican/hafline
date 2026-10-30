@@ -20,9 +20,9 @@ abstract class AdminController extends Controller
     protected ?string $permissionAbility = null;
 
     /**
-     * Per-method ability overrides (e.g. index => view-users).
+     * Per-method ability overrides (e.g. index => view-users); a list requires every ability in it.
      *
-     * @var array<string, string>
+     * @var array<string, string|list<string>>
      */
     protected array $permissionMap = [];
 
@@ -40,7 +40,9 @@ abstract class AdminController extends Controller
     protected function authorizeIncoming(string $method): void
     {
         if (isset($this->permissionMap[$method])) {
-            $this->authorize($this->permissionMap[$method]);
+            foreach ((array) $this->permissionMap[$method] as $ability) {
+                $this->authorize($ability);
+            }
 
             return;
         }

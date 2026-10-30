@@ -13,11 +13,13 @@ use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
 use App\Repositories\FuelReceiptRepository;
 use App\Repositories\HaulRepository;
+use App\Repositories\InvoiceRepository;
 use App\Repositories\MachineWorkRepository;
 use App\Repositories\ShipmentRepository;
 use App\Repositories\VehicleAccountRepository;
 use App\Services\Ledger\FuelReceiptLedger;
 use App\Services\Ledger\HaulLedger;
+use App\Services\Ledger\InvoiceLedger;
 use App\Services\Ledger\Ledger;
 use App\Services\Ledger\MachineWorkLedger;
 use App\Services\Ledger\OwnershipTransferLedger;
@@ -26,10 +28,10 @@ use Carbon\CarbonInterface;
 
 /**
  * Ownership periods are contiguous: a transfer closes the open period the day before the new
- * one starts. Hauls, shipments, machine work, fuel receipts and plate receivables from the affected dates move
- * to the right owner, ledger included; payments stay with whoever was paid. The previous owner's
- * balance on the plate is then closed, either already settled (must be zero) or carried to the new
- * owner, and everything before the transfer date is locked.
+ * one starts. Hauls, shipments, machine work, fuel receipts, plate-sale invoices and plate
+ * receivables from the affected dates move to the right owner, ledger included; payments stay
+ * with whoever was paid. The previous owner's balance on the plate is then closed, either already
+ * settled (must be zero) or carried to the new owner, and everything before the transfer date is locked.
  */
 class VehicleOwnershipService extends Service
 {
@@ -40,6 +42,8 @@ class VehicleOwnershipService extends Service
         private MachineWorkLedger $workLedger,
         private FuelReceiptRepository $receipts,
         private FuelReceiptLedger $receiptLedger,
+        private InvoiceRepository $invoices,
+        private InvoiceLedger $invoiceLedger,
         private Ledger $postings,
         private VehicleAccountRepository $accounts,
         private OwnershipTransferLedger $transferLedger,
@@ -274,6 +278,18 @@ class VehicleOwnershipService extends Service
             if ($receipt->party_id !== $party) {
                 $receipt->update(['party_id' => $party]);
                 $this->receiptLedger->sync($receipt);
+            }
+        }
+
+        foreach ($this->invoices->forVehicleSince($vehicle->id, $from) as $invoice) {
+            $party = $this->ownerFor($vehicle, $invoice->issued_on, $invoice->invoice_no);
+
+            if ($invoice->party_id !== $party) {
+                $invoice->update(['party_id' => $party]);
+
+                if (! $invoice->isDraft()) {
+                    $this->invoiceLedger->sync($invoice);
+                }
             }
         }
 

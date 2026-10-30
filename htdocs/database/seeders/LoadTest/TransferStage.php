@@ -2,12 +2,17 @@
 
 namespace Database\Seeders\LoadTest;
 
+use App\Enums\AccountType;
+use App\Enums\InvoiceDirection;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\Bank;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\MachineWork;
 use App\Models\Party;
+use App\Models\Shipment;
 use App\Models\Vehicle;
 use App\Models\VehicleOwnership;
 use App\Models\VehicleReceivable;
@@ -106,12 +111,23 @@ final class TransferStage
             ->where($dateColumn, '>=', $dateColumn === 'hauled_at' ? $on : $since)
             ->sum($column);
 
+        $movingSales = (float) Invoice::query()
+            ->where('vehicle_id', $vehicle->id)
+            ->where('party_id', $seller->id)
+            ->where('is_draft', false)
+            ->where('direction', InvoiceDirection::Sale)
+            ->whereDate('issued_on', '>=', $since)
+            ->sum('total');
+
         $left = round(
             $this->accounts->balance($vehicle->id, $seller->id)
             - $moving(Haul::query(), 'price', 'hauled_at')
             - $moving(MachineWork::query(), 'amount', 'worked_on')
             - $moving(VehicleReceivable::query(), 'amount', 'occurred_on')
-            + $moving(FuelReceipt::query(), 'amount', 'issued_on'),
+            - $moving(Shipment::query(), 'carrier_net_amount', 'shipped_on')
+            - $moving(Shipment::query(), 'driver_amount', 'shipped_on')
+            + $moving(FuelReceipt::query(), 'amount', 'issued_on')
+            + $movingSales,
             2,
         );
 
@@ -125,6 +141,7 @@ final class TransferStage
             'amount' => number_format(abs($left), 2, '.', ''),
             'occurred_on' => $on->copy()->subDay()->toDateString(),
             'payment_method' => PaymentMethod::BankTransfer->value,
+            'bank_id' => Bank::query()->where('active', true)->where('type', AccountType::Bank)->inRandomOrder()->value('id'),
             'description' => 'Devir hesaplaşması',
         ], null);
     }

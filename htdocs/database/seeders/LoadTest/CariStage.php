@@ -2,16 +2,21 @@
 
 namespace Database\Seeders\LoadTest;
 
+use App\Enums\AccountType;
+use App\Enums\CashDirection;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
-use App\Models\Bank;
-use App\Models\CashCategory;
+use App\Enums\SiteBilling;
 use App\Models\FuelReceipt;
+use App\Models\FuelTankFill;
 use App\Models\Haul;
 use App\Models\LedgerEntry;
 use App\Models\MachineWork;
+use App\Models\Party;
+use App\Models\Shipment;
 use App\Models\SiteTransaction;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Services\CariEntryService;
 use Database\Seeders\LoadTest\Support\Progress;
 use Illuminate\Support\Carbon;
@@ -42,33 +47,40 @@ final class CariStage
         private CariEntryService $entries,
     ) {}
 
-    public function run(CatalogStage $catalog, Carbon $from, Carbon $to): void
+    public function run(CatalogStage $catalog, Carbon $from, Carbon $to, ?InvoiceStage $invoices = null): void
     {
         $this->progress->stage('Cari hareketleri (fiş bakiyesine göre, tarih sırasıyla)');
 
         $userId = User::query()->value('id');
-        $categories = CashCategory::query()->where('active', true)->get();
-        $banks = Bank::query()->where('active', true)->get();
         $done = 0;
 
-        // Order matters: owner residuals and the cash drawer read ledger rows posted by earlier phases.
+        // Order matters: açılış dönem başında; nakliye ödemeleri plaka hakedişinden önce;
+        // fatura/stok (45) kasadan önce; cari virman bakiyelerden sonra; kasa en sonda.
         $phases = [
+            'açılış bakiyeleri' => fn () => $this->queueOpenings($catalog, $from),
+            'nakliye tahsilat + ödeme' => fn () => $this->queueShipmentSettlements($catalog, $from, $to),
             'plaka haftalık hakediş' => fn () => $this->queueVehicleSettlements($catalog, $from, $to),
             'döküm 15 günlük ödeme' => fn () => $this->queueDumpSettlements($catalog, $from, $to),
-            'akaryakıt 15 günlük fatura + ödeme' => fn () => $this->queueFuelSettlements($catalog, $from, $to),
-            'müşteri aylık hakediş + tahsilat' => fn () => $this->queueCustomerBilling($catalog, $from, $to),
-            'tedarikçi fatura + ödeme' => fn () => $this->queueSuppliers($catalog, $from, $to, $categories),
+            'akaryakıt açık bakiye ödeme' => fn () => $this->queueFuelSettlements($catalog, $from, $to),
+            'şantiye aylık hakediş + tahsilat' => fn () => $this->queueSiteBilling($catalog, $from, $to),
             'piyasa sefer + tahsilat' => fn () => $this->queueMarket($catalog, $from, $to),
-            'şantiye gelir / gider' => fn () => $this->queueSiteMovements($catalog, $from, $to, $categories),
-            'sahip / operatör ay sonu' => fn () => $this->queueOwnerResiduals($catalog, $from, $to, $categories),
-            'kasa' => fn () => $this->queueCashDrawer($from, $to, $categories, $banks),
+            'şantiye gelir / gider' => fn () => $this->queueSiteMovements($catalog, $from, $to),
+            'sahip / operatör ay sonu' => fn () => $this->queueOwnerResiduals($catalog, $from, $to),
+            'cari virman' => fn () => $this->queuePartyTransfers($catalog, $from, $to),
         ];
 
         foreach ($phases as $label => $build) {
             $queue = $build();
             $this->progress->note($label.': '.number_format(count($queue)));
-            $done = $this->flush($queue, $userId, $done);
+            $done = $this->flush($queue, $userId, $done, $catalog);
         }
+
+        // Real invoices replace the old supplier "fatura" cari rows (K5); cash drawer still last.
+        $invoices?->run($catalog, $from, $to);
+
+        $cash = $this->queueCashDrawer($catalog, $from, $to);
+        $this->progress->note('kasa: '.number_format(count($cash)));
+        $done = $this->flush($cash, $userId, $done, $catalog);
 
         $this->progress->done(number_format($done).' cari hareket');
     }
@@ -76,16 +88,169 @@ final class CariStage
     /**
      * @param  list<array<string, mixed>>  $queue
      */
-    private function flush(array $queue, ?string $userId, int $done): int
+    private function flush(array $queue, ?string $userId, int $done, CatalogStage $catalog): int
     {
         $total = count($queue);
 
         foreach ($queue as $index => $payload) {
-            $this->entries->create($payload, $userId);
+            $this->entries->create(
+                $catalog->withInstrumentDetails(
+                    $catalog->withPaymentAccount($catalog->withCashCategory($payload)),
+                ),
+                $userId,
+            );
             $this->progress->batch($index + 1, $total, 'cari');
         }
 
         return $done + $total;
+    }
+
+    /**
+     * Transport trips: collect from the customer (borç), pay the carrier on the plate (alacak) and
+     * the referrer (komisyoncu). Sized from each party's own open trip balance so a little borç /
+     * alacak stays open. Carrier payments run before weekly plate settlements.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function queueShipmentSettlements(CatalogStage $catalog, Carbon $from, Carbon $to): array
+    {
+        $queue = [];
+        $plates = Vehicle::query()->toBase()->pluck('plate', 'id');
+
+        $customerRows = Shipment::query()->toBase()
+            ->selectRaw('customer_party_id as party_id, substr(cast(shipped_on as text), 1, 10) as day, SUM(customer_amount) as total')
+            ->whereNull('deleted_at')
+            ->groupByRaw('customer_party_id, substr(cast(shipped_on as text), 1, 10)')
+            ->orderBy('day')
+            ->get()
+            ->groupBy('party_id');
+
+        foreach ($catalog->partiesFor(PartyRole::Customer) as $party) {
+            $entries = ($customerRows[$party->id] ?? collect())->values();
+            $open = ['customer' => 0.0];
+            $cursor = 0;
+
+            foreach ($this->weekdays($from->copy()->addWeek(), $to, Carbon::THURSDAY) as $payday) {
+                $cursor = $this->accumulate($entries, $cursor, $payday, $open, fn () => 'customer', 'day', 'total', null);
+
+                if ($open['customer'] < 3_000) {
+                    continue;
+                }
+
+                $amount = $this->roundDown($open['customer'] * fake()->randomFloat(2, 0.65, 0.95));
+
+                foreach ($this->splitAmount($amount, 1, 2) as $part) {
+                    $queue[] = [
+                        'kind' => 'customer',
+                        'direction' => 'credit',
+                        'party_id' => $party->id,
+                        'amount' => $part,
+                        'occurred_on' => $payday->toDateString(),
+                        'payment_method' => fake()->randomElement([
+                            PaymentMethod::BankTransfer,
+                            PaymentMethod::BankTransfer,
+                            PaymentMethod::Cash,
+                            PaymentMethod::Cheque,
+                            PaymentMethod::PromissoryNote,
+                        ])->value,
+                        'description' => 'Nakliye tahsilatı',
+                    ];
+                }
+
+                $open['customer'] -= $amount;
+            }
+        }
+
+        $carrierRows = Shipment::query()->toBase()
+            ->selectRaw(
+                'vehicle_id, party_id, substr(cast(shipped_on as text), 1, 10) as day, '
+                .'SUM(carrier_net_amount + driver_amount) as total'
+            )
+            ->whereNull('deleted_at')
+            ->groupByRaw('vehicle_id, party_id, substr(cast(shipped_on as text), 1, 10)')
+            ->orderBy('day')
+            ->get()
+            ->groupBy(fn ($row) => $row->vehicle_id.'|'.$row->party_id);
+
+        foreach ($carrierRows as $key => $group) {
+            [$vehicleId, $partyId] = explode('|', (string) $key, 2);
+            $plate = $plates[$vehicleId] ?? null;
+
+            if (! $plate) {
+                continue;
+            }
+
+            $entries = $group->values();
+            $open = ['carrier' => 0.0];
+            $cursor = 0;
+            $payWeekday = fake()->randomElement([Carbon::TUESDAY, Carbon::FRIDAY]);
+
+            foreach ($this->weekdays($from->copy()->addWeek(), $to, $payWeekday) as $payday) {
+                $cursor = $this->accumulate($entries, $cursor, $payday, $open, fn () => 'carrier', 'day', 'total', null);
+
+                if ($catalog->ownerOn($vehicleId, $payday) !== $partyId) {
+                    continue;
+                }
+
+                if ($open['carrier'] < 2_000) {
+                    continue;
+                }
+
+                $amount = $this->roundDown($open['carrier'] * fake()->randomFloat(2, 0.7, 0.95));
+                $queue[] = [
+                    'kind' => 'vehicle_payment',
+                    'plate' => $plate,
+                    'amount' => $amount,
+                    'occurred_on' => $payday->toDateString(),
+                    'payment_method' => fake()->randomElement(self::PLATE_METHODS)->value,
+                    'description' => 'Nakliyeci ödemesi',
+                ];
+                $open['carrier'] -= $amount;
+            }
+        }
+
+        $commissionRows = Shipment::query()->toBase()
+            ->selectRaw('commission_party_id as party_id, substr(cast(shipped_on as text), 1, 10) as day, SUM(commission_amount) as total')
+            ->whereNull('deleted_at')
+            ->whereNotNull('commission_party_id')
+            ->where('commission_amount', '>', 0)
+            ->groupByRaw('commission_party_id, substr(cast(shipped_on as text), 1, 10)')
+            ->orderBy('day')
+            ->get()
+            ->groupBy('party_id');
+
+        foreach ($catalog->partiesFor(PartyRole::Commission) as $party) {
+            $entries = ($commissionRows[$party->id] ?? collect())->values();
+            $open = ['commission' => 0.0];
+            $cursor = 0;
+
+            foreach ($this->weekdays($from->copy()->addWeek(), $to, Carbon::WEDNESDAY) as $payday) {
+                $cursor = $this->accumulate($entries, $cursor, $payday, $open, fn () => 'commission', 'day', 'total', null);
+
+                if ($open['commission'] < 500) {
+                    continue;
+                }
+
+                $amount = $this->roundDown($open['commission'] * fake()->randomFloat(2, 0.7, 0.95));
+                $queue[] = [
+                    'kind' => 'owner_payment',
+                    'direction' => 'debit',
+                    'party_id' => $party->id,
+                    'amount' => $amount,
+                    'occurred_on' => $payday->toDateString(),
+                    'payment_method' => fake()->randomElement([
+                        PaymentMethod::BankTransfer,
+                        PaymentMethod::BankTransfer,
+                        PaymentMethod::Cash,
+                        PaymentMethod::Cheque,
+                    ])->value,
+                    'description' => 'Komisyon ödemesi',
+                ];
+                $open['commission'] -= $amount;
+            }
+        }
+
+        return $this->sortByDate($queue);
     }
 
     /**
@@ -225,81 +390,56 @@ final class CariStage
     }
 
     /**
-     * Fuel firms invoice each station / site twice a month from the receipts; invoices are paid
-     * 10–35 days later. Unpaid invoices near the end of the period stay open.
+     * Station receipts credit the firm at purchase_price; tank fills credit the supplier when
+     * the pump is topped up. Wednesdays pay down that combined open alacak (payments only).
      *
      * @return list<array<string, mixed>>
      */
     private function queueFuelSettlements(CatalogStage $catalog, Carbon $from, Carbon $to): array
     {
         $queue = [];
-        $stations = $catalog->allStations()->keyBy('id');
-        $periods = $this->halfMonthPeriods($from, $to);
-
-        $rows = FuelReceipt::query()->toBase()
-            ->selectRaw('fuel_station_id, fuel_party_id, site_id, issued_on, SUM(quantity) as liters, SUM(quantity * unit_price) as total')
-            ->groupBy('fuel_station_id', 'fuel_party_id', 'site_id', 'issued_on')
+        $receiptRows = FuelReceipt::query()->toBase()
+            ->selectRaw('fuel_party_id as party_id, issued_on as day, SUM(purchase_amount) as total')
+            ->whereNotNull('fuel_party_id')
+            ->groupByRaw('fuel_party_id, issued_on')
             ->get();
+        $fillRows = FuelTankFill::query()->toBase()
+            ->selectRaw('party_id, filled_on as day, SUM(amount) as total')
+            ->whereNull('deleted_at')
+            ->groupByRaw('party_id, filled_on')
+            ->get();
+        $rows = $receiptRows->concat($fillRows)
+            ->groupBy('party_id')
+            ->map(fn (Collection $group) => $group->sortBy('day')->values());
 
-        $buckets = [];
+        foreach ($catalog->partiesFor(PartyRole::Fuel) as $party) {
+            $entries = ($rows[$party->id] ?? collect())->values();
+            $open = ['fuel' => 0.0];
+            $cursor = 0;
 
-        foreach ($rows as $row) {
-            foreach ($periods as $index => [$start, $end]) {
-                if ($row->issued_on >= $start->toDateString() && $row->issued_on <= $end->toDateString()) {
-                    $key = $index.'|'.$row->fuel_station_id.'|'.$row->fuel_party_id.'|'.$row->site_id;
-                    $buckets[$key] ??= ['period' => $index, 'station' => $row->fuel_station_id, 'party' => $row->fuel_party_id, 'site' => $row->site_id, 'liters' => 0.0, 'total' => 0.0];
-                    $buckets[$key]['liters'] += (float) $row->liters;
-                    $buckets[$key]['total'] += (float) $row->total;
+            foreach ($this->weekdays($from->copy()->addWeek(), $to, Carbon::WEDNESDAY) as $payday) {
+                $cursor = $this->accumulate($entries, $cursor, $payday, $open, fn () => 'fuel', 'day', 'total', null);
 
-                    break;
-                }
-            }
-        }
-
-        foreach ($buckets as $bucket) {
-            $station = $stations->get($bucket['station']);
-            $invoiceOn = $periods[$bucket['period']][1]->copy()->addDays(fake()->numberBetween(1, 3));
-
-            if (! $station || $bucket['total'] < 1_000 || $invoiceOn->gt($to)) {
-                continue;
-            }
-
-            $invoice = round($bucket['total'], 2);
-            $queue[] = [
-                'kind' => 'fuel',
-                'direction' => 'credit',
-                'party_id' => $bucket['party'],
-                'site_id' => $bucket['site'],
-                'fuel_station_id' => $station->id,
-                'amount' => $invoice,
-                'liters' => round($bucket['liters'], 2),
-                'unit_price' => $station->unit_price,
-                'occurred_on' => $invoiceOn->toDateString(),
-                'document_no' => 'AK-'.str_pad((string) (++$this->doc), 6, '0', STR_PAD_LEFT),
-                'description' => 'Akaryakıt faturası (15 günlük fiş toplamı)',
-            ];
-
-            $paidOn = $invoiceOn->copy()->addDays(fake()->numberBetween(10, 25));
-            $toPay = $this->roundDown($invoice * fake()->randomFloat(2, 0.85, 1.0));
-
-            foreach ($this->splitAmount($toPay, 1, 2) as $amount) {
-                if ($paidOn->gt($to)) {
-                    break;
+                if ($open['fuel'] < 5_000) {
+                    continue;
                 }
 
+                $amount = $this->roundDown($open['fuel'] * fake()->randomFloat(2, 0.6, 0.9));
                 $queue[] = [
                     'kind' => 'fuel',
                     'direction' => 'debit',
-                    'party_id' => $bucket['party'],
-                    'site_id' => $bucket['site'],
-                    'fuel_station_id' => $station->id,
+                    'party_id' => $party->id,
                     'amount' => $amount,
-                    'occurred_on' => $paidOn->toDateString(),
-                    'payment_method' => fake()->boolean(80) ? PaymentMethod::BankTransfer->value : PaymentMethod::Cheque->value,
+                    'occurred_on' => $payday->toDateString(),
+                    'payment_method' => fake()->randomElement([
+                        PaymentMethod::BankTransfer,
+                        PaymentMethod::BankTransfer,
+                        PaymentMethod::Cheque,
+                    ])->value,
                     'document_no' => 'AO-'.str_pad((string) (++$this->doc), 6, '0', STR_PAD_LEFT),
                     'description' => 'Akaryakıt ödemesi',
                 ];
-                $paidOn->addDays(fake()->numberBetween(7, 12));
+                $open['fuel'] -= $amount;
             }
         }
 
@@ -307,19 +447,21 @@ final class CariStage
     }
 
     /**
-     * Month-end hakediş per site from its hauls and machine hours (plus margin), billed to the
-     * site's customer; collections arrive 15–40 days later in 1–3 parts.
+     * Month-end progress bill (hakediş) on Progress sites from haul site prices and machine hours
+     * (plus margin), debited to the site's own cari. Per-trip sites are already debited by hauls.
+     * Collections for both arrive 15–40 days later in 1–3 parts as şantiye tahsilatı.
      *
      * @return list<array<string, mixed>>
      */
-    private function queueCustomerBilling(CatalogStage $catalog, Carbon $from, Carbon $to): array
+    private function queueSiteBilling(CatalogStage $catalog, Carbon $from, Carbon $to): array
     {
         $queue = [];
         $revenue = [];
 
+        // substr(text) so SQLite tests and Postgres agree (CAST AS DATE is year-only on SQLite).
         $hauls = Haul::query()->toBase()
-            ->selectRaw('site_id, CAST(hauled_at AS DATE) as day, SUM(price) as total')
-            ->groupByRaw('site_id, CAST(hauled_at AS DATE)')
+            ->selectRaw('site_id, substr(cast(hauled_at as text), 1, 10) as day, SUM(site_price) as total')
+            ->groupByRaw('site_id, substr(cast(hauled_at as text), 1, 10)')
             ->get();
         $works = MachineWork::query()->toBase()
             ->selectRaw('site_id, worked_on as day, SUM(hours * hourly_rate) as total')
@@ -332,9 +474,7 @@ final class CariStage
         }
 
         foreach ($catalog->allSites() as $site) {
-            $customerId = $catalog->customerOf($site->id);
-
-            if (! $customerId) {
+            if (! $site->party_id) {
                 continue;
             }
 
@@ -345,20 +485,22 @@ final class CariStage
                     continue;
                 }
 
-                $amount = $this->roundDown($base * fake()->randomFloat(2, 1.18, 1.32));
-                $queue[] = [
-                    'kind' => 'customer',
-                    'direction' => 'debit',
-                    'party_id' => $customerId,
-                    'site_id' => $site->id,
-                    'amount' => $amount,
-                    'occurred_on' => $monthEnd->toDateString(),
-                    'document_no' => 'HK-'.str_pad((string) (++$this->doc), 6, '0', STR_PAD_LEFT),
-                    'description' => $monthEnd->translatedFormat('F Y').' hakedişi',
-                ];
+                if ($site->billing_mode === SiteBilling::Progress) {
+                    $amount = $this->roundDown($base * fake()->randomFloat(2, 1.18, 1.32));
+                    $queue[] = [
+                        'kind' => 'site_bill',
+                        'site_id' => $site->id,
+                        'amount' => $amount,
+                        'occurred_on' => $monthEnd->toDateString(),
+                        'description' => $monthEnd->translatedFormat('F Y').' hakedişi',
+                    ];
+                    $collect = $this->roundDown($amount * fake()->randomFloat(2, 0.75, 1.0));
+                } else {
+                    // Per-trip hauls already debit the site cari; collect a share of the month.
+                    $collect = $this->roundDown($base * fake()->randomFloat(2, 0.75, 1.0));
+                }
 
                 $collectOn = $monthEnd->copy()->addDays(fake()->numberBetween(15, 40));
-                $collect = $this->roundDown($amount * fake()->randomFloat(2, 0.75, 1.0));
 
                 foreach ($this->splitAmount($collect, 1, 3) as $part) {
                     if ($collectOn->gt($to)) {
@@ -366,71 +508,21 @@ final class CariStage
                     }
 
                     $queue[] = [
-                        'kind' => 'customer',
+                        'kind' => 'site',
                         'direction' => 'credit',
-                        'party_id' => $customerId,
                         'site_id' => $site->id,
                         'amount' => $part,
                         'occurred_on' => $collectOn->toDateString(),
-                        'payment_method' => fake()->randomElement([PaymentMethod::BankTransfer, PaymentMethod::BankTransfer, PaymentMethod::Cheque, PaymentMethod::PromissoryNote])->value,
-                        'description' => 'Hakediş tahsilatı',
+                        'payment_method' => fake()->randomElement([
+                            PaymentMethod::BankTransfer,
+                            PaymentMethod::BankTransfer,
+                            PaymentMethod::Cheque,
+                            PaymentMethod::PromissoryNote,
+                        ])->value,
+                        'description' => 'Şantiye tahsilatı',
                     ];
                     $collectOn->addDays(fake()->numberBetween(7, 15));
                 }
-            }
-        }
-
-        return $this->sortByDate($queue);
-    }
-
-    /**
-     * Material / spare-part invoices, each paid 7–30 days later (70–100%).
-     *
-     * @param  Collection<int, CashCategory>  $categories
-     * @return list<array<string, mixed>>
-     */
-    private function queueSuppliers(CatalogStage $catalog, Carbon $from, Carbon $to, Collection $categories): array
-    {
-        $queue = [];
-        $sites = $catalog->allSites();
-        $days = $this->days($from, $to);
-
-        foreach ($catalog->partiesFor(PartyRole::Supplier) as $party) {
-            $invoiceCount = fake()->numberBetween(2, 3) * OperationsStage::MONTHS;
-
-            for ($n = 0; $n < $invoiceCount; $n++) {
-                $invoiceOn = fake()->randomElement($days);
-                $siteId = $sites->random()->id;
-                $amount = $this->roundDown(fake()->numberBetween(5_000, 60_000));
-                $queue[] = [
-                    'kind' => 'supplier',
-                    'direction' => 'credit',
-                    'party_id' => $party->id,
-                    'site_id' => $siteId,
-                    'amount' => $amount,
-                    'occurred_on' => $invoiceOn->toDateString(),
-                    'document_no' => 'ST-'.str_pad((string) (++$this->doc), 6, '0', STR_PAD_LEFT),
-                    'description' => fake()->randomElement(['Kum', 'Çakıl', 'Lastik', 'Yedek parça', 'Madeni yağ', 'Filtre']),
-                ];
-
-                $payOn = $invoiceOn->copy()->addDays(fake()->numberBetween(7, 30));
-
-                if ($payOn->gt($to)) {
-                    continue;
-                }
-
-                $queue[] = [
-                    'kind' => 'supplier',
-                    'direction' => 'debit',
-                    'party_id' => $party->id,
-                    'site_id' => $siteId,
-                    'amount' => $this->roundDown($amount * fake()->randomFloat(2, 0.7, 1.0)),
-                    'occurred_on' => $payOn->toDateString(),
-                    'payment_method' => fake()->randomElement([PaymentMethod::BankTransfer, PaymentMethod::BankTransfer, PaymentMethod::Cash, PaymentMethod::CreditCard])->value,
-                    'cash_category_id' => $categories->random()->id,
-                    'document_no' => 'SO-'.str_pad((string) (++$this->doc), 6, '0', STR_PAD_LEFT),
-                    'description' => 'Tedarikçi ödemesi',
-                ];
             }
         }
 
@@ -500,10 +592,9 @@ final class CariStage
     /**
      * Site running costs (çıkış = debit) and the odd site income (giriş = credit).
      *
-     * @param  Collection<int, CashCategory>  $categories
      * @return list<array<string, mixed>>
      */
-    private function queueSiteMovements(CatalogStage $catalog, Carbon $from, Carbon $to, Collection $categories): array
+    private function queueSiteMovements(CatalogStage $catalog, Carbon $from, Carbon $to): array
     {
         $queue = [];
         $days = $this->days($from, $to);
@@ -542,10 +633,9 @@ final class CariStage
      * Month-end payment of what plate payments do not cover: operator fees and the balance a
      * former owner still has on a transferred vehicle.
      *
-     * @param  Collection<int, CashCategory>  $categories
      * @return list<array<string, mixed>>
      */
-    private function queueOwnerResiduals(CatalogStage $catalog, Carbon $from, Carbon $to, Collection $categories): array
+    private function queueOwnerResiduals(CatalogStage $catalog, Carbon $from, Carbon $to): array
     {
         $queue = [];
         $partyIds = $catalog->partiesFor(PartyRole::VehicleOwner)
@@ -589,7 +679,7 @@ final class CariStage
                     'amount' => $amount,
                     'occurred_on' => $payday->toDateString(),
                     'payment_method' => fake()->boolean(70) ? PaymentMethod::BankTransfer->value : PaymentMethod::Cash->value,
-                    'cash_category_id' => $categories->random()->id,
+                    'cash_category_id' => $catalog->categoryFor(CashDirection::Expense)?->id,
                     'description' => 'Operatörlük / devir sonrası mahsup',
                 ];
                 $balances[''] = ($balances[''] ?? 0) - $amount;
@@ -600,42 +690,169 @@ final class CariStage
     }
 
     /**
-     * Daily office spending plus bank withdrawals that keep the drawer above zero, given every
-     * cash payment and collection posted so far (cash_entries: debit = giriş, credit = çıkış).
+     * Prior-period party balances as of the seed window start. One opening per party; cash/bank
+     * untouched. Customers open borçlu (debit), payables (supplier / fuel / dump) open alacaklı
+     * (credit); market and owners get a mix.
      *
-     * @param  Collection<int, CashCategory>  $categories
-     * @param  Collection<int, Bank>  $banks
      * @return list<array<string, mixed>>
      */
-    private function queueCashDrawer(Carbon $from, Carbon $to, Collection $categories, Collection $banks): array
+    private function queueOpenings(CatalogStage $catalog, Carbon $from): array
+    {
+        $on = $from->toDateString();
+        $queue = [];
+        $used = [];
+
+        $add = function (Party $party, string $direction, float $amount, string $label) use (&$queue, &$used, $on): void {
+            if (isset($used[$party->id]) || $amount < 50) {
+                return;
+            }
+
+            $used[$party->id] = true;
+            $queue[] = [
+                'kind' => 'opening',
+                'direction' => $direction,
+                'party_id' => $party->id,
+                'amount' => $amount,
+                'occurred_on' => $on,
+                'description' => 'Açılış bakiyesi · '.$label,
+            ];
+        };
+
+        foreach ($catalog->partiesFor(PartyRole::Customer)->shuffle()->take(12) as $party) {
+            $add($party, 'debit', $this->roundDown(fake()->numberBetween(8_000, 75_000)), 'alıcı');
+        }
+
+        foreach ($catalog->partiesFor(PartyRole::Supplier)->shuffle()->take(12) as $party) {
+            $add($party, 'credit', $this->roundDown(fake()->numberBetween(10_000, 90_000)), 'satıcı');
+        }
+
+        foreach ($catalog->partiesFor(PartyRole::Fuel)->shuffle()->take(6) as $party) {
+            $add($party, 'credit', $this->roundDown(fake()->numberBetween(15_000, 120_000)), 'akaryakıt');
+        }
+
+        foreach ($catalog->partiesFor(PartyRole::DumpOperator)->shuffle()->take(4) as $party) {
+            $add($party, 'credit', $this->roundDown(fake()->numberBetween(5_000, 45_000)), 'döküm');
+        }
+
+        foreach ($catalog->partiesFor(PartyRole::Market)->shuffle()->take(8)->values() as $index => $party) {
+            $add(
+                $party,
+                $index % 2 === 0 ? 'debit' : 'credit',
+                $this->roundDown(fake()->numberBetween(5_000, 40_000)),
+                'piyasa',
+            );
+        }
+
+        foreach ($catalog->partiesFor(PartyRole::VehicleOwner)->shuffle()->take(15)->values() as $index => $party) {
+            $add(
+                $party,
+                $index % 3 === 0 ? 'credit' : 'debit',
+                $this->roundDown(fake()->numberBetween(3_000, 35_000)),
+                'araç sahibi',
+            );
+        }
+
+        return $queue;
+    }
+
+    /**
+     * Offsets open borç against open alacak without touching cash: debit the party we owe,
+     * credit the party that owes us (mahsup / cari virman).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function queuePartyTransfers(CatalogStage $catalog, Carbon $from, Carbon $to): array
+    {
+        $rows = LedgerEntry::query()->toBase()
+            ->whereNotNull('party_id')
+            ->groupBy('party_id')
+            ->havingRaw('ABS(SUM(debit) - SUM(credit)) >= ?', [2_000])
+            ->get(['party_id', DB::raw('SUM(debit) - SUM(credit) as balance')]);
+
+        $debtors = $rows->filter(fn ($row) => (float) $row->balance >= 2_000)->shuffle()->take(12)->values();
+        $creditors = $rows->filter(fn ($row) => (float) $row->balance <= -2_000)->shuffle()->take(12)->values();
+        $span = max(21, (int) $from->diffInDays($to));
+        $queue = [];
+        $n = min($debtors->count(), $creditors->count());
+
+        for ($i = 0; $i < $n; $i++) {
+            $debtor = $debtors[$i];
+            $creditor = $creditors[$i];
+
+            if ($debtor->party_id === $creditor->party_id) {
+                continue;
+            }
+
+            $amount = $this->roundDown(min(
+                abs((float) $debtor->balance) * 0.4,
+                abs((float) $creditor->balance) * 0.4,
+                (float) fake()->numberBetween(2_000, 30_000),
+            ));
+
+            if ($amount < 500) {
+                continue;
+            }
+
+            $queue[] = [
+                'kind' => 'party_transfer',
+                'party_id' => $creditor->party_id,
+                'counter_party_id' => $debtor->party_id,
+                'amount' => $amount,
+                'occurred_on' => $from->copy()->addDays(fake()->numberBetween(21, $span))->toDateString(),
+                'description' => fake()->randomElement(['Cari virman', 'Mahsup', 'Cari mahsuplaşma']),
+            ];
+        }
+
+        return $this->sortByDate($queue);
+    }
+
+    /**
+     * Daily office spending plus account transfers that keep the drawer funded: bank→cash when
+     * low, cash→bank when high (replaces the old fake "Bankadan çekilen" cash rows).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function queueCashDrawer(CatalogStage $catalog, Carbon $from, Carbon $to): array
     {
         $net = [];
+
+        $addNet = function ($row) use (&$net): void {
+            $date = Carbon::parse((string) $row->occurred_on)->toDateString();
+            $net[$date] = ($net[$date] ?? 0) + (float) $row->net;
+        };
 
         LedgerEntry::query()->toBase()
             ->where('payment_method', PaymentMethod::Cash->value)
             ->groupBy('occurred_on')
             ->get(['occurred_on', DB::raw('SUM(credit) - SUM(debit) as net')])
-            ->each(function ($row) use (&$net): void {
-                $net[(string) $row->occurred_on] = ($net[(string) $row->occurred_on] ?? 0) + (float) $row->net;
-            });
+            ->each($addNet);
 
         SiteTransaction::query()->toBase()
             ->where('payment_method', PaymentMethod::Cash->value)
             ->groupBy('occurred_on')
             ->get(['occurred_on', DB::raw('SUM(credit) - SUM(debit) as net')])
-            ->each(function ($row) use (&$net): void {
-                $net[(string) $row->occurred_on] = ($net[(string) $row->occurred_on] ?? 0) + (float) $row->net;
-            });
+            ->each($addNet);
 
+        $banks = $catalog->banksOf(AccountType::Bank);
+        $cashBoxes = $catalog->banksOf(AccountType::Cash);
         $queue = [];
         $balance = 0.0;
-        $entry = fn (string $direction, float $amount, Carbon $day, string $description, bool $withBank = false): array => [
+        $expense = fn (float $amount, Carbon $day, string $description): array => [
             'kind' => 'cash',
-            'direction' => $direction,
+            'direction' => 'credit',
             'amount' => $amount,
             'occurred_on' => $day->toDateString(),
-            'cash_category_id' => $categories->random()->id,
-            'bank_id' => $withBank ? $banks->random()->id : null,
+            'cash_category_id' => $catalog->categoryFor(
+                $catalog->categoryDirectionFor('cash', 'credit'),
+            )?->id,
+            'description' => $description,
+        ];
+        $transfer = fn (string $fromId, string $toId, float $amount, Carbon $day, string $description): array => [
+            'kind' => 'account_transfer',
+            'bank_id' => $fromId,
+            'counter_bank_id' => $toId,
+            'amount' => $amount,
+            'occurred_on' => $day->toDateString(),
             'description' => $description,
         ];
 
@@ -646,19 +863,37 @@ final class CariStage
             if (! $day->isSunday()) {
                 for ($n = 0; $n < fake()->numberBetween(1, 3); $n++) {
                     $amount = $this->roundDown(fake()->numberBetween(300, 6_000));
-                    $queue[] = $entry('credit', $amount, $day, fake()->randomElement(['Ofis gideri', 'Yemek', 'Kırtasiye', 'Binek araç yakıtı', 'Kargo']));
+                    $queue[] = $expense($amount, $day, fake()->randomElement(['Ofis gideri', 'Yemek', 'Kırtasiye', 'Binek araç yakıtı', 'Kargo']));
                     $expected -= $amount;
                 }
             }
 
             if ($balance + $expected < 50_000) {
                 $amount = $this->roundDown(fake()->numberBetween(150_000, 250_000) - ($balance + $expected));
-                $queue[] = $entry('debit', $amount, $day, 'Bankadan çekilen', true);
-                $expected += $amount;
+
+                if ($amount > 0 && $banks->isNotEmpty() && $cashBoxes->isNotEmpty()) {
+                    $queue[] = $transfer(
+                        $banks->random()->id,
+                        $cashBoxes->random()->id,
+                        $amount,
+                        $day,
+                        'Bankadan kasaya çekim',
+                    );
+                    $expected += $amount;
+                }
             } elseif ($balance + $expected > 400_000) {
                 $amount = $this->roundDown($balance + $expected - fake()->numberBetween(150_000, 250_000));
-                $queue[] = $entry('credit', $amount, $day, 'Bankaya yatan', true);
-                $expected -= $amount;
+
+                if ($amount > 0 && $banks->isNotEmpty() && $cashBoxes->isNotEmpty()) {
+                    $queue[] = $transfer(
+                        $cashBoxes->random()->id,
+                        $banks->random()->id,
+                        $amount,
+                        $day,
+                        'Kasadan bankaya yatırma',
+                    );
+                    $expected -= $amount;
+                }
             }
 
             $balance += $expected;
@@ -773,32 +1008,6 @@ final class CariStage
             $this->days($from->copy()->addDay(), $to),
             fn (Carbon $day) => in_array($day->day, [1, 16], true),
         ));
-    }
-
-    /**
-     * Closed half-month invoice periods: [1–15] and [16–end of month].
-     *
-     * @return list<array{0: Carbon, 1: Carbon}>
-     */
-    private function halfMonthPeriods(Carbon $from, Carbon $to): array
-    {
-        $periods = [];
-        $cursor = $from->copy()->startOfMonth();
-
-        while ($cursor->lte($to)) {
-            $mid = $cursor->copy()->day(15);
-            $end = $cursor->copy()->endOfMonth()->startOfDay();
-
-            foreach ([[$cursor->copy(), $mid], [$mid->copy()->addDay(), $end]] as [$start, $finish]) {
-                if ($finish->lt($to)) {
-                    $periods[] = [$start, $finish];
-                }
-            }
-
-            $cursor->addMonth();
-        }
-
-        return $periods;
     }
 
     /**

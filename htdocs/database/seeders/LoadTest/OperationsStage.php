@@ -6,13 +6,18 @@ use App\Enums\PartyRole;
 use App\Enums\Shift;
 use App\Models\FuelReceipt;
 use App\Models\FuelStation;
+use App\Models\FuelTankCount;
+use App\Models\FuelTankFill;
 use App\Models\Haul;
 use App\Models\HaulRoute;
 use App\Models\MachineWork;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\FuelTankService;
 use App\Services\Ledger\FuelReceiptLedger;
 use App\Services\Ledger\HaulLedger;
+use App\Services\Ledger\Ledger;
+use App\Services\Ledger\LedgerLine;
 use App\Services\Ledger\MachineWorkLedger;
 use Database\Seeders\LoadTest\Support\Progress;
 use Database\Seeders\LoadTest\Support\TurkishData;
@@ -30,7 +35,7 @@ use Illuminate\Support\Str;
  */
 final class OperationsStage
 {
-    public const MONTHS = 12;
+    public const MONTHS = 3;
 
     private const WEEKDAY = 0;
 
@@ -62,11 +67,18 @@ final class OperationsStage
 
     private const TANK_LITRES = ['TIR' => 400, 'KIRKAYAK' => 350, 'ON TEKER' => 300, 'TAKSİ' => 160, 'MAKİNE' => 400];
 
+    /** @var array<string, float> saha pompası id => eldeki litre */
+    private array $pumpStock = [];
+
+    private int $fillDoc = 0;
+
     public function __construct(
         private Progress $progress,
         private HaulLedger $haulLedger,
         private MachineWorkLedger $machineLedger,
         private FuelReceiptLedger $fuelLedger,
+        private Ledger $ledger,
+        private FuelTankService $fuelTanks,
     ) {}
 
     public function run(CatalogStage $catalog, Carbon $from, Carbon $to): void
@@ -81,8 +93,10 @@ final class OperationsStage
             count($days),
         ));
 
+        $this->seedTankOpeningStock($catalog, $from, $creatorId);
         $this->seedHaulsAndFuel($catalog, $days, $creatorId);
         $this->seedMachineWorksAndFuel($catalog, $days, $creatorId);
+        $this->seedTankCounts($catalog, $from, $to, $creatorId);
     }
 
     /**
@@ -180,7 +194,7 @@ final class OperationsStage
                     ) {
                         $station = $catalog->stationFor($tank[$vehicle->id]['site'], $vIndex, $tank[$vehicle->id]['offSite']);
                         $fuelSeq++;
-                        if ($this->createFuel($vehicle, $station, $tank[$vehicle->id], $start->copy()->subMinutes(fake()->numberBetween(5, 15)), 'Y'.$day->format('Ym').str_pad((string) $fuelSeq, 6, '0', STR_PAD_LEFT), $vehicle->driver_name, $creatorId)) {
+                        if ($this->createFuel($vehicle, $station, $tank[$vehicle->id], $start->copy()->subMinutes(fake()->numberBetween(5, 15)), 'Y'.$day->format('Ym').str_pad((string) $fuelSeq, 6, '0', STR_PAD_LEFT), $vehicle->driver_name, $creatorId, $catalog)) {
                             $tank[$vehicle->id] = [...$tank[$vehicle->id], 'litres' => 0.0, 'tickets' => 0];
                             $fuelDone++;
                         }
@@ -217,6 +231,7 @@ final class OperationsStage
                             'site_id' => $route->site_id,
                             'dump_site_id' => $route->dump_site_id,
                             'dump_party_id' => $route->dumpSite->party_id,
+                            'site_party_id' => $route->site->perTripPartyId(),
                             'tonnage' => match ($vehicle->vehicleClass?->name) {
                                 'TIR' => fake()->numberBetween(22, 30),
                                 'KIRKAYAK' => fake()->numberBetween(16, 24),
@@ -230,6 +245,7 @@ final class OperationsStage
                             'updated_at' => $enteredAt,
                             'price' => $prices['price'],
                             'dump_price' => $prices['dump_price'],
+                            'site_price' => $prices['site_price'],
                         ]);
 
                         $haul->setRelation('site', $route->site);
@@ -347,7 +363,7 @@ final class OperationsStage
                         $station = $catalog->stationFor($tank[$machine->id]['site'], $mIndex, false);
                         $fuelSeq++;
                         $fuelAt = $day->copy()->setTime(fake()->numberBetween(8, 9), fake()->numberBetween(0, 59));
-                        if ($this->createFuel($machine, $station, [...$tank[$machine->id], 'tickets' => 0], $fuelAt, 'YM'.$day->format('Ym').str_pad((string) $fuelSeq, 5, '0', STR_PAD_LEFT), TurkishData::personName(), $creatorId)) {
+                        if ($this->createFuel($machine, $station, [...$tank[$machine->id], 'tickets' => 0], $fuelAt, 'YM'.$day->format('Ym').str_pad((string) $fuelSeq, 5, '0', STR_PAD_LEFT), TurkishData::personName(), $creatorId, $catalog)) {
                             $tank[$machine->id] = [...$tank[$machine->id], 'litres' => 0.0, 'tickets' => 0];
                             $fuelDone++;
                         }
@@ -406,13 +422,95 @@ final class OperationsStage
     }
 
     /**
-     * @param  array{site: ?string, litres: float, tickets: int, km: int}  $tank
+     * Opening fills so pompadan fiş never starts from an empty book stock.
      */
-    private function createFuel(Vehicle $vehicle, FuelStation $station, array $tank, Carbon $at, string $ticketNo, ?string $receivedBy, ?string $creatorId): bool
+    private function seedTankOpeningStock(CatalogStage $catalog, Carbon $from, ?string $creatorId): void
+    {
+        $tanks = $catalog->allTanks();
+
+        if ($tanks->isEmpty()) {
+            return;
+        }
+
+        $this->progress->stage('Saha pompası açılış dolumu');
+        $suppliers = $catalog->partiesFor(PartyRole::Fuel);
+
+        foreach ($tanks as $tank) {
+            $qty = (float) fake()->numberBetween(12_000, 22_000);
+            $price = fake()->randomFloat(2, 37.50, 44.80);
+            $on = $from->copy()->subDays(fake()->numberBetween(1, 5))->setTime(9, 0);
+            $this->writeFill($tank, $suppliers->random()->id, $on, $qty, $price, $creatorId);
+            $this->pumpStock[$tank->id] = $qty;
+        }
+
+        $this->progress->done(sprintf('%d pompa · %s lt açılış', $tanks->count(), number_format(array_sum($this->pumpStock))));
+    }
+
+    /**
+     * Month-end physical counts with a small variance; chronological so each difference uses that day's book.
+     */
+    private function seedTankCounts(CatalogStage $catalog, Carbon $from, Carbon $to, ?string $creatorId): void
+    {
+        $tanks = $catalog->allTanks();
+
+        if ($tanks->isEmpty()) {
+            return;
+        }
+
+        $this->progress->stage('Saha pompası sayım');
+        $done = 0;
+        $cursor = $from->copy()->endOfMonth()->startOfDay();
+
+        while ($cursor->lte($to)) {
+            foreach ($tanks as $tank) {
+                $book = $this->fuelTanks->stock($tank, $cursor)['quantity'];
+                $measured = max(0.0, round($book + fake()->randomFloat(2, -80, 40), 2));
+
+                if (abs($measured - $book) < 1) {
+                    continue;
+                }
+
+                $at = $cursor->copy()->setTime(17, fake()->numberBetween(0, 45));
+                FuelTankCount::query()->forceCreate([
+                    'id' => (string) Str::uuid7($at),
+                    'fuel_station_id' => $tank->id,
+                    'counted_on' => $cursor->toDateString(),
+                    'quantity' => $measured,
+                    'difference' => round($measured - $book, 2),
+                    'description' => $cursor->translatedFormat('F Y').' sayımı',
+                    'created_by' => $creatorId,
+                    'created_at' => $at,
+                    'updated_at' => $at,
+                ]);
+                $this->pumpStock[$tank->id] = $measured;
+                $done++;
+            }
+
+            $cursor->addMonthNoOverflow()->endOfMonth()->startOfDay();
+        }
+
+        $this->progress->done(sprintf('%d sayım', $done));
+    }
+
+    /**
+     * @param  array{owner?: ?string, site: ?string, litres: float, tickets: int, km: int}  $tank
+     */
+    private function createFuel(Vehicle $vehicle, FuelStation $station, array $tank, Carbon $at, string $ticketNo, ?string $receivedBy, ?string $creatorId, CatalogStage $catalog): bool
     {
         // A fill that has not happened yet is not written; the tank keeps its litres for the next one.
         if ($at->isFuture()) {
             return false;
+        }
+
+        $isTank = $station->isTank();
+        $quantity = min(self::TANK_LITRES[$vehicle->vehicleClass?->name] ?? 400, (int) round($tank['litres']));
+
+        if ($quantity <= 0) {
+            return false;
+        }
+
+        if ($isTank) {
+            $this->ensurePumpStock($station, $quantity, $at, $catalog, $creatorId);
         }
 
         $receipt = FuelReceipt::query()->forceCreate([
@@ -421,10 +519,11 @@ final class OperationsStage
             'vehicle_id' => $vehicle->id,
             'party_id' => $tank['owner'],
             'fuel_station_id' => $station->id,
-            'fuel_party_id' => $station->party_id,
+            'fuel_party_id' => $isTank ? null : $station->party_id,
             'site_id' => $tank['site'],
-            'quantity' => min(self::TANK_LITRES[$vehicle->vehicleClass?->name] ?? 400, (int) round($tank['litres'])),
+            'quantity' => $quantity,
             'unit_price' => $station->unit_price,
+            'purchase_price' => $isTank ? 0 : $station->purchase_price,
             'issued_on' => $at->toDateString(),
             'km' => $tank['km'],
             'received_by' => $receivedBy ?? TurkishData::personName(),
@@ -438,7 +537,56 @@ final class OperationsStage
         $receipt->setRelation('fuelStation', $station);
         $this->fuelLedger->sync($receipt);
 
+        if ($isTank) {
+            $this->pumpStock[$station->id] = ($this->pumpStock[$station->id] ?? 0) - $quantity;
+        }
+
         return true;
+    }
+
+    private function ensurePumpStock(FuelStation $tank, float $needed, Carbon $at, CatalogStage $catalog, ?string $creatorId): void
+    {
+        $suppliers = $catalog->partiesFor(PartyRole::Fuel);
+
+        while (($this->pumpStock[$tank->id] ?? 0) + 0.001 < $needed) {
+            $qty = (float) fake()->numberBetween(8_000, 16_000);
+            $price = fake()->randomFloat(2, 37.50, 44.80);
+            // Same-day fills sort before receipts in FuelTankRepository, so morning refill covers the draw.
+            $filledAt = $at->copy()->subMinutes(fake()->numberBetween(30, 180));
+            $this->writeFill($tank, $suppliers->random()->id, $filledAt, $qty, $price, $creatorId);
+            $this->pumpStock[$tank->id] = ($this->pumpStock[$tank->id] ?? 0) + $qty;
+        }
+    }
+
+    private function writeFill(FuelStation $tank, string $partyId, Carbon $at, float $quantity, float $unitPrice, ?string $creatorId): void
+    {
+        $fill = FuelTankFill::query()->forceCreate([
+            'id' => (string) Str::uuid7($at),
+            'fuel_station_id' => $tank->id,
+            'party_id' => $partyId,
+            'filled_on' => $at->toDateString(),
+            'quantity' => $quantity,
+            'unit_price' => $unitPrice,
+            'document_no' => 'DL-'.str_pad((string) (++$this->fillDoc), 6, '0', STR_PAD_LEFT),
+            'created_by' => $creatorId,
+            'created_at' => $at,
+            'updated_at' => $at,
+        ]);
+        $fill->refresh();
+
+        $this->ledger->sync($fill, [
+            LedgerLine::credit(
+                $fill->party_id,
+                $fill->filled_on,
+                $fill->total(),
+                sprintf(
+                    'Yakıt dolumu %s · %s · %s lt',
+                    $fill->document_no,
+                    $tank->name,
+                    rtrim(rtrim(number_format((float) $fill->quantity, 2, ',', '.'), '0'), ','),
+                ),
+            ),
+        ]);
     }
 
     /**

@@ -2,8 +2,10 @@
 
 namespace App\Repositories;
 
+use App\Enums\InvoiceDirection;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\MachineWork;
 use App\Models\Shipment;
@@ -37,6 +39,12 @@ class VehicleAccountRepository
 
         $charged = $sum(FuelReceipt::query(), 'amount')
             + $sum(VehiclePayment::query(), 'amount')
+            + $sum(
+                Invoice::query()
+                    ->where('is_draft', false)
+                    ->where('direction', InvoiceDirection::Sale),
+                'total',
+            )
             + (float) DB::table('vehicle_fines')
                 ->where('vehicle_id', $vehicleId)
                 ->where('party_id', $partyId)

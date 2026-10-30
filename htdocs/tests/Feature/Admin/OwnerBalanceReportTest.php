@@ -7,6 +7,7 @@ use App\Models\FuelReceipt;
 use App\Models\FuelStation;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\PartyPayment;
 use App\Models\Site;
@@ -14,6 +15,8 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePayment;
 use App\Models\VehicleReceivable;
+use App\Repositories\VehicleAccountRepository;
+use App\Services\Reports\OwnerBalanceReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -265,6 +268,58 @@ class OwnerBalanceReportTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.reports.owner-balance', $this->filters()))
             ->assertSeeInOrder(['Devir', 'Alacak', 'Elden', 'Borç', 'Filtreli bakiye']);
+    }
+
+    public function test_plate_sale_debit_matches_cari(): void
+    {
+        $this->makeHaul($this->vehicle, $this->owner, $this->routeA, '2026-09-05 08:00:00', 2000);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicle->id,
+            'issued_on' => '2026-09-12',
+            'subtotal' => 1500,
+            'vat_amount' => 0,
+            'total' => 1500,
+            'is_draft' => false,
+        ]);
+
+        Invoice::factory()->sale()->draft()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => $this->vehicle->id,
+            'issued_on' => '2026-09-13',
+            'subtotal' => 400,
+            'vat_amount' => 0,
+            'total' => 400,
+        ]);
+
+        Invoice::factory()->sale()->create([
+            'party_id' => $this->owner->id,
+            'vehicle_id' => null,
+            'issued_on' => '2026-09-14',
+            'subtotal' => 700,
+            'vat_amount' => 0,
+            'total' => 700,
+        ]);
+
+        $report = app(OwnerBalanceReportService::class)->report([
+            'period' => 'range',
+            'from' => '2026-01-01',
+            'to' => '2026-12-31',
+            'site' => '',
+            'fuel_station' => '',
+        ]);
+
+        $row = collect($report['rows'])->firstWhere('name', 'Ahmet Yılmaz');
+
+        $this->assertNotNull($row);
+        $this->assertSame(2000.0, $row['credit']);
+        $this->assertSame(1500.0, $row['debit']);
+        $this->assertSame(-500.0, $row['balance']);
+
+        $cari = app(VehicleAccountRepository::class)->balance($this->vehicle->id, $this->owner->id);
+
+        $this->assertSame($cari, -$row['balance']);
     }
 
     /**

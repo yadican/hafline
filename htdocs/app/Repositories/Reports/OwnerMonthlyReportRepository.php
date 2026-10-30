@@ -2,9 +2,11 @@
 
 namespace App\Repositories\Reports;
 
+use App\Enums\InvoiceDirection;
 use App\Enums\PartyRole;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
+use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\MachineWork;
 use App\Models\Party;
@@ -158,6 +160,27 @@ class OwnerMonthlyReportRepository
     }
 
     /**
+     * Live plate-sale invoices for one owner snapshot on one vehicle in [from, to).
+     *
+     * @return Collection<int, object{id: string, issued_on: string, invoice_no: string, description: string|null, total: string}>
+     */
+    public function materialTotals(string $partyId, string $vehicleId, Carbon $from, Carbon $to): Collection
+    {
+        return Invoice::query()
+            ->toBase()
+            ->where('party_id', $partyId)
+            ->where('vehicle_id', $vehicleId)
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->where('is_draft', false)
+            ->where('issued_on', '>=', $from->toDateString())
+            ->where('issued_on', '<', $to->toDateString())
+            ->whereNull('deleted_at')
+            ->orderBy('issued_on')
+            ->orderBy('invoice_no')
+            ->get(['id', 'issued_on', 'invoice_no', 'description', 'total']);
+    }
+
+    /**
      * @return Collection<int, object{id: string, occurred_on: string, description: string|null, amount: string}>
      */
     public function payments(string $partyId, string $vehicleId, Carbon $from, Carbon $to): Collection
@@ -288,6 +311,16 @@ class OwnerMonthlyReportRepository
             ->whereNull('deleted_at')
             ->sum('amount');
 
+        $material = (float) Invoice::query()
+            ->toBase()
+            ->where('party_id', $partyId)
+            ->whereNotNull('vehicle_id')
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->where('is_draft', false)
+            ->where('issued_on', '<', $beforeDate)
+            ->whereNull('deleted_at')
+            ->sum('total');
+
         $payments = (float) VehiclePayment::query()
             ->toBase()
             ->where('party_id', $partyId)
@@ -316,7 +349,7 @@ class OwnerMonthlyReportRepository
             ->where('occurred_on', '<', $beforeDate)
             ->sum(DB::raw('debit - credit'));
 
-        return round($fuel + $payments + $fines + $ownerPayments + $transfers - $hauls - $machineWorks - $operatorWorks - $receivables, 2);
+        return round($fuel + $material + $payments + $fines + $ownerPayments + $transfers - $hauls - $machineWorks - $operatorWorks - $receivables, 2);
     }
 
     /**
@@ -393,6 +426,18 @@ class OwnerMonthlyReportRepository
             ->distinct()
             ->pluck('vehicle_id');
 
+        $materialIds = Invoice::query()
+            ->toBase()
+            ->where('party_id', $partyId)
+            ->whereNotNull('vehicle_id')
+            ->where('direction', InvoiceDirection::Sale->value)
+            ->where('is_draft', false)
+            ->where('issued_on', '>=', $from->toDateString())
+            ->where('issued_on', '<', $to->toDateString())
+            ->whereNull('deleted_at')
+            ->distinct()
+            ->pluck('vehicle_id');
+
         $paymentIds = VehiclePayment::query()
             ->toBase()
             ->where('party_id', $partyId)
@@ -433,6 +478,7 @@ class OwnerMonthlyReportRepository
             ->merge($machineIds)
             ->merge($transferIds)
             ->merge($fuelIds)
+            ->merge($materialIds)
             ->merge($paymentIds)
             ->merge($receivableIds)
             ->merge($fineIds)

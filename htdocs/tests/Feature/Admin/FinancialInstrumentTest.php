@@ -80,6 +80,63 @@ class FinancialInstrumentTest extends TestCase
             ->assertSee('Ciro et');
     }
 
+    public function test_cheque_create_requires_the_selected_group_create_permission(): void
+    {
+        $clerk = User::factory()->create();
+        $clerk->givePermissionTo([
+            'view-dashboard',
+            'view-financial-instrument',
+            'create-financial-instrument',
+            'create-owner-payment-cari-entry',
+        ]);
+
+        $owner = Party::factory()->withRole(PartyRole::VehicleOwner)->create(['name' => '37 SAHIP']);
+
+        $create = $this->actingAs($clerk)
+            ->get(route('admin.financial-instruments.create'))
+            ->assertOk();
+
+        $groups = $create->viewData('groups');
+        $this->assertArrayHasKey('vehicle_owner', $groups);
+        $this->assertArrayNotHasKey('customer', $groups);
+        $this->assertArrayNotHasKey('supplier', $groups);
+        $create->assertSee('37 SAHIP')->assertDontSee($this->customer->name);
+
+        $this->actingAs($clerk)
+            ->post(route('admin.financial-instruments.store'), [
+                'direction' => 'given',
+                'payment_method' => 'cheque',
+                'counterparty' => 'vehicle_owner|'.$owner->id,
+                'amount' => '1000',
+                'occurred_on' => '2026-06-01',
+                'due_on' => '2026-07-01',
+            ])
+            ->assertRedirect(route('admin.financial-instruments.index'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($clerk)
+            ->post(route('admin.financial-instruments.store'), [
+                'direction' => 'received',
+                'payment_method' => 'cheque',
+                'counterparty' => 'customer|'.$this->customer->id,
+                'amount' => '1000',
+                'occurred_on' => '2026-06-01',
+                'due_on' => '2026-07-01',
+            ])
+            ->assertForbidden();
+
+        $denied = User::factory()->create();
+        $denied->givePermissionTo([
+            'view-dashboard',
+            'view-financial-instrument',
+            'create-financial-instrument',
+        ]);
+
+        $this->actingAs($denied)
+            ->get(route('admin.financial-instruments.create'))
+            ->assertForbidden();
+    }
+
     public function test_cheque_entered_on_its_own_screen_writes_the_cari_entry_of_the_chosen_group(): void
     {
         $this->actingAs($this->admin)

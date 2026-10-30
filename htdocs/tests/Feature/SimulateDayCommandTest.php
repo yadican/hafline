@@ -2,18 +2,37 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountType;
+use App\Enums\CashDirection;
+use App\Enums\InvoiceDirection;
+use App\Enums\InvoicePaymentStatus;
+use App\Enums\PartyRole;
+use App\Models\AccountTransfer;
+use App\Models\Bank;
+use App\Models\CashCategory;
+use App\Models\CashEntry;
+use App\Models\CompanyTransaction;
 use App\Models\DumpSiteClassPrice;
 use App\Models\FuelStation;
 use App\Models\Haul;
 use App\Models\HaulRoute;
+use App\Models\Invoice;
 use App\Models\MachineWork;
 use App\Models\Party;
 use App\Models\RouteClassPrice;
+use App\Models\StockItem;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
+use App\Services\InvoiceService;
+use App\Services\StockService;
+use Database\Seeders\CashCategorySeeder;
 use Database\Seeders\LoadTest\DailyStage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use ReflectionMethod;
+use ReflectionProperty;
 use Tests\TestCase;
 
 class SimulateDayCommandTest extends TestCase
@@ -32,7 +51,7 @@ class SimulateDayCommandTest extends TestCase
         RouteClassPrice::query()->create(['route_id' => $route->id, 'vehicle_class_id' => $class->id, 'price' => 2500]);
         DumpSiteClassPrice::query()->create(['dump_site_id' => $route->dump_site_id, 'vehicle_class_id' => $class->id, 'price' => 400]);
 
-        $station = FuelStation::factory()->create(['unit_price' => 50]);
+        $station = FuelStation::factory()->create(['unit_price' => 50, 'purchase_price' => 42]);
         DB::table('fuel_station_sites')->insert(['fuel_station_id' => $station->id, 'site_id' => $route->site_id]);
 
         foreach (range(1, 5) as $n) {
@@ -84,5 +103,113 @@ class SimulateDayCommandTest extends TestCase
 
         $this->assertSame(['2026-03-09', '2026-03-10', '2026-03-11'], $days);
         $this->artisan('ledger:audit', ['--skip-reports' => true])->assertSuccessful();
+    }
+
+    public function test_cash_drawer_tops_up_via_account_transfer_not_fake_cash_row(): void
+    {
+        $this->seed(CashCategorySeeder::class);
+        Bank::factory()->create(['type' => AccountType::Cash, 'name' => 'Merkez Kasa']);
+        Bank::factory()->create(['type' => AccountType::Bank, 'name' => 'Ziraat']);
+
+        $this->artisan('simulate:day', ['date' => '2026-03-10', '--no-audit' => true])->assertSuccessful();
+
+        $this->assertGreaterThan(0, AccountTransfer::query()->where('description', 'Bankadan kasaya çekim')->count());
+        $this->assertSame(0, CashEntry::query()->whereIn('description', ['Bankadan nakit çekim', 'Bankadan çekilen'])->count());
+        $this->artisan('ledger:audit', ['--skip-reports' => true])->assertSuccessful();
+    }
+
+    public function test_supplier_stock_and_plate_sales_go_through_invoices_not_fake_cari(): void
+    {
+        $this->seed(CashCategorySeeder::class);
+        Bank::factory()->create(['type' => AccountType::Cash, 'name' => 'Merkez Kasa']);
+        Bank::factory()->create(['type' => AccountType::Bank, 'name' => 'Ziraat']);
+
+        $supplier = Party::factory()->company()->withRole(PartyRole::Supplier)->create();
+        $customer = Party::factory()->company()->withRole(PartyRole::Customer)->create();
+        $item = StockItem::factory()->create(['name' => 'Filtre', 'sales_price' => 100, 'tracks_stock' => true]);
+        $expense = CashCategory::query()->where('direction', CashDirection::Expense)->first();
+        $income = CashCategory::query()->where('direction', CashDirection::Income)->first();
+        $day = Carbon::parse('2026-03-12');
+        $user = DailyStage::user();
+
+        app(InvoiceService::class)->create([
+            'direction' => InvoiceDirection::Purchase->value,
+            'party_id' => $supplier->id,
+            'invoice_no' => 'A-TEST-001',
+            'issued_on' => $day->toDateString(),
+            'payment_status' => InvoicePaymentStatus::Unpaid->value,
+            'lines' => [[
+                'description' => $item->name,
+                'stock_item_id' => $item->id,
+                'quantity' => '20.000',
+                'unit_price' => '70.00',
+                'vat_rate' => '0',
+                'cash_category_id' => $expense?->id,
+            ]],
+        ], $user->id);
+
+        $this->assertGreaterThan(10, app(StockService::class)->stock($item->fresh(), $day)['quantity']);
+
+        $stage = app(DailyStage::class);
+        $this->bindDay($stage, $day);
+
+        (new ReflectionMethod(DailyStage::class, 'writePurchase'))->invoke(
+            $stage,
+            $supplier,
+            collect([$item]),
+            null,
+            $expense,
+            collect(),
+        );
+
+        $vehicles = Vehicle::query()->where('active', true)->whereHas('vehicleClass', fn ($q) => $q->where('hourly', false))->get();
+        (new ReflectionMethod(DailyStage::class, 'writePlateSale'))->invoke($stage, $vehicles, collect([$item]), $income);
+        (new ReflectionMethod(DailyStage::class, 'writeCustomerSale'))->invoke(
+            $stage,
+            collect([$customer]),
+            collect([$item]),
+            null,
+            $income,
+        );
+
+        $this->assertGreaterThan(1, Invoice::query()->where('direction', InvoiceDirection::Purchase)->count());
+        $this->assertGreaterThan(0, Invoice::query()->where('direction', InvoiceDirection::Sale)->whereNotNull('vehicle_id')->count());
+        $this->assertGreaterThan(0, Invoice::query()->where('direction', InvoiceDirection::Sale)->whereNull('vehicle_id')->count());
+        $this->assertSame(
+            0,
+            CompanyTransaction::query()
+                ->where('role', PartyRole::Supplier)
+                ->where('credit', '>', 0)
+                ->whereNull('payment_method')
+                ->count(),
+            'Eski sahte tedarikçi fatura cari satırı olmamalı.',
+        );
+        $this->assertGreaterThanOrEqual(0, app(StockService::class)->stock($item->fresh(), $day)['quantity']);
+
+        $this->artisan('simulate:day', ['date' => '2026-03-10', '--no-audit' => true])->assertSuccessful();
+        $this->assertSame(
+            0,
+            CompanyTransaction::query()
+                ->where('role', PartyRole::Supplier)
+                ->where('credit', '>', 0)
+                ->whereNull('payment_method')
+                ->count(),
+        );
+
+        $this->artisan('ledger:audit', ['--skip-reports' => true])->assertSuccessful();
+    }
+
+    private function bindDay(DailyStage $stage, Carbon $day): void
+    {
+        $user = DailyStage::user();
+        Auth::setUser($user);
+
+        (new ReflectionProperty(DailyStage::class, 'day'))->setValue($stage, $day->copy()->startOfDay());
+        (new ReflectionProperty(DailyStage::class, 'cutoff'))->setValue($stage, $day->copy()->endOfDay());
+        (new ReflectionProperty(DailyStage::class, 'dayType'))->setValue($stage, 0);
+        (new ReflectionProperty(DailyStage::class, 'user'))->setValue($stage, $user);
+        (new ReflectionProperty(DailyStage::class, 'ticket'))->setValue($stage, 0);
+        (new ReflectionProperty(DailyStage::class, 'counts'))->setValue($stage, []);
+        (new ReflectionProperty(DailyStage::class, 'skipped'))->setValue($stage, []);
     }
 }

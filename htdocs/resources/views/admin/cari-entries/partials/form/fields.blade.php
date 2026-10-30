@@ -20,14 +20,14 @@
                 @endforeach
             </div>
         </x-form.field>
-        <p class="panel-hint" x-show="['supplier', 'customer', 'fuel', 'market'].includes(kind)">Ödeme tipi seçilmezse kasa etkilenmez; tutar yalnızca cariye borç ya da alacak olarak yazılır (vadeli fatura, çek, mahsup).</p>
+        <p class="panel-hint" x-show="['supplier', 'customer', 'fuel', 'market'].includes(kind)">Fatura için <a href="{{ route('admin.invoices.index') }}">Faturalar</a> ekranını kullanın. Burada yalnız ödeme / tahsilat girilir; ödeme tipi zorunludur.</p>
         <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Açılış bakiyesi kasayı etkilemez; yalnızca carinin başlangıç durumunu yazar.</p>
     </div>
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
     @php($method = old('payment_method', ($form['payment_method'] ?? null) instanceof \BackedEnum ? $form['payment_method']->value : ($form['payment_method'] ?? '')))
     <div x-show="! ['cash', 'opening', 'party_transfer', 'site_bill', 'account_transfer'].includes(kind)" x-cloak x-data="{ method: @js((string) $method) }">
-        <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" x-model="method" />
+        <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçin" :options="$options['methods']" x-model="method" x-bind:required="['supplier', 'customer', 'fuel', 'market'].includes(kind)" />
         <div x-show="['cheque', 'promissory_note'].includes(method) && kind !== 'vehicle_receivable'" x-cloak>
             <x-form.input name="cheque_no" label="Çek / senet no" maxlength="20" />
             <x-form.input name="due_on" label="Vade" type="date" x-bind:required="['cheque', 'promissory_note'].includes(method) && kind !== 'vehicle_receivable'" />

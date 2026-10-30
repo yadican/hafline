@@ -47,6 +47,34 @@ enum CariEntryKind: string
         };
     }
 
+    public function group(): CariEntryGroup
+    {
+        return match ($this) {
+            self::Supplier, self::Customer, self::Fuel, self::Market => CariEntryGroup::FirmPayment,
+            self::VehiclePayment => CariEntryGroup::VehiclePayment,
+            self::VehicleReceivable => CariEntryGroup::VehicleReceivable,
+            self::OwnerPayment => CariEntryGroup::OwnerPayment,
+            self::DumpPayment => CariEntryGroup::DumpPayment,
+            self::SiteBill => CariEntryGroup::SiteBill,
+            self::Site => CariEntryGroup::Site,
+            self::Cash => CariEntryGroup::Cash,
+            self::AccountTransfer => CariEntryGroup::AccountTransfer,
+            self::Opening => CariEntryGroup::Opening,
+            self::PartyTransfer => CariEntryGroup::PartyTransfer,
+        };
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function casesIn(CariEntryGroup $group): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            fn (self $kind) => $kind->group() === $group,
+        ));
+    }
+
     public function partyRole(): ?PartyRole
     {
         return match ($this) {
@@ -65,6 +93,15 @@ enum CariEntryKind: string
     public function takesAnyParty(): bool
     {
         return in_array($this, [self::Opening, self::PartyTransfer], true);
+    }
+
+    /**
+     * Firm kinds used to allow an empty payment method for deferred invoices; those go through
+     * Faturalar now, so a payment method is required (K5).
+     */
+    public function requiresPaymentMethod(): bool
+    {
+        return in_array($this, [self::Supplier, self::Customer, self::Fuel, self::Market], true);
     }
 
     /**

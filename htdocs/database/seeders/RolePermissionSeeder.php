@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CariEntryGroup;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -22,9 +23,15 @@ class RolePermissionSeeder extends Seeder
             'machine-work',
             'fuel-receipt',
             'party',
+            // Legacy monolithic resource — kept until 35a–37 authorize by group.
             'cari-entry',
+            ...self::cariEntryGroupResources(),
+            'invoice',
             'financial-instrument',
             'cash-category',
+            'stock-item',
+            'stock-usage',
+            'stock-count',
             'bank',
             'vehicle',
             'vehicle-class',
@@ -74,6 +81,17 @@ class RolePermissionSeeder extends Seeder
     /**
      * @return list<string>
      */
+    public static function cariEntryGroupResources(): array
+    {
+        return array_map(
+            fn (CariEntryGroup $group) => $group->permissionResource(),
+            CariEntryGroup::cases(),
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
     public static function reportPermissionNames(): array
     {
         return [
@@ -95,6 +113,7 @@ class RolePermissionSeeder extends Seeder
             'view-report-vehicle-cost-owners',
             'view-report-company-balance',
             'view-report-company-ledger',
+            'view-report-invoice-aging',
             'view-report-site-cari',
             'view-report-site-expense',
             'view-report-cash-movements',
@@ -135,11 +154,41 @@ class RolePermissionSeeder extends Seeder
             ->where('name', 'view-reports')
             ->delete();
 
+        $this->expandLegacyCariEntryPermissions();
+
         $role = Role::firstOrCreate(
             ['name' => 'yonetici', 'guard_name' => 'web'],
             ['id' => (string) Str::uuid7()]
         );
         $role->syncPermissions($permissions);
+    }
+
+    /**
+     * Roles that already hold monolithic *-cari-entry get the matching action
+     * on every cari entry group resource.
+     */
+    private function expandLegacyCariEntryPermissions(): void
+    {
+        $groupResources = self::cariEntryGroupResources();
+        $actions = ['view', 'create', 'edit', 'delete'];
+
+        foreach (Role::query()->where('guard_name', 'web')->get() as $role) {
+            $toGive = [];
+
+            foreach ($actions as $action) {
+                if (! $role->hasPermissionTo("{$action}-cari-entry")) {
+                    continue;
+                }
+
+                foreach ($groupResources as $resource) {
+                    $toGive[] = "{$action}-{$resource}";
+                }
+            }
+
+            if ($toGive !== []) {
+                $role->givePermissionTo($toGive);
+            }
+        }
     }
 
     private function seedApiCatalog(): void

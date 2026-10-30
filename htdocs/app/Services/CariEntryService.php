@@ -53,6 +53,7 @@ class CariEntryService extends Service
         private Ledger $ledger,
         private VehicleOwnershipService $ownerships,
         private FinancialInstrumentService $instruments,
+        private InvoicePaymentService $invoicePayments,
     ) {}
 
     /**
@@ -94,17 +95,21 @@ class CariEntryService extends Service
     /**
      * @param  array<string, mixed>  $data
      */
-    public function create(array $data, ?string $userId): void
+    public function create(array $data, ?string $userId): Model
     {
-        $this->transaction(function () use ($data, $userId): void {
+        return $this->transaction(function () use ($data, $userId): Model {
             $this->assertPlateOpen($this->kind($data), null, $data);
             $entry = $this->persist($this->kind($data), $data, $userId);
             $this->post($entry, $data);
             $this->instruments->syncEntry($this->kind($data), $entry, $data, $this->postedParty($entry), $userId);
+
+            return $entry;
         });
     }
 
     /**
+     * An entry paying invoices keeps only the matches its new amount, party, side and method still cover.
+     *
      * @param  array<string, mixed>  $data
      */
     public function update(CariEntryKind $kind, string $id, array $data): void
@@ -119,15 +124,20 @@ class CariEntryService extends Service
             $entry = $this->persist($kind, $data, $entry->created_by, $entry);
             $this->post($entry, $data, $postedParty);
             $this->instruments->syncEntry($kind, $entry, $data, $this->postedParty($entry), $entry->created_by);
+            $this->invoicePayments->fitPayment($entry);
         });
     }
 
+    /**
+     * The invoices a deleted payment settled open again.
+     */
     public function delete(CariEntryKind $kind, string $id): void
     {
         $this->transaction(function () use ($kind, $id): void {
             $entry = $this->find($kind, $id);
             $this->assertPlateOpen($kind, $entry, null);
             $this->instruments->releaseEntry($entry);
+            $this->invoicePayments->releasePayment($entry);
 
             if ($kind->postsLedger()) {
                 $this->ledger->void($entry);

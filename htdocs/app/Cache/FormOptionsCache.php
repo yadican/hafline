@@ -27,6 +27,8 @@ final class FormOptionsCache
 
     public const CASH_CATEGORIES = 'cash_categories';
 
+    public const STOCK_ITEMS = 'stock_items';
+
     public const EMPLOYEES = 'employees';
 
     public const HAUL_ROUTES = 'haul_routes';
@@ -63,6 +65,7 @@ final class FormOptionsCache
         self::FUEL_STATIONS => ['all', 'active'],
         self::BANKS => ['all', 'active', 'accounts'],
         self::CASH_CATEGORIES => ['all', 'income', 'expense', 'both'],
+        self::STOCK_ITEMS => ['active'],
         self::EMPLOYEES => ['all', 'with_period'],
         self::HAUL_ROUTES => ['site_dump', 'dump_site'],
         self::HAUL_ROUTE_SITES => ['open'],

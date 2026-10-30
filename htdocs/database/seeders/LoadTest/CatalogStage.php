@@ -2,16 +2,26 @@
 
 namespace Database\Seeders\LoadTest;
 
+use App\Enums\AccountType;
+use App\Enums\CariEntryKind;
+use App\Enums\CashDirection;
+use App\Enums\FuelSourceType;
 use App\Enums\PartyRole;
+use App\Enums\PaymentMethod;
+use App\Enums\SiteBilling;
+use App\Enums\StockItemUnit;
 use App\Models\Bank;
+use App\Models\CashCategory;
 use App\Models\DumpSite;
 use App\Models\DumpSiteClassPrice;
 use App\Models\FuelStation;
 use App\Models\HaulRoute;
 use App\Models\Party;
 use App\Models\RouteClassPrice;
+use App\Models\RouteSitePrice;
 use App\Models\RouteVehiclePrice;
 use App\Models\Site;
+use App\Models\StockItem;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
 use Database\Seeders\LoadTest\Support\Progress;
@@ -64,6 +74,17 @@ final class CatalogStage
     /** @var Collection<int, VehicleClass> */
     private Collection $classes;
 
+    /** @var Collection<int, Bank> */
+    private Collection $banks;
+
+    /** @var Collection<int, CashCategory>|null */
+    private ?Collection $categories = null;
+
+    /** @var Collection<int, StockItem> */
+    private Collection $stockItems;
+
+    private int $instrumentDoc = 0;
+
     /** @var array<string, list<array{party_id: string, started_on: string, ended_on: ?string}>> */
     private array $ownershipIndex = [];
 
@@ -72,6 +93,9 @@ final class CatalogStage
 
     /** @var array<string, array<string, string>> routeId => classId => price */
     private array $routeClassPrices = [];
+
+    /** @var array<string, array<string, string>> routeId => classId => site sale price */
+    private array $routeSitePrices = [];
 
     /** @var array<string, array<string, string>> dumpId => classId => price */
     private array $dumpClassPrices = [];
@@ -85,9 +109,6 @@ final class CatalogStage
     /** @var array<string, int> routeId => round-trip minutes (load, haul, dump, return) */
     private array $routeCycles = [];
 
-    /** @var array<string, string> siteId => customer partyId */
-    private array $siteCustomers = [];
-
     /** @var array<string, list<FuelStation>> siteId => on-site stations */
     private array $siteStations = [];
 
@@ -99,13 +120,14 @@ final class CatalogStage
     public function run(Carbon $fleetSince, Carbon $from, Carbon $to): self
     {
         $this->classes = VehicleClass::query()->get()->keyBy('name');
-        $this->seedBanks();
+        $this->seedBanks($from);
         $this->seedParties();
         $this->seedSites();
         $this->seedDumpSites();
         $this->seedRoutes();
         $this->seedFuelStations();
         $this->seedVehicles($fleetSince, $from, $to);
+        $this->seedStockItems();
 
         return $this;
     }
@@ -118,11 +140,6 @@ final class CatalogStage
     public function preferredRouteId(string $vehicleId): ?string
     {
         return $this->preferredRoutes[$vehicleId] ?? null;
-    }
-
-    public function customerOf(string $siteId): ?string
-    {
-        return $this->siteCustomers[$siteId] ?? null;
     }
 
     /**
@@ -145,6 +162,136 @@ final class CatalogStage
     public function partiesFor(PartyRole $role): Collection
     {
         return $this->partiesByRole[$role->value] ?? collect();
+    }
+
+    /** @return Collection<int, Bank> */
+    public function allBanks(): Collection
+    {
+        return $this->banks;
+    }
+
+    /** @return Collection<int, Bank> */
+    public function banksOf(AccountType $type): Collection
+    {
+        return $this->banks->where('type', $type)->values();
+    }
+
+    /**
+     * Account whose type the payment method moves money through (cash→kasa, transfer→banka, card→POS/kart).
+     * Null when the method parks money elsewhere (çek/senet) or moves none (mahsup).
+     */
+    public function bankFor(PaymentMethod $method): ?Bank
+    {
+        $pool = collect($method->accountTypes())
+            ->flatMap(fn (AccountType $type) => $this->banksOf($type))
+            ->values();
+
+        return $pool->isEmpty() ? null : $pool->random();
+    }
+
+    /**
+     * Active cash categories that can be picked for money going out (expense) or coming in (income).
+     *
+     * @return Collection<int, CashCategory>
+     */
+    public function categoriesOf(CashDirection $direction): Collection
+    {
+        $this->categories ??= CashCategory::query()->where('active', true)->get();
+
+        return $this->categories
+            ->filter(fn (CashCategory $category) => in_array($category->direction, [$direction, CashDirection::Both], true))
+            ->values();
+    }
+
+    /**
+     * Category whose direction matches the movement (expense/income), including "both".
+     */
+    public function categoryFor(CashDirection $direction): ?CashCategory
+    {
+        $pool = $this->categoriesOf($direction);
+
+        return $pool->isEmpty() ? null : $pool->random();
+    }
+
+    /**
+     * Which category side a cari kind + debit/credit direction expects (kasa nakit is inverted).
+     */
+    public function categoryDirectionFor(string $kind, string $direction): CashDirection
+    {
+        if ($kind === CariEntryKind::Cash->value) {
+            return $direction === 'debit' ? CashDirection::Income : CashDirection::Expense;
+        }
+
+        return $direction === 'credit' ? CashDirection::Income : CashDirection::Expense;
+    }
+
+    /**
+     * Attach cash_category_id when the payload has a direction and no category yet.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function withCashCategory(array $payload): array
+    {
+        if (! empty($payload['cash_category_id']) || empty($payload['direction'])) {
+            return $payload;
+        }
+
+        $payload['cash_category_id'] = $this->categoryFor(
+            $this->categoryDirectionFor((string) ($payload['kind'] ?? ''), (string) $payload['direction']),
+        )?->id;
+
+        return $payload;
+    }
+
+    /**
+     * Attach bank_id when the payload names a money-moving payment method and has no account yet.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function withPaymentAccount(array $payload): array
+    {
+        if (! empty($payload['bank_id'])) {
+            return $payload;
+        }
+
+        $method = PaymentMethod::tryFrom((string) ($payload['payment_method'] ?? ''));
+
+        if ($method === null || $method->accountTypes() === []) {
+            return $payload;
+        }
+
+        $payload['bank_id'] = $this->bankFor($method)?->id;
+
+        return $payload;
+    }
+
+    /**
+     * Fill cheque_no and due_on when the payment is a cheque or promissory note.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function withInstrumentDetails(array $payload): array
+    {
+        $method = PaymentMethod::tryFrom((string) ($payload['payment_method'] ?? ''));
+
+        if ($method === null || ! $method->hasDueDate()) {
+            return $payload;
+        }
+
+        if (empty($payload['cheque_no'])) {
+            $prefix = $method === PaymentMethod::PromissoryNote ? 'SN' : 'CK';
+            $payload['cheque_no'] = $prefix.str_pad((string) (++$this->instrumentDoc), 6, '0', STR_PAD_LEFT);
+        }
+
+        if (empty($payload['due_on'])) {
+            $occurred = Carbon::parse((string) ($payload['occurred_on'] ?? 'today'));
+            $payload['due_on'] = $occurred->copy()->addDays(fake()->numberBetween(7, 90))->toDateString();
+        }
+
+        return $payload;
     }
 
     /** @return Collection<int, Site> */
@@ -171,6 +318,12 @@ final class CatalogStage
         return $this->stations;
     }
 
+    /** @return Collection<int, FuelStation> */
+    public function allTanks(): Collection
+    {
+        return $this->stations->filter(fn (FuelStation $station) => $station->isTank())->values();
+    }
+
     /** @return Collection<int, Vehicle> */
     public function haulVehicles(): Collection
     {
@@ -187,6 +340,18 @@ final class CatalogStage
     public function allVehicles(): Collection
     {
         return $this->haulVehicles->concat($this->machines)->values();
+    }
+
+    /** @return Collection<int, StockItem> */
+    public function stockItems(): Collection
+    {
+        return $this->stockItems;
+    }
+
+    /** @return Collection<int, StockItem> */
+    public function trackedStockItems(): Collection
+    {
+        return $this->stockItems->where('tracks_stock', true)->values();
     }
 
     public function ownerOn(string $vehicleId, Carbon $day): ?string
@@ -216,35 +381,104 @@ final class CatalogStage
     }
 
     /**
-     * @return array{price: string, dump_price: string}
+     * @return array{price: string, dump_price: string, site_price: string}
      */
     public function quote(Vehicle $vehicle, HaulRoute $route): array
     {
         $vehiclePrice = $this->routeVehiclePrices[$route->id][$vehicle->id] ?? null;
         $classPrice = $vehiclePrice ?? ($this->routeClassPrices[$route->id][$vehicle->vehicle_class_id] ?? '0');
         $dumpPrice = $this->dumpClassPrices[$route->dump_site_id][$vehicle->vehicle_class_id] ?? '0';
+        $sitePrice = $this->routeSitePrices[$route->id][$vehicle->vehicle_class_id] ?? '0';
 
         return [
             'price' => (string) ($vehiclePrice ?? $classPrice),
             'dump_price' => (string) $dumpPrice,
+            'site_price' => (string) $sitePrice,
         ];
     }
 
-    private function seedBanks(): void
+    private function seedBanks(Carbon $openedOn): void
     {
-        $this->progress->stage('Bankalar (TR)');
+        $this->progress->stage('Hesaplar (kasa / banka / POS / kart)');
+        $this->banks = collect();
 
-        $names = TurkishData::banks();
-        foreach ($names as $index => $name) {
-            Bank::query()->firstOrCreate(['name' => $name], [
-                'representative' => TurkishData::personName(),
-                'phone' => fake()->numerify('0212#######'),
-                'account_no' => sprintf('TR%02d%022d', ($index % 90) + 10, 100000000000000000 + $index),
+        $definitions = [
+            ...$this->cashAccountDefinitions(),
+            ...$this->bankAccountDefinitions(),
+            ...$this->posAccountDefinitions(),
+            ...$this->creditCardAccountDefinitions(),
+        ];
+
+        foreach ($definitions as $index => $definition) {
+            $bank = Bank::query()->firstOrCreate(['name' => $definition['name']], [
+                ...$definition,
+                'opened_on' => $openedOn->toDateString(),
+                'active' => true,
             ]);
-            $this->progress->batch($index + 1, count($names), 'banka');
+            $this->banks->push($bank);
+            $this->progress->batch($index + 1, count($definitions), 'hesap');
         }
 
-        $this->progress->done(count($names).' banka');
+        $counts = collect(AccountType::cases())
+            ->map(fn (AccountType $type) => mb_strtolower($type->label(), 'UTF-8').': '.$this->banksOf($type)->count())
+            ->implode(' · ');
+
+        $this->progress->done($this->banks->count().' hesap ('.$counts.')');
+    }
+
+    /**
+     * @return list<array{type: AccountType, name: string, opening_balance: string, phone?: string}>
+     */
+    private function cashAccountDefinitions(): array
+    {
+        return [
+            ['type' => AccountType::Cash, 'name' => 'Merkez Kasa', 'opening_balance' => '125000.00', 'phone' => fake()->numerify('0216#######')],
+            ['type' => AccountType::Cash, 'name' => 'Şantiye Kasası', 'opening_balance' => '42000.00', 'phone' => fake()->numerify('0262#######')],
+            ['type' => AccountType::Cash, 'name' => 'Ofis Kasası', 'opening_balance' => '18500.00', 'phone' => fake()->numerify('0212#######')],
+        ];
+    }
+
+    /**
+     * @return list<array{type: AccountType, name: string, opening_balance: string, representative: string, phone: string, account_no: string, iban: string, branch: string}>
+     */
+    private function bankAccountDefinitions(): array
+    {
+        $names = TurkishData::banks();
+
+        return array_map(fn (string $name, int $index) => [
+            'type' => AccountType::Bank,
+            'name' => $name,
+            'branch' => fake()->randomElement(['Gebze', 'Pendik', 'Kadıköy', 'Ümraniye', 'Başakşehir', 'Merkez']),
+            'representative' => TurkishData::personName(),
+            'phone' => fake()->numerify('0212#######'),
+            'account_no' => sprintf('%06d%04d', 100000 + $index, 1000 + ($index % 9000)),
+            'iban' => sprintf('TR%02d%022d', ($index % 90) + 10, 100000000000000000 + $index),
+            'opening_balance' => number_format(75000 + ($index * 12500), 2, '.', ''),
+        ], $names, array_keys($names));
+    }
+
+    /**
+     * @return list<array{type: AccountType, name: string, opening_balance: string, representative: string, phone: string, branch: string}>
+     */
+    private function posAccountDefinitions(): array
+    {
+        return [
+            ['type' => AccountType::Pos, 'name' => 'Ziraat POS · Merkez', 'branch' => 'Gebze', 'representative' => TurkishData::personName(), 'phone' => fake()->numerify('0216#######'), 'opening_balance' => '0.00'],
+            ['type' => AccountType::Pos, 'name' => 'İş Bankası POS · Şantiye', 'branch' => 'Pendik', 'representative' => TurkishData::personName(), 'phone' => fake()->numerify('0216#######'), 'opening_balance' => '0.00'],
+            ['type' => AccountType::Pos, 'name' => 'Garanti POS · Ofis', 'branch' => 'Kadıköy', 'representative' => TurkishData::personName(), 'phone' => fake()->numerify('0216#######'), 'opening_balance' => '1250.00'],
+        ];
+    }
+
+    /**
+     * @return list<array{type: AccountType, name: string, opening_balance: string, representative: string, phone: string, account_no: string, branch: string}>
+     */
+    private function creditCardAccountDefinitions(): array
+    {
+        return [
+            ['type' => AccountType::CreditCard, 'name' => 'Yapı Kredi Business', 'branch' => 'Kadıköy', 'representative' => TurkishData::personName(), 'phone' => fake()->numerify('0216#######'), 'account_no' => fake()->numerify('############'), 'opening_balance' => '-48500.00'],
+            ['type' => AccountType::CreditCard, 'name' => 'Akbank Axess Ticari', 'branch' => 'Ümraniye', 'representative' => TurkishData::personName(), 'phone' => fake()->numerify('0216#######'), 'account_no' => fake()->numerify('############'), 'opening_balance' => '-27300.00'],
+            ['type' => AccountType::CreditCard, 'name' => 'Garanti Bonus Business', 'branch' => 'Başakşehir', 'representative' => TurkishData::personName(), 'phone' => fake()->numerify('0216#######'), 'account_no' => fake()->numerify('############'), 'opening_balance' => '-15200.00'],
+        ];
     }
 
     private function seedParties(): void
@@ -265,6 +499,7 @@ final class CatalogStage
             PartyRole::Fuel->value => 14,
             PartyRole::Market->value => 20,
             PartyRole::VehicleOwner->value => 65,
+            PartyRole::Commission->value => 18,
         ];
 
         foreach ($personTargets as $role => $count) {
@@ -302,6 +537,7 @@ final class CatalogStage
                 PartyRole::Fuel->value => 'AKARYAKIT',
                 PartyRole::Market->value => 'PİYASA',
                 PartyRole::VehicleOwner->value => 'NAKLİYE',
+                PartyRole::Commission->value => 'REFERANS',
                 default => '',
             };
 
@@ -334,7 +570,18 @@ final class CatalogStage
             $this->partiesByRole[PartyRole::Supplier->value]->push($fuel);
         }
 
-        foreach ([PartyRole::Supplier, PartyRole::Market, PartyRole::VehicleOwner] as $role) {
+        // Bazı piyasa / müşteri firmaları aynı zamanda komisyoncu (referans).
+        foreach ($this->partiesByRole[PartyRole::Market->value]->random(4) as $market) {
+            $market->assignRole(PartyRole::Commission);
+            $this->partiesByRole[PartyRole::Commission->value]->push($market);
+        }
+
+        foreach ($this->partiesByRole[PartyRole::Customer->value]->random(3) as $customer) {
+            $customer->assignRole(PartyRole::Commission);
+            $this->partiesByRole[PartyRole::Commission->value]->push($customer);
+        }
+
+        foreach ([PartyRole::Supplier, PartyRole::Market, PartyRole::VehicleOwner, PartyRole::Commission] as $role) {
             $this->partiesByRole[$role->value] = $this->partiesByRole[$role->value]->unique('id')->values();
         }
 
@@ -385,19 +632,35 @@ final class CatalogStage
 
         $names = collect(TurkishData::siteNames())->shuffle()->take(self::SITE_COUNT)->values();
         $this->sites = collect();
+        $this->partiesByRole[PartyRole::Site->value] = $this->partiesByRole[PartyRole::Site->value] ?? collect();
 
         $customers = $this->partiesFor(PartyRole::Customer)->values();
         $suppliers = $this->partiesFor(PartyRole::Supplier);
         $markets = $this->partiesFor(PartyRole::Market);
 
         foreach ($names as $index => $name) {
-            $site = Site::query()->create(['name' => $name]);
+            // Own cari per site (company + site role); ~1/3 billed per trip, rest by progress bill.
+            $cari = Party::factory()->company()->withRole(PartyRole::Site)->create([
+                'name' => $name,
+                'phone' => fake()->numerify('021########'),
+                'address' => fake()->randomElement(TurkishData::cityAreas()).' / Türkiye',
+            ]);
+            $cari->company?->update([
+                'tax_office' => fake()->randomElement(TurkishData::cityAreas()),
+                'tax_number' => str_pad((string) fake()->unique()->numberBetween(1000000000, 1999999999), 10, '0', STR_PAD_LEFT),
+            ]);
+            $this->partiesByRole[PartyRole::Site->value]->push($cari);
+
+            $site = Site::query()->create([
+                'name' => $name,
+                'party_id' => $cari->id,
+                'billing_mode' => ($index % 3 === 0 ? SiteBilling::PerTrip : SiteBilling::Progress)->value,
+            ]);
 
             // Round-robin so every customer owns at least one site; fuel firms follow their stations.
             $customerId = $customers[$index % $customers->count()]->id;
             $site->parties()->attach($customerId, ['role' => PartyRole::Customer->value]);
             $site->parties()->attach($suppliers->random()->id, ['role' => PartyRole::Supplier->value]);
-            $this->siteCustomers[$site->id] = $customerId;
 
             if (fake()->boolean(70)) {
                 $site->parties()->attach($markets->random()->id, ['role' => PartyRole::Market->value]);
@@ -407,7 +670,7 @@ final class CatalogStage
             $this->progress->batch($index + 1, self::SITE_COUNT, 'şantiye');
         }
 
-        $this->progress->done($this->sites->count().' şantiye');
+        $this->progress->done($this->sites->count().' şantiye (cari + faturalama)');
     }
 
     private function seedDumpSites(): void
@@ -477,6 +740,7 @@ final class CatalogStage
 
                 foreach ($haulClasses as $class) {
                     $price = $this->routePrice($class->name, $cycle);
+                    $sitePrice = $this->siteSalePrice($price);
 
                     RouteClassPrice::query()->create([
                         'route_id' => $route->id,
@@ -484,7 +748,14 @@ final class CatalogStage
                         'price' => $price,
                     ]);
 
+                    RouteSitePrice::query()->create([
+                        'route_id' => $route->id,
+                        'vehicle_class_id' => $class->id,
+                        'price' => $sitePrice,
+                    ]);
+
                     $this->routeClassPrices[$route->id][$class->id] = (string) $price;
+                    $this->routeSitePrices[$route->id][$class->id] = (string) $sitePrice;
                 }
 
                 $route->setRelation('dumpSite', $dump);
@@ -513,6 +784,14 @@ final class CatalogStage
         return (int) round(($base + $cycleMinutes * $perMinute) * fake()->randomFloat(2, 0.95, 1.05), -1);
     }
 
+    /**
+     * What the site is billed per trip; always above the carrier's class price.
+     */
+    private function siteSalePrice(int $classPrice): int
+    {
+        return (int) round($classPrice * fake()->randomFloat(2, 1.15, 1.40), -1);
+    }
+
     private function seedFuelStations(): void
     {
         $this->progress->stage('Akaryakıt istasyonları');
@@ -532,10 +811,15 @@ final class CatalogStage
                 $brand = fake()->randomElement(TurkishData::fuelBrandNames());
                 // Every firm keeps at least one on-site pump so it shows up on site reports.
                 $onSite = $n === 1 || fake()->boolean(45);
+                $unitPrice = fake()->randomFloat(2, 44.50, 52.80);
+                // Purchase (firm credit on each receipt) sits below the sale price charged to the owner.
+                $purchasePrice = round($unitPrice * fake()->randomFloat(2, 0.86, 0.94), 2);
                 $station = FuelStation::query()->create([
                     'name' => sprintf('%s %s %s', $brand, $onSite ? 'ŞANTİYE' : 'DIŞ', $n === 1 ? 'MERKEZ' : chr(64 + $n)),
+                    'type' => FuelSourceType::Station,
                     'party_id' => $firm->id,
-                    'unit_price' => fake()->randomFloat(2, 44.50, 52.80),
+                    'purchase_price' => $purchasePrice,
+                    'unit_price' => $unitPrice,
                 ]);
 
                 if ($onSite) {
@@ -570,9 +854,64 @@ final class CatalogStage
             }
         }
 
-        $this->offSiteStations = $this->stations->filter(fn (FuelStation $station) => $station->sites->isEmpty())->values();
+        $this->offSiteStations = $this->stations->filter(
+            fn (FuelStation $station) => ! $station->isTank() && $station->sites->isEmpty(),
+        )->values();
 
-        $this->progress->done(sprintf('%d istasyon (%d şantiye içi + %d dış)', $created, $onSiteStations->count(), $this->offSiteStations->count()));
+        $tanks = $this->seedFieldPumps();
+
+        $this->progress->done(sprintf(
+            '%d istasyon (%d şantiye içi + %d dış) · %d saha pompası',
+            $created,
+            $onSiteStations->count(),
+            $this->offSiteStations->count(),
+            $tanks,
+        ));
+    }
+
+    /**
+     * Our own on-site pumps: no firm; stock comes from fills. Linked to a few sites each so
+     * stationFor can hand vehicles a tank alongside firm stations.
+     */
+    private function seedFieldPumps(): int
+    {
+        $count = min(12, max(4, (int) floor($this->sites->count() / 4)));
+        $pool = $this->sites->shuffle()->values();
+        $cursor = 0;
+
+        for ($i = 0; $i < $count; $i++) {
+            $unitPrice = fake()->randomFloat(2, 46.80, 53.20);
+            $tank = FuelStation::query()->create([
+                'name' => sprintf('SAHA POMPASI %s', $i === 0 ? 'MERKEZ' : chr(64 + $i)),
+                'type' => FuelSourceType::Tank,
+                'party_id' => null,
+                'purchase_price' => 0,
+                'unit_price' => $unitPrice,
+            ]);
+
+            $linkCount = min(fake()->numberBetween(1, 3), $pool->count());
+            $linked = collect();
+
+            for ($n = 0; $n < $linkCount; $n++) {
+                $linked->push($pool[$cursor % $pool->count()]);
+                $cursor++;
+            }
+
+            $linked = $linked->unique('id')->values();
+            $tank->sites()->attach($linked->pluck('id'));
+            $tank->setRelation('sites', $linked);
+
+            foreach ($linked as $site) {
+                $this->siteStations[$site->id] = [
+                    ...($this->siteStations[$site->id] ?? []),
+                    $tank,
+                ];
+            }
+
+            $this->stations->push($tank);
+        }
+
+        return $count;
     }
 
     private function seedVehicles(Carbon $fleetSince, Carbon $from, Carbon $to): void
@@ -697,6 +1036,49 @@ final class CatalogStage
         }
 
         $this->progress->done(sprintf('%d taşıma + %d makine', $this->haulVehicles->count(), $this->machines->count()));
+    }
+
+    /**
+     * Spare parts and materials for purchase / sale / plate-sale invoices (45). One untracked
+     * service line so non-stock invoice lines also appear.
+     */
+    private function seedStockItems(): void
+    {
+        $this->progress->stage('Stok kalemleri');
+
+        $byName = CashCategory::query()->where('active', true)->get()->keyBy('name');
+
+        $defs = [
+            ['name' => 'Hava filtresi', 'unit' => StockItemUnit::Piece, 'sales_price' => '850.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Yağ filtresi', 'unit' => StockItemUnit::Piece, 'sales_price' => '320.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Mazot filtresi', 'unit' => StockItemUnit::Piece, 'sales_price' => '480.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Lastik 315/80', 'unit' => StockItemUnit::Piece, 'sales_price' => '8500.00', 'category' => 'Lastik'],
+            ['name' => 'Madeni yağ 15W40', 'unit' => StockItemUnit::Liter, 'sales_price' => '185.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Hidrolik yağ', 'unit' => StockItemUnit::Liter, 'sales_price' => '95.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Fren balatası', 'unit' => StockItemUnit::Piece, 'sales_price' => '1200.00', 'category' => 'Tamir ve Bakım'],
+            ['name' => 'Cıvata seti', 'unit' => StockItemUnit::Piece, 'sales_price' => '45.00', 'category' => 'Hırdavat'],
+            ['name' => 'Kayış', 'unit' => StockItemUnit::Piece, 'sales_price' => '650.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Akü 180Ah', 'unit' => StockItemUnit::Piece, 'sales_price' => '4200.00', 'category' => 'Yedek Parça'],
+            ['name' => 'Çimento', 'unit' => StockItemUnit::Kilogram, 'sales_price' => '4.50', 'category' => 'Hırdavat'],
+            ['name' => 'Gres', 'unit' => StockItemUnit::Kilogram, 'sales_price' => '120.00', 'category' => 'Yedek Parça'],
+            ['name' => 'İşçilik / montaj', 'unit' => StockItemUnit::Piece, 'sales_price' => '1500.00', 'category' => 'Hizmet Alımı', 'tracks_stock' => false],
+        ];
+
+        $this->stockItems = collect();
+
+        foreach ($defs as $def) {
+            $item = StockItem::query()->create([
+                'name' => $def['name'],
+                'unit' => $def['unit'],
+                'tracks_stock' => $def['tracks_stock'] ?? true,
+                'cash_category_id' => $byName->get($def['category'])?->id,
+                'sales_price' => $def['sales_price'],
+                'active' => true,
+            ]);
+            $this->stockItems->push($item);
+        }
+
+        $this->progress->done($this->stockItems->count().' stok kalemi');
     }
 
     private function uniquePlate(?string $cityCode = null): string

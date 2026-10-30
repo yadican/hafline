@@ -13,7 +13,12 @@
 
             @include('admin.dashboard.partials.stats')
 
-            @include('admin.dashboard.partials.finance-reminders')
+            @if ($financeReminders !== null || $invoiceReminders !== null)
+                <div class="dash-reminders">
+                    @include('admin.dashboard.partials.finance-reminders')
+                    @include('admin.dashboard.partials.invoice-reminders')
+                </div>
+            @endif
 
             @if ($recentHauls !== null || $cashSummary !== null)
                 <div class="dash-panels">
