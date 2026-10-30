@@ -48,6 +48,7 @@ class CariEntryRequest extends FormRequest
             'fuel_station_id' => $this->input('fuel_station_id') ?: null,
             'dump_site_id' => $this->input('dump_site_id') ?: null,
             'bank_id' => $this->accountApplies($kind) ? ($this->input('bank_id') ?: null) : null,
+            'counter_bank_id' => $kind === CariEntryKind::AccountTransfer ? ($this->input('counter_bank_id') ?: null) : null,
             'cash_category_id' => $kind?->movesMoney() === false ? null : ($this->input('cash_category_id') ?: null),
             'payment_method' => $kind?->movesMoney() === false ? null : ($this->input('payment_method') ?: null),
             'document_no' => trim((string) $this->input('document_no')) ?: null,
@@ -75,6 +76,7 @@ class CariEntryRequest extends FormRequest
             'fuel_station_id' => ['nullable', 'uuid'],
             'dump_site_id' => ['nullable', 'uuid'],
             'bank_id' => ['nullable', 'uuid'],
+            'counter_bank_id' => ['nullable', 'uuid'],
             'cash_category_id' => ['nullable', 'uuid'],
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
             'document_no' => ['nullable', 'string', 'max:40'],
@@ -174,6 +176,14 @@ class CariEntryRequest extends FormRequest
 
                 $this->checkAccount($validator, $kind);
 
+                if ($kind === CariEntryKind::AccountTransfer) {
+                    $this->checkPaymentAccount($validator, AccountType::cases(), 'counter_bank_id', 'Paranın girdiği hesabı seçin.');
+
+                    if ($this->input('counter_bank_id') && $this->input('counter_bank_id') === $this->input('bank_id')) {
+                        $validator->errors()->add('counter_bank_id', 'Virmanın iki tarafı farklı hesap olmalı.');
+                    }
+                }
+
                 if ($kind === CariEntryKind::DumpPayment && ! $this->input('dump_site_id')) {
                     $validator->errors()->add('dump_site_id', 'Döküm yeri seçin.');
                 }
@@ -220,6 +230,7 @@ class CariEntryRequest extends FormRequest
             'fuel_station_id' => 'yakıt yeri',
             'dump_site_id' => 'döküm yeri',
             'bank_id' => 'hesap',
+            'counter_bank_id' => 'giren hesap',
             'cash_category_id' => 'kasa kategorisi',
             'payment_method' => 'ödeme tipi',
             'document_no' => 'belge no',
@@ -238,12 +249,13 @@ class CariEntryRequest extends FormRequest
     }
 
     /**
-     * A cash-box movement always names its account; a payment names one when its method moves
-     * money through an account (cash, transfer, card). Cheque, note and offset leave it empty.
+     * A cash-box movement and a transfer between accounts always name their account; a payment
+     * names one when its method moves money through an account (cash, transfer, card). Cheque,
+     * note and offset leave it empty.
      */
     private function accountApplies(?CariEntryKind $kind): bool
     {
-        if ($kind === CariEntryKind::Cash) {
+        if ($kind?->namesAccount()) {
             return true;
         }
 
@@ -257,9 +269,11 @@ class CariEntryRequest extends FormRequest
     private function checkAccount(Validator $validator, CariEntryKind $kind): void
     {
         if ($this->accountApplies($kind)) {
-            $this->checkPaymentAccount($validator, $kind === CariEntryKind::Cash
-                ? AccountType::cases()
-                : PaymentMethod::from($this->input('payment_method'))->accountTypes());
+            $this->checkPaymentAccount(
+                $validator,
+                $kind->namesAccount() ? AccountType::cases() : PaymentMethod::from($this->input('payment_method'))->accountTypes(),
+                missing: $kind === CariEntryKind::AccountTransfer ? 'Paranın çıktığı hesabı seçin.' : 'Paranın geçtiği hesabı seçin.',
+            );
         }
     }
 

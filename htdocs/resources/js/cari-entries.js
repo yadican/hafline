@@ -2,8 +2,9 @@ import { getJson, money, normalizePlate, onReady } from './entry-support.js';
 
 const PARTY_KINDS = ['supplier', 'customer', 'fuel', 'market', 'owner_payment', 'opening', 'party_transfer'];
 const PLATE_KINDS = ['vehicle_payment', 'vehicle_receivable'];
+const ACCOUNT_KINDS = ['cash', 'account_transfer'];
 
-// Kasa hareketlerinin party alanı yok; tür cash iken filtreyi kapat.
+// Kasa hareketlerinin ve hesaplar arası virmanın party alanı yok; bu türlerde filtreyi kapat.
 function bindSearchToolbar(form) {
     const kind = form.querySelector('[name="kind"]');
     const party = form.querySelector('[name="party"]');
@@ -13,7 +14,7 @@ function bindSearchToolbar(form) {
     }
 
     const sync = () => {
-        const locked = kind.value === 'cash';
+        const locked = ACCOUNT_KINDS.includes(kind.value);
         const $ = window.jQuery;
 
         if ($ && locked) {

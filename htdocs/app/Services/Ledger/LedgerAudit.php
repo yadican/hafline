@@ -2,8 +2,11 @@
 
 namespace App\Services\Ledger;
 
+use App\Enums\AccountType;
+use App\Models\Bank;
 use App\Models\FinancialInstrument;
 use App\Models\VehicleOwnership;
+use App\Repositories\BankRepository;
 use App\Repositories\Reports\OwnerBalanceReportRepository;
 use App\Repositories\Reports\VehicleBalanceReportRepository;
 use App\Repositories\VehicleAccountRepository;
@@ -68,6 +71,7 @@ class LedgerAudit
         private OwnerBalanceReportRepository $ownerBalances,
         private VehicleBalanceReportRepository $vehicleBalances,
         private CashMovementReportService $cash,
+        private BankRepository $banks,
     ) {}
 
     /**
@@ -84,6 +88,7 @@ class LedgerAudit
             $this->ownerBalanceReportMatchesCari(),
             $this->plateBalanceReportMatchesCari(),
             $this->cashDrawerMatchesCashMovements(),
+            $this->cashDrawerMatchesCashAccounts(),
             $this->instrumentsMatchTheirEntries(),
         ];
     }
@@ -384,9 +389,26 @@ class LedgerAudit
     {
         $today = Carbon::today();
         $report = $this->cash->report(['period' => 'range', 'from' => '2000-01-01', 'to' => $today->toDateString()]);
+        $transfers = fn (string $side): float => (float) DB::table('account_transfers as t')
+            ->join('banks as b', 'b.id', '=', "t.{$side}")
+            ->whereNull('t.deleted_at')
+            ->where('b.type', AccountType::Cash->value)
+            ->where('t.occurred_on', '<=', $today->toDateString())
+            ->sum('t.amount');
 
         $expected = round(
-            (float) DB::table('cash_entries')->whereNull('deleted_at')->where('occurred_on', '<=', $today->toDateString())->sum(DB::raw('debit - credit'))
+            (float) DB::table('cash_entries as t')
+                ->leftJoin('banks as b', 'b.id', '=', 't.bank_id')
+                ->whereNull('t.deleted_at')
+                ->where(fn ($query) => $query->whereNull('t.bank_id')->orWhere('b.type', AccountType::Cash->value))
+                ->where('t.occurred_on', '<=', $today->toDateString())
+                ->sum(DB::raw('t.debit - t.credit'))
+            + (float) DB::table('banks')
+                ->whereNull('deleted_at')
+                ->where('type', AccountType::Cash->value)
+                ->where(fn ($query) => $query->whereNull('opened_on')->orWhere('opened_on', '<=', $today->toDateString()))
+                ->sum('opening_balance')
+            + $transfers('to_bank_id') - $transfers('from_bank_id')
             + (float) DB::table('site_transactions')->whereNull('deleted_at')->where('payment_method', 'cash')->where('occurred_on', '<=', $today->toDateString())->sum(DB::raw('credit - debit'))
             + (float) DB::table('ledger_entries')->where('payment_method', 'cash')->where('occurred_on', '<=', $today->toDateString())
                 ->whereIn('source_type', ['vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'company_transaction'])
@@ -408,6 +430,62 @@ class LedgerAudit
             : [];
 
         return $this->result('Kasa kapanışı = tüm nakit hareketler', 1, $failures);
+    }
+
+    /**
+     * The cash report reads money by its payment method, the account balances by the account it
+     * names. Both must land on the same drawer: cash that names no account (older records) is the
+     * only allowed difference; a cash payment on a bank account or a transfer payment on a cash box
+     * is listed by its document.
+     *
+     * @return array{check: string, checked: int, failures: list<string>}
+     */
+    private function cashDrawerMatchesCashAccounts(): array
+    {
+        $today = Carbon::today();
+        $day = $today->toDateString();
+        $cash = AccountType::Cash->value;
+        $report = $this->cash->report(['period' => 'range', 'from' => '2000-01-01', 'to' => $day])['closing'];
+
+        $boxes = Bank::withTrashed()->where('type', $cash)->pluck('id')->all();
+        $accounts = array_sum($this->banks->balances($boxes, $today));
+
+        $unassigned = (float) DB::table('cash_entries')->whereNull('deleted_at')->whereNull('bank_id')->where('occurred_on', '<=', $day)->sum(DB::raw('debit - credit'))
+            + (float) DB::table('site_transactions')->whereNull('deleted_at')->whereNull('bank_id')->where('payment_method', 'cash')->where('occurred_on', '<=', $day)->sum(DB::raw('credit - debit'))
+            + (float) DB::table('ledger_entries')->whereNull('bank_id')->where('payment_method', 'cash')->where('occurred_on', '<=', $day)
+                ->whereIn('source_type', ['vehicle_payment', 'vehicle_receivable', 'party_payment', 'dump_site_payment', 'company_transaction'])
+                ->sum(DB::raw('credit - debit'))
+            - (float) DB::table('employee_payments')->whereNull('deleted_at')->whereNull('bank_id')->where('payment_method', 'cash')->where('occurred_on', '<=', $day)->sum('amount')
+            - (float) DB::table('other_payments')->whereNull('deleted_at')->where('payment_method', 'cash')->where('occurred_on', '<=', $day)->sum('amount');
+
+        $expected = round($accounts + $unassigned, 2);
+        $failures = [];
+
+        if (abs($report - $expected) >= 0.005) {
+            $failures[] = sprintf(
+                'Kasa raporu %s, kasa hesapları %s + hesapsız nakit %s',
+                number_format($report, 2, ',', '.'),
+                number_format($accounts, 2, ',', '.'),
+                number_format($unassigned, 2, ',', '.'),
+            );
+        }
+
+        $mismatched = DB::select(<<<'SQL'
+            select x.st, x.sid, x.method, b.name account, b.type from (
+                select source_type st, cast(source_id as text) sid, payment_method method, bank_id from ledger_entries le
+                where le.bank_id is not null and le.source_type <> 'site_transaction'
+                  and le.reversal_of is null and not exists (select 1 from ledger_entries r where r.reversal_of = le.id)
+                union all select 'site_transaction', cast(id as text), payment_method, bank_id from site_transactions where deleted_at is null and bank_id is not null
+            ) x
+            join banks b on b.id = x.bank_id
+            where (coalesce(x.method, '') = 'cash') <> (b.type = 'cash')
+        SQL);
+
+        foreach ($mismatched as $row) {
+            $failures[] = sprintf('%s %s: ödeme tipi %s, hesap %s (%s)', $row->st, $row->sid, $row->method ?? 'yok', $row->account, AccountType::from($row->type)->label());
+        }
+
+        return $this->result('Kasa raporu = kasa hesaplarının bakiyesi', count($boxes), $failures);
     }
 
     /**

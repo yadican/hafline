@@ -14,14 +14,14 @@ trait ChecksPaymentAccount
     /**
      * @param  list<AccountType>  $allowed
      */
-    protected function checkPaymentAccount(Validator $validator, array $allowed): void
+    protected function checkPaymentAccount(Validator $validator, array $allowed, string $field = 'bank_id', string $missing = 'Paranın geçtiği hesabı seçin.'): void
     {
-        $account = Bank::query()->where('active', true)->find($this->input('bank_id'));
+        $account = Bank::query()->where('active', true)->find($this->input($field));
 
         if (! $account) {
-            $validator->errors()->add('bank_id', 'Paranın geçtiği hesabı seçin.');
+            $validator->errors()->add($field, $missing);
         } elseif (! in_array($account->type, $allowed, true)) {
-            $validator->errors()->add('bank_id', sprintf(
+            $validator->errors()->add($field, sprintf(
                 'Bu ödeme tipi için %s hesabı seçin.',
                 implode(' veya ', array_map(fn (AccountType $type) => mb_strtolower($type->label(), 'UTF-8'), $allowed)),
             ));

@@ -26,7 +26,7 @@
     <x-form.money name="amount" label="Tutar" required />
     <x-form.input name="occurred_on" label="Tarih" type="date" required />
     @php($method = old('payment_method', ($form['payment_method'] ?? null) instanceof \BackedEnum ? $form['payment_method']->value : ($form['payment_method'] ?? '')))
-    <div x-show="! ['cash', 'opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak x-data="{ method: @js((string) $method) }">
+    <div x-show="! ['cash', 'opening', 'party_transfer', 'site_bill', 'account_transfer'].includes(kind)" x-cloak x-data="{ method: @js((string) $method) }">
         <x-form.select searchable name="payment_method" label="Ödeme tipi" placeholder="Seçilmedi" :options="$options['methods']" x-model="method" />
         <div x-show="['cheque', 'promissory_note'].includes(method) && kind !== 'vehicle_receivable'" x-cloak>
             <x-form.input name="cheque_no" label="Çek / senet no" maxlength="20" />
@@ -44,11 +44,23 @@
             @endif
         </div>
     </div>
-    <div x-show="! ['opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
-        <x-form.select searchable name="bank_id" label="Hesap" placeholder="Hesap seçin" :options="$options['banks']" />
+    <div x-show="! ['opening', 'party_transfer', 'site_bill', 'account_transfer'].includes(kind)" x-cloak>
+        <x-form.select searchable name="bank_id" label="Hesap" placeholder="Hesap seçin" :options="$options['banks']" x-bind:disabled="kind === 'account_transfer'" />
         <p class="panel-hint">Nakitte kasa, havalede banka, kartta POS veya kredi kartı hesabı zorunludur. Çek, senet ve mahsupta boş bırakılır.</p>
     </div>
-    <div x-show="! ['opening', 'party_transfer', 'site_bill'].includes(kind)" x-cloak>
+    <div x-show="kind === 'account_transfer'" x-cloak>
+        @foreach (['bank_id' => 'Çıkan hesap', 'counter_bank_id' => 'Giren hesap'] as $accountField => $accountLabel)
+            <x-form.field :label="$accountLabel" for="transfer-{{ $accountField }}" :name="$accountField">
+                <select data-searchable-select data-placeholder="{{ $accountLabel }} seçin" id="transfer-{{ $accountField }}" name="{{ $accountField }}" class="slct" x-bind:disabled="kind !== 'account_transfer'">
+                    <option value="">{{ $accountLabel }} seçin</option>
+                    @foreach ($options['banks'] as $id => $name)
+                        <option value="{{ $id }}" @selected((string) old($accountField, $form[$accountField] ?? '') === (string) $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </x-form.field>
+        @endforeach
+    </div>
+    <div x-show="! ['opening', 'party_transfer', 'site_bill', 'account_transfer'].includes(kind)" x-cloak>
         <x-form.select searchable name="cash_category_id" label="Kasa kategorisi" placeholder="Kategori yok" :options="$options['categories']" />
     </div>
     <p class="panel-hint" x-show="kind === 'site_bill'" x-cloak>Şantiyenin dönem hakedişi: şantiye carisini bu tutarla borçlandırır. Ödeme değildir; tahsilat "Şantiye Gelir / Gider" ile kasa girişi olarak girilir.</p>
@@ -56,6 +68,7 @@
     <p class="panel-hint" x-show="kind === 'fuel'" x-cloak>Yakıt fişleri istasyonu alış fiyatıyla kendiliğinden alacaklandırır; saha pompasının yakıt dolumu da pompa kartından girilir. Buraya sadece fişe bağlı olmayan alımları ve istasyona yapılan ödemeleri girin, yoksa aynı litre iki kez yazılır.</p>
     <p class="panel-hint" x-show="kind === 'opening'" x-cloak>Carinin sisteme geçmeden önceki bakiyesi. Her cari için bir kez girilir; para hareketi değildir, kasayı etkilemez.</p>
     <p class="panel-hint" x-show="kind === 'party_transfer'" x-cloak>Mahsup: borçlanan carinin bakiyesi artar, alacaklanan carinin bakiyesi aynı tutarda azalır. Kasa ve banka etkilenmez.</p>
+    <p class="panel-hint" x-show="kind === 'account_transfer'" x-cloak>Kendi hesaplarımız arasında para aktarımı: bankadan nakit çekim, kasadan bankaya yatırma, POS'un bankaya geçmesi, kredi kartı borcunun ödenmesi. Tutar çıkan hesaptan düşer, giren hesaba eklenir; hiçbir cari etkilenmez.</p>
     <x-form.input name="description" label="Açıklama" maxlength="255" />
 </x-form.group>
 

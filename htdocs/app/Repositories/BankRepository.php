@@ -7,6 +7,7 @@ use App\Enums\AccountType;
 use App\Enums\InstrumentMovementType;
 use App\Models\Bank;
 use App\Support\Sort;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -117,25 +118,31 @@ class BankRepository extends Repository
             }
         }
 
-        return false;
+        return DB::table('account_transfers')
+            ->where(fn ($query) => $query->where('from_bank_id', $bank->id)->orWhere('to_bank_id', $bank->id))
+            ->exists();
     }
 
     /**
-     * Balance of each account: opening balance plus the money that went in and out through it.
-     * Cari lines are read from the party's side (credit = the party paid us = money in).
+     * Balance of each account: opening balance plus the money that went in and out through it,
+     * up to the given day (everything when null). Cari lines are read from the party's side
+     * (credit = the party paid us = money in).
      *
      * @param  list<string>  $ids
      * @return array<string, float>
      */
-    public function balances(array $ids): array
+    public function balances(array $ids, ?CarbonInterface $until = null): array
     {
         if ($ids === []) {
             return [];
         }
 
+        $day = $until?->toDateString();
+
         // A site collection is read from site_transactions; its cari line is not counted again.
         $sum = fn (string $table, string $in, string $out, bool $live = false) => DB::table($table)
             ->whereIn('bank_id', $ids)
+            ->when($day, fn ($query) => $query->where('occurred_on', '<=', $day))
             ->when(! $live, fn ($query) => $query->whereNull('deleted_at'))
             ->when($live, fn ($query) => $query
                 ->where('source_type', '<>', 'site_transaction')
@@ -150,23 +157,38 @@ class BankRepository extends Repository
         $ledger = $sum('ledger_entries', 'credit', 'debit', live: true);
         $cash = $sum('cash_entries', 'debit', 'credit');
         $sites = $sum('site_transactions', 'credit', 'debit');
-        $openings = Bank::withTrashed()->whereIn('id', $ids)->pluck('opening_balance', 'id');
+        $openings = Bank::withTrashed()
+            ->whereIn('id', $ids)
+            ->when($day, fn ($query) => $query->where(fn ($opened) => $opened->whereNull('opened_on')->orWhere('opened_on', '<=', $day)))
+            ->pluck('opening_balance', 'id');
 
         // A collected cheque or note brings its amount into the account; paying our own takes it out.
         $instruments = DB::table('financial_instrument_movements as m')
             ->join('financial_instruments as i', 'i.id', '=', 'm.financial_instrument_id')
             ->whereIn('m.bank_id', $ids)
             ->whereNull('m.deleted_at')
+            ->when($day, fn ($query) => $query->where('m.occurred_on', '<=', $day))
             ->whereIn('m.type', [InstrumentMovementType::Collect->value, InstrumentMovementType::Pay->value])
             ->groupBy('m.bank_id')
             ->selectRaw("m.bank_id, COALESCE(SUM(CASE WHEN m.type = 'collect' THEN i.amount ELSE -i.amount END), 0) as total")
             ->pluck('total', 'bank_id');
 
+        $transfer = fn (string $column) => DB::table('account_transfers')
+            ->whereIn($column, $ids)
+            ->whereNull('deleted_at')
+            ->when($day, fn ($query) => $query->where('occurred_on', '<=', $day))
+            ->groupBy($column)
+            ->selectRaw("{$column} as bank_id, COALESCE(SUM(amount), 0) as total")
+            ->pluck('total', 'bank_id');
+        $transfersIn = $transfer('to_bank_id');
+        $transfersOut = $transfer('from_bank_id');
+
         $balances = [];
 
         foreach ($ids as $id) {
             $balances[$id] = round(
-                (float) ($openings[$id] ?? 0) + (float) ($ledger[$id] ?? 0) + (float) ($cash[$id] ?? 0) + (float) ($sites[$id] ?? 0) + (float) ($instruments[$id] ?? 0),
+                (float) ($openings[$id] ?? 0) + (float) ($ledger[$id] ?? 0) + (float) ($cash[$id] ?? 0) + (float) ($sites[$id] ?? 0) + (float) ($instruments[$id] ?? 0)
+                + (float) ($transfersIn[$id] ?? 0) - (float) ($transfersOut[$id] ?? 0),
                 2,
             );
         }

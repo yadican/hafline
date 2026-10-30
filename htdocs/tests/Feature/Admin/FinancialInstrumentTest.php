@@ -14,7 +14,9 @@ use App\Models\FinancialInstrumentMovement;
 use App\Models\LedgerEntry;
 use App\Models\Party;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Repositories\BankRepository;
+use App\Services\CariEntryService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -135,6 +137,26 @@ class FinancialInstrumentTest extends TestCase
         $this->assertSame('party_payment', $note->source_type);
         $this->assertSame(InstrumentStatus::Issued, $note->status);
         $this->assertSame(3000.0, $this->balance($owner));
+    }
+
+    public function test_entry_written_by_code_takes_the_paper_direction_from_its_kind(): void
+    {
+        $owner = Party::factory()->create();
+        Vehicle::factory()->ownedBy($owner, '2026-01-01')->create(['plate' => '34 SN 10']);
+
+        app(CariEntryService::class)->create([
+            'kind' => 'vehicle_payment',
+            'plate' => '34 SN 10',
+            'amount' => '6000',
+            'occurred_on' => '2026-07-01',
+            'payment_method' => PaymentMethod::PromissoryNote->value,
+            'due_on' => '2026-09-01',
+        ], null);
+
+        $note = FinancialInstrument::query()->sole();
+        $this->assertSame(InstrumentDirection::Given, $note->direction);
+        $this->assertSame(InstrumentStatus::Issued, $note->status);
+        $this->assertSame($owner->id, $note->party_id);
     }
 
     public function test_cari_must_hold_the_role_of_the_group_it_is_picked_from(): void

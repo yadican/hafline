@@ -142,7 +142,7 @@ class FinancialInstrumentService extends Service
         }
 
         $issuedOn = Carbon::parse($data['occurred_on'])->toDateString();
-        $direction = InstrumentDirection::fromLedgerSide((string) $data['direction']);
+        $direction = InstrumentDirection::fromLedgerSide($kind->directionMode() === 'choice' ? (string) $data['direction'] : $kind->directionMode());
         $attributes = [
             'payment_method' => $method,
             'direction' => $direction,

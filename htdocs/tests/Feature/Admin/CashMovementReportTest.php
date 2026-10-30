@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\AccountType;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\Bank;
 use App\Models\CashEntry;
 use App\Models\CompanyTransaction;
 use App\Models\Employee;
@@ -131,6 +133,32 @@ class CashMovementReportTest extends TestCase
         $this->assertSame(650.0, $report['total_cikis']);
         // 5000 + 1000 − 400 − 250 = 5350
         $this->assertSame(5350.0, $report['closing']);
+    }
+
+    public function test_only_cash_boxes_and_their_opening_balances_move_the_drawer(): void
+    {
+        Bank::factory()->create(['type' => AccountType::Cash, 'opening_balance' => 2000, 'opened_on' => null]);
+        Bank::factory()->create(['type' => AccountType::Cash, 'name' => 'Şantiye Kasası', 'opening_balance' => 500, 'opened_on' => '2026-09-03']);
+        $bank = Bank::factory()->create(['type' => AccountType::Bank, 'opening_balance' => 90000]);
+
+        CashEntry::query()->create([
+            'bank_id' => $bank->id,
+            'debit' => 0,
+            'credit' => 700,
+            'occurred_on' => '2026-09-04',
+            'description' => 'Banka kesintisi',
+        ]);
+
+        $report = $this->actingAs($this->admin)
+            ->get(route('admin.reports.cash-movements', $this->filters()))
+            ->assertOk()
+            ->assertDontSee('Banka kesintisi')
+            ->viewData('report');
+
+        $this->assertSame(2000.0, $report['opening']);
+        $this->assertCount(1, $report['lines']);
+        $this->assertSame('Açılış Bakiyesi', $report['lines'][0]['kind_label']);
+        $this->assertSame(2500.0, $report['closing']);
     }
 
     public function test_market_linked_vehicle_payment_is_not_double_counted(): void

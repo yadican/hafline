@@ -1,4 +1,4 @@
-@php($partyLocked = ($filters['kind'] ?? null) === 'cash')
+@php($partyLocked = (bool) \App\Enums\CariEntryKind::tryFrom($filters['kind'] ?? '')?->namesAccount())
 <div class="panel-liste-bar">
     <x-search.form
         :action="route('admin.cari-entries.index')"
@@ -45,7 +45,11 @@
             @if ($filters !== [])
                 <x-ui.button icon="fa-solid fa-xmark" :href="route('admin.cari-entries.index')" class="w-full justify-center sm:w-auto">Temizle</x-ui.button>
             @endif
-            <x-ui.button variant="create" icon="fa-solid fa-money-bill-transfer" :href="route('admin.cari-entries.create')" class="w-full justify-center sm:w-auto">Yeni Cari</x-ui.button>
+            @if (($filters['kind'] ?? null) === 'account_transfer')
+                <x-ui.button variant="create" icon="fa-solid fa-right-left" :href="route('admin.cari-entries.create', ['kind' => 'account_transfer'])" class="w-full justify-center sm:w-auto">Yeni virman</x-ui.button>
+            @else
+                <x-ui.button variant="create" icon="fa-solid fa-money-bill-transfer" :href="route('admin.cari-entries.create')" class="w-full justify-center sm:w-auto">Yeni Cari</x-ui.button>
+            @endif
         </div>
     </x-search.form>
 </div>

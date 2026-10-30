@@ -25,10 +25,12 @@ enum CariEntryKind: string
     case Opening = 'opening';
     case PartyTransfer = 'party_transfer';
     case SiteBill = 'site_bill';
+    case AccountTransfer = 'account_transfer';
 
     public function label(): string
     {
         return match ($this) {
+            self::AccountTransfer => 'Hesaplar Arası Virman',
             self::Opening => 'Açılış Bakiyesi',
             self::PartyTransfer => 'Cari Virman',
             self::SiteBill => 'Şantiye Hakedişi',
@@ -67,10 +69,19 @@ enum CariEntryKind: string
 
     /**
      * Kinds that record a balance, not money changing hands: no payment method, account or category.
+     * A transfer between our own accounts moves money but only names its two accounts.
      */
     public function movesMoney(): bool
     {
-        return ! in_array($this, [self::Opening, self::PartyTransfer, self::SiteBill], true);
+        return ! in_array($this, [self::Opening, self::PartyTransfer, self::SiteBill, self::AccountTransfer], true);
+    }
+
+    /**
+     * The entry names the account(s) itself instead of taking one from its payment method.
+     */
+    public function namesAccount(): bool
+    {
+        return in_array($this, [self::Cash, self::AccountTransfer], true);
     }
 
     /**
@@ -80,7 +91,7 @@ enum CariEntryKind: string
     public function directionMode(): string
     {
         return match ($this) {
-            self::VehiclePayment, self::OwnerPayment, self::DumpPayment, self::PartyTransfer, self::SiteBill => 'debit',
+            self::VehiclePayment, self::OwnerPayment, self::DumpPayment, self::PartyTransfer, self::SiteBill, self::AccountTransfer => 'debit',
             self::VehicleReceivable => 'credit',
             default => 'choice',
         };
@@ -96,6 +107,7 @@ enum CariEntryKind: string
     {
         return match ($this) {
             self::Cash => ['debit' => 'Kasa girişi', 'credit' => 'Kasa çıkışı'],
+            self::AccountTransfer => ['debit' => 'Çıkan hesaptan girene', 'credit' => 'Çıkan hesaptan girene'],
             self::Site => ['debit' => 'Kasa çıkışı (gider)', 'credit' => 'Kasa girişi (tahsilat)'],
             self::Opening => ['debit' => 'Cari bize borçlu', 'credit' => 'Biz cariye borçluyuz'],
             self::Supplier, self::Customer, self::Fuel, self::Market,
@@ -114,10 +126,11 @@ enum CariEntryKind: string
     }
 
     /**
-     * A site entry posts only a collection, and only when the site has its own cari.
+     * A site entry posts only a collection, and only when the site has its own cari. Kasa Nakit and
+     * transfers between our own accounts never touch a cari.
      */
     public function postsLedger(): bool
     {
-        return $this !== self::Cash;
+        return ! in_array($this, [self::Cash, self::AccountTransfer], true);
     }
 }

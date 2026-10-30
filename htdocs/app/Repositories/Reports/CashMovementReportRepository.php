@@ -74,10 +74,62 @@ class CashMovementReportRepository
         $cash = PaymentMethod::Cash->value;
         $branches = [];
 
-        // cash_entries: debit = giriş, credit = çıkış (company cash drawer)
+        $kasa = AccountType::Cash->value;
+
+        // Opening balance of each cash box: on its opening day, or before every period when it has none.
+        $branches[] = DB::table('banks as b')
+            ->whereNull('b.deleted_at')
+            ->where('b.type', $kasa)
+            ->where('b.opening_balance', '<>', 0)
+            ->when($fromInclusive !== null && $toExclusive !== null, function ($q) use ($fromInclusive, $toExclusive): void {
+                $q->whereNotNull('b.opened_on')
+                    ->where('b.opened_on', '>=', $fromInclusive)
+                    ->where('b.opened_on', '<', $toExclusive);
+            })
+            ->when($fromInclusive !== null && $toExclusive === null, fn ($q) => $q->where(fn ($opened) => $opened
+                ->whereNull('b.opened_on')
+                ->orWhere('b.opened_on', '<', $fromInclusive)))
+            ->selectRaw("
+                b.opened_on as occurred_on,
+                b.created_at,
+                b.id,
+                'Açılış Bakiyesi' as kind_label,
+                b.name as description,
+                b.name as payment_label,
+                CASE WHEN b.opening_balance > 0 THEN b.opening_balance ELSE 0 END as giris,
+                CASE WHEN b.opening_balance < 0 THEN -b.opening_balance ELSE 0 END as cikis
+            ");
+
+        // Transfers between our own accounts: the leg on a cash box moves the drawer.
+        foreach (['from_bank_id' => 'cikis', 'to_bank_id' => 'giris'] as $side => $column) {
+            $branches[] = DB::table('account_transfers as t')
+                ->join('banks as fb', 'fb.id', '=', 't.from_bank_id')
+                ->join('banks as tb', 'tb.id', '=', 't.to_bank_id')
+                ->whereNull('t.deleted_at')
+                ->where($side === 'from_bank_id' ? 'fb.type' : 'tb.type', $kasa)
+                ->when($fromInclusive !== null && $toExclusive !== null, function ($q) use ($fromInclusive, $toExclusive): void {
+                    $q->where('t.occurred_on', '>=', $fromInclusive)
+                        ->where('t.occurred_on', '<', $toExclusive);
+                })
+                ->when($fromInclusive !== null && $toExclusive === null, fn ($q) => $q->where('t.occurred_on', '<', $fromInclusive))
+                ->selectRaw("
+                    t.occurred_on,
+                    t.created_at,
+                    t.id,
+                    'Hesaplar Arası Virman' as kind_label,
+                    t.description,
+                    fb.name || ' → ' || tb.name as payment_label,
+                    ".($column === 'giris' ? 't.amount' : '0').' as giris,
+                    '.($column === 'cikis' ? 't.amount' : '0').' as cikis
+                ');
+        }
+
+        // cash_entries on a cash box (or on no account): debit = giriş, credit = çıkış. Kasa Nakit on a
+        // bank, POS or card account moves that account, not the drawer.
         $cashEntries = DB::table('cash_entries as t')
             ->leftJoin('banks as b', 'b.id', '=', 't.bank_id')
             ->whereNull('t.deleted_at')
+            ->where(fn ($q) => $q->whereNull('t.bank_id')->orWhere('b.type', $kasa))
             ->when($fromInclusive !== null && $toExclusive !== null, function ($q) use ($fromInclusive, $toExclusive): void {
                 $q->where('t.occurred_on', '>=', $fromInclusive)
                     ->where('t.occurred_on', '<', $toExclusive);

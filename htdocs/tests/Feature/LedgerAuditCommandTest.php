@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleClass;
 use App\Models\VehiclePayment;
+use App\Services\CariEntryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -154,6 +155,25 @@ class LedgerAuditCommandTest extends TestCase
         $this->artisan('ledger:audit')
             ->expectsOutputToContain('Cari satırlarının modülü, şantiyesi ve hesabı belgeyle aynı · kontrol')
             ->expectsOutputToContain('Cari ile kaynaklar arasında uyumsuzluk var.')
+            ->assertFailed();
+    }
+
+    public function test_audit_fails_when_a_cash_payment_goes_through_a_bank_account(): void
+    {
+        $bank = Bank::factory()->create(['type' => AccountType::Bank, 'name' => 'Ziraat']);
+
+        app(CariEntryService::class)->create([
+            'kind' => 'vehicle_payment',
+            'plate' => '34 TR 100',
+            'amount' => '750',
+            'occurred_on' => '2026-03-20',
+            'payment_method' => PaymentMethod::Cash->value,
+            'bank_id' => $bank->id,
+        ], null);
+
+        $this->artisan('ledger:audit', ['--skip-reports' => true])
+            ->expectsOutputToContain('Kasa raporu = kasa hesaplarının bakiyesi · kontrol 0 · uyumsuz 2')
+            ->expectsOutputToContain('ödeme tipi cash, hesap Ziraat (Banka)')
             ->assertFailed();
     }
 

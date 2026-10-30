@@ -9,6 +9,11 @@
         :back="route('admin.banks.index')"
     >
         <x-slot:actions>
+            @if ($bank->active)
+                @can('create-cari-entry')
+                    <x-ui.button icon="fa-solid fa-right-left" :href="route('admin.cari-entries.create', ['kind' => 'account_transfer', 'bank_id' => $bank->id])">Bu hesaptan virman</x-ui.button>
+                @endcan
+            @endif
             @can('edit-bank')
                 <x-ui.button variant="edit" icon="fa-solid fa-pen" :href="route('admin.banks.edit', $bank)">Düzenle</x-ui.button>
             @endcan

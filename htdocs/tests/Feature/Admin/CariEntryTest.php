@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Enums\AccountType;
 use App\Enums\PartyRole;
 use App\Enums\PaymentMethod;
+use App\Models\AccountTransfer;
 use App\Models\Bank;
 use App\Models\CashCategory;
 use App\Models\CashEntry;
@@ -325,6 +326,85 @@ class CariEntryTest extends TestCase
 
         $this->assertSame(0.0, app(PartyRepository::class)->totals($supplier)['balance']);
         $this->assertSame(0.0, app(PartyRepository::class)->totals($customer)['balance']);
+    }
+
+    public function test_account_transfer_moves_money_between_our_accounts_without_touching_a_cari(): void
+    {
+        $bank = Bank::factory()->create(['type' => AccountType::Bank, 'name' => 'Ziraat', 'opening_balance' => 10000]);
+        $payload = ['kind' => 'account_transfer', 'amount' => '4000', 'occurred_on' => '2026-06-05', 'description' => 'Bankadan nakit çekim'];
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), $payload)
+            ->assertSessionHasErrors(['bank_id' => 'Paranın çıktığı hesabı seçin.', 'counter_bank_id' => 'Paranın girdiği hesabı seçin.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [...$payload, 'bank_id' => $bank->id, 'counter_bank_id' => $bank->id])
+            ->assertSessionHasErrors(['counter_bank_id' => 'Virmanın iki tarafı farklı hesap olmalı.']);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.cari-entries.store'), [...$payload, 'bank_id' => $bank->id, 'counter_bank_id' => $this->cashBox->id, 'payment_method' => 'cash'])
+            ->assertSessionHasNoErrors();
+
+        $transfer = AccountTransfer::query()->sole();
+        $this->assertSame(0, LedgerEntry::query()->count());
+        $this->assertSame(
+            [$bank->id => 6000.0, $this->cashBox->id => 4000.0],
+            app(BankRepository::class)->balances([$bank->id, $this->cashBox->id]),
+        );
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.index'))
+            ->assertSee('Ziraat → Merkez Kasa');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.show', ['kind' => 'account_transfer', 'entry' => $transfer->id]))
+            ->assertOk()
+            ->assertSeeInOrder(['Çıkan hesap', 'Ziraat', 'Giren hesap', 'Merkez Kasa']);
+
+        $cash = $this->actingAs($this->admin)
+            ->get(route('admin.reports.cash-movements', ['period' => 'month', 'year' => 2026, 'month' => 6]))
+            ->assertSee('Hesaplar Arası Virman')
+            ->viewData('report');
+        $this->assertSame(4000.0, $cash['closing']);
+
+        $this->artisan('ledger:audit', ['--skip-reports' => true])
+            ->expectsOutputToContain('Kasa raporu = kasa hesaplarının bakiyesi · kontrol 1 · uyumsuz 0')
+            ->assertSuccessful();
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.cari-entries.destroy', ['kind' => 'account_transfer', 'entry' => $transfer->id]));
+
+        $this->assertSoftDeleted($transfer);
+        $this->assertSame(10000.0, app(BankRepository::class)->balances([$bank->id])[$bank->id]);
+    }
+
+    public function test_account_transfer_is_reached_from_the_account_screens(): void
+    {
+        $bank = Bank::factory()->create(['type' => AccountType::Bank, 'name' => 'Ziraat']);
+        $createUrl = route('admin.cari-entries.create', ['kind' => 'account_transfer']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.banks.index'))
+            ->assertSee('Hesaplar arası virman')
+            ->assertSee(e($createUrl), false);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.banks.show', $bank))
+            ->assertSee('Bu hesaptan virman')
+            ->assertSee(e(route('admin.cari-entries.create', ['kind' => 'account_transfer', 'bank_id' => $bank->id])), false);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.create', ['kind' => 'account_transfer', 'bank_id' => $bank->id]))
+            ->assertOk()
+            ->assertSee('Hesaplar arası virman')
+            ->assertSee('Çıkan hesap')
+            ->assertSee('value="'.$bank->id.'" selected', false);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.cari-entries.index', ['kind' => 'account_transfer']))
+            ->assertOk()
+            ->assertSee('Yeni virman')
+            ->assertSee(e($createUrl), false);
     }
 
     public function test_payment_names_an_account_of_its_method_and_moves_that_balance(): void

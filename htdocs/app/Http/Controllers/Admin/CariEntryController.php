@@ -37,15 +37,21 @@ class CariEntryController extends AdminController
     public function create(Request $request): View
     {
         $kind = CariEntryKind::tryFrom($request->string('kind')->toString()) ?? CariEntryKind::Supplier;
+        $isTransfer = $kind === CariEntryKind::AccountTransfer;
 
         return view('admin.cari-entries.create', [
-            'title' => 'Yeni cari hareketi',
+            'title' => $isTransfer ? 'Hesaplar arası virman' : 'Yeni cari hareketi',
+            'heading' => $isTransfer ? 'Hesaplar arası virman' : 'Yeni cari hareketi',
+            'description' => $isTransfer
+                ? 'Kendi hesaplarımız arasında para aktarın: bankadan nakit çekim, kasadan bankaya yatırma, POS\'un bankaya geçmesi, kredi kartı ödemesi.'
+                : 'Kasaya giren ve kasadan çıkan paraları, cari açılışlarını ve virmanları girin.',
             'options' => $this->entries->formOptions(),
             'form' => [
                 'kind' => $kind->value,
                 'direction' => 'debit',
                 'occurred_on' => today()->toDateString(),
                 'plate' => $request->string('plate')->limit(20, '')->toString() ?: null,
+                'bank_id' => $isTransfer ? ($request->string('bank_id')->toString() ?: null) : null,
             ],
         ]);
     }

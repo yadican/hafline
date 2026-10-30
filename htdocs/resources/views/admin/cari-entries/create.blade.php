@@ -2,9 +2,9 @@
 
 @section('content')
     <x-panel.page
-        heading="Yeni cari hareketi"
+        :heading="$heading"
         icon="fa-solid fa-plus"
-        description="Kasaya giren ve kasadan çıkan paraları, cari açılışlarını ve virmanları girin."
+        :description="$description"
         :breadcrumbs="['Gösterge paneli' => route('admin.dashboard'), 'Cari hareketleri' => route('admin.cari-entries.index'), 'Yeni' => null]"
         :back="route('admin.cari-entries.index')"
     >

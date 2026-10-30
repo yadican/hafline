@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Enums\AccountType;
 use App\Enums\CariEntryKind;
 use App\Enums\PartyRole;
+use App\Models\AccountTransfer;
 use App\Models\Bank;
 use App\Models\CompanyTransaction;
 use App\Models\DumpSite;
@@ -505,11 +506,13 @@ class CariFuzzTest extends TestCase
             'amount' => (string) (mt_rand(1, 2000) * 5),
             'occurred_on' => $occurredOn,
             'payment_method' => $method,
-            'bank_id' => match ($method) {
-                'cash' => $this->cashBox->id,
-                'bank_transfer' => $this->bank->id,
+            'bank_id' => match (true) {
+                $kind === CariEntryKind::AccountTransfer => $this->pick([$this->cashBox->id, $this->bank->id]),
+                $method === 'cash' => $this->cashBox->id,
+                $method === 'bank_transfer' => $this->bank->id,
                 default => null,
             },
+            'counter_bank_id' => $kind === CariEntryKind::AccountTransfer ? $this->pick([$this->cashBox->id, $this->bank->id]) : null,
             'due_on' => in_array($method, ['cheque', 'promissory_note'], true) ? Carbon::parse($occurredOn)->addDays(mt_rand(0, 90))->toDateString() : null,
             'cheque_no' => in_array($method, ['cheque', 'promissory_note'], true) ? 'FZ'.mt_rand(1000, 9999) : null,
             'party_id' => match ($kind) {
@@ -544,6 +547,7 @@ class CariFuzzTest extends TestCase
             CariEntryKind::Opening => OpeningBalance::query(),
             CariEntryKind::PartyTransfer => PartyTransfer::query(),
             CariEntryKind::SiteBill => SiteBill::query(),
+            CariEntryKind::AccountTransfer => AccountTransfer::query(),
             CariEntryKind::Cash => null,
         };
 

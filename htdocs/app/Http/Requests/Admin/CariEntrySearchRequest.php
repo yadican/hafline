@@ -39,8 +39,8 @@ class CariEntrySearchRequest extends FormRequest
             fn ($value) => $value !== null && $value !== '',
         );
 
-        // Kasa hareketlerinin party_id'si yok; seçim gönderilse bile yok sayılır.
-        if (($filters['kind'] ?? null) === CariEntryKind::Cash->value) {
+        // Kasa hareketlerinin ve hesaplar arası virmanın party_id'si yok; seçim gönderilse bile yok sayılır.
+        if (CariEntryKind::tryFrom($filters['kind'] ?? '')?->namesAccount()) {
             unset($filters['party']);
         }
 

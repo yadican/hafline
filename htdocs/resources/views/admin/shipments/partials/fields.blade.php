@@ -38,8 +38,8 @@
     </div>
     <x-form.money name="carrier_price" label="Nakliye fiyatı" step="0.0001" suffix="TL/ton" required data-shipment-amount />
     <div class="grid gap-3 sm:grid-cols-2">
-        <x-form.select name="carrier_vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->carrier_vat_rate : '0'" data-shipment-tax />
-        <x-form.select name="carrier_withholding_rate" label="Tevkifat" :options="$options['withholding']" data-shipment-tax />
+        <x-form.select searchable hide-search name="carrier_vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->carrier_vat_rate : '0'" required data-shipment-tax />
+        <x-form.select searchable hide-search name="carrier_withholding_rate" label="Tevkifat" :options="$options['withholding']" required data-shipment-tax />
     </div>
     <x-form.input name="carrier_note" label="Nakliye açıklaması" maxlength="255" placeholder="Nakliye notu..." />
     @include('admin.shipments.partials.totals', [
@@ -59,8 +59,8 @@
     <datalist id="shipment-addresses" data-shipment-addresses></datalist>
     <x-form.money name="sale_price" label="Nakliye hizmet bedeli" step="0.0001" suffix="TL/ton" required data-shipment-amount />
     <div class="grid gap-3 sm:grid-cols-2">
-        <x-form.select name="vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->vat_rate : '20'" data-shipment-tax />
-        <x-form.select name="withholding_rate" label="Tevkifat" :options="$options['withholding']" data-shipment-tax />
+        <x-form.select searchable hide-search name="vat_rate" label="KDV oranı" :options="$options['vat']" :value="$current ? (string) (int) $current->vat_rate : '20'" required data-shipment-tax />
+        <x-form.select searchable hide-search name="withholding_rate" label="Tevkifat" :options="$options['withholding']" required data-shipment-tax />
     </div>
     <x-form.input name="customer_note" label="Müşteri satış açıklaması" maxlength="255" placeholder="Müşteri notu..." />
     @include('admin.shipments.partials.totals', [

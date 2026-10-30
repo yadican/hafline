@@ -6,6 +6,7 @@ use App\Enums\CariEntryKind;
 use App\Enums\PaymentMethod;
 use App\Exceptions\OperationException;
 use App\Exceptions\OperationRejectedException;
+use App\Models\AccountTransfer;
 use App\Models\Bank;
 use App\Models\CashCategory;
 use App\Models\CashEntry;
@@ -174,7 +175,8 @@ class CariEntryService extends Service
             'unit_price' => $entry->unit_price ?? null,
             'plate' => method_exists($entry, 'vehicle') ? $entry->vehicle?->plate : null,
             'dump_site_id' => $entry->dump_site_id ?? null,
-            'bank_id' => $entry->bank_id ?? null,
+            'bank_id' => $entry->bank_id ?? $entry->from_bank_id ?? null,
+            'counter_bank_id' => $entry->to_bank_id ?? null,
             'cheque_no' => $entry->cheque_no ?? $instrument?->number,
             'due_on' => $instrument?->due_on->toDateString(),
             'instrument_bank' => $instrument?->bank_name,
@@ -208,12 +210,14 @@ class CariEntryService extends Service
             'Birim fiyat' => $form['unit_price'] !== null ? number_format((float) $form['unit_price'], 4, ',', '.').' TL' : null,
             'Belge no' => $form['document_no'],
             'Teslim alan' => $form['receiver_name'] ? trim($form['receiver_name'].' '.($form['receiver_national_id'] ?? '')) : null,
-            'Hesap' => $name(Bank::class, $form['bank_id']),
+            ($kind === CariEntryKind::AccountTransfer ? 'Çıkan hesap' : 'Hesap') => $name(Bank::class, $form['bank_id']),
+            'Giren hesap' => $name(Bank::class, $form['counter_bank_id']),
         ], fn ($value) => $value !== null && $value !== '');
 
         return [
             'direction' => match (true) {
                 $kind === CariEntryKind::PartyTransfer => 'Borçlanan cariye borç, alacaklanan cariye alacak',
+                $kind === CariEntryKind::AccountTransfer => 'Çıkan hesaptan düşer, giren hesaba eklenir',
                 default => $kind->directionLabels()[$form['direction']],
             },
             'amount' => $form['amount'],
@@ -240,6 +244,7 @@ class CariEntryService extends Service
             CariEntryKind::Opening => OpeningBalance::query(),
             CariEntryKind::PartyTransfer => PartyTransfer::query(),
             CariEntryKind::SiteBill => SiteBill::query(),
+            CariEntryKind::AccountTransfer => AccountTransfer::query(),
         };
 
         return $query->find($id) ?? throw new OperationException('Kayıt bulunamadı.');
@@ -344,6 +349,14 @@ class CariEntryService extends Service
                 'description' => $data['description'] ?? null,
                 'created_by' => $existing?->created_by ?? $userId,
             ],
+            CariEntryKind::AccountTransfer => [
+                'from_bank_id' => $data['bank_id'],
+                'to_bank_id' => $data['counter_bank_id'],
+                'amount' => $amount,
+                'occurred_on' => $date,
+                'description' => $data['description'] ?? null,
+                'created_by' => $existing?->created_by ?? $userId,
+            ],
         };
 
         if ($existing) {
@@ -363,6 +376,7 @@ class CariEntryService extends Service
             CariEntryKind::Opening => OpeningBalance::class,
             CariEntryKind::PartyTransfer => PartyTransfer::class,
             CariEntryKind::SiteBill => SiteBill::class,
+            CariEntryKind::AccountTransfer => AccountTransfer::class,
         };
 
         return $class::query()->create($attributes);

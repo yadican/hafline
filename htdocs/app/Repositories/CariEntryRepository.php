@@ -140,6 +140,14 @@ class CariEntryRepository
                 ->selectRaw("t.id, 'cash' as kind, 'Kasa' as label, t.debit, t.credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);
         }
 
+        if ($keep('account_transfer') && empty($filters['party'])) {
+            $branches[] = $this->dated(DB::table('account_transfers as t')
+                ->leftJoin('banks as fb', 'fb.id', '=', 't.from_bank_id')
+                ->leftJoin('banks as tb', 'tb.id', '=', 't.to_bank_id')
+                ->whereNull('t.deleted_at')
+                ->selectRaw("t.id, 'account_transfer' as kind, fb.name || ' → ' || tb.name as label, t.amount as debit, t.amount as credit, t.occurred_on, t.description, cast(null as varchar(20)) as payment_method"), $filters);
+        }
+
         return $branches;
     }
 

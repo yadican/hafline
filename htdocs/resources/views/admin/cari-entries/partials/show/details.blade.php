@@ -12,14 +12,16 @@
         <x-form.field label="Tarih">
             <div>{{ $details['occurred_on']->format('d.m.Y') }}</div>
         </x-form.field>
-        @if ($kind !== \App\Enums\CariEntryKind::Cash)
+        @if (! $kind->namesAccount())
             <x-form.field label="Ödeme tipi">
                 <div>{{ $details['payment_method']?->label() ?: '—' }}</div>
             </x-form.field>
         @endif
-        <x-form.field label="Kasa kategorisi">
-            <div>{{ $details['category'] ?: '—' }}</div>
-        </x-form.field>
+        @if ($kind !== \App\Enums\CariEntryKind::AccountTransfer)
+            <x-form.field label="Kasa kategorisi">
+                <div>{{ $details['category'] ?: '—' }}</div>
+            </x-form.field>
+        @endif
         <x-form.field label="Açıklama">
             <div>{{ $details['description'] ?: '—' }}</div>
         </x-form.field>
