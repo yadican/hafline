@@ -402,6 +402,27 @@
 	gap: 8px;
 }
 
+/* Rapor indirme butonları: ikon format rengini taşır, hover'da aynı tonun açığı */
+.report-export {
+	--export-tone: var(--ui-ink);
+	--export-tint: #f3f4f6;
+}
+.report-export.is-xlsx { --export-tone: #1d7044; --export-tint: #e8f3ec; }
+.report-export.is-pdf { --export-tone: #c4321f; --export-tint: #fbeae7; }
+.report-export.is-csv { --export-tone: #1f6fb2; --export-tint: #e8f1f9; }
+.report-export.is-print { --export-tone: #2a2e32; --export-tint: #eceef2; }
+
+.report-export.panel-btn i {
+	color: var(--export-tone);
+	font-size: 17px;
+	opacity: 1;
+}
+.report-export.panel-btn:hover {
+	background: var(--export-tint);
+	border-color: var(--export-tone);
+	color: var(--export-tone) !important;
+}
+
 /* Personel maaş kartı: içerik genişliği, sağa hizalı tutar/input */
 .employee-salary-table.panel-list {
 	table-layout: auto;

@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd sockets \
+    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd sockets zip \
     && pecl install redis \
     && pecl install xdebug-3.5.1 \
     && docker-php-ext-enable redis xdebug \
