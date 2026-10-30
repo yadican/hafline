@@ -24,6 +24,7 @@ class DashboardController extends AdminController
             'shortcuts' => $summary['shortcuts'],
             'recentHauls' => $summary['recent_hauls'],
             'cashSummary' => $summary['cash_summary'],
+            'financeReminders' => $summary['finance_reminders'],
             'todayLabel' => today()->translatedFormat('d F Y'),
         ]);
     }

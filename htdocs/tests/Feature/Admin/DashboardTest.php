@@ -3,12 +3,20 @@
 namespace Tests\Feature\Admin;
 
 use App\Cache\DashboardCache;
+use App\Enums\AccountType;
+use App\Enums\InstrumentDirection;
+use App\Enums\InstrumentStatus;
+use App\Enums\PartyRole;
+use App\Enums\PaymentMethod;
+use App\Models\Bank;
 use App\Models\CashCategory;
 use App\Models\CashEntry;
 use App\Models\Employee;
+use App\Models\FinancialInstrument;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\MachineWork;
+use App\Models\Party;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -16,6 +24,7 @@ use App\Services\DashboardService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -132,8 +141,96 @@ class DashboardTest extends TestCase
             })
             ->assertViewHas('recentHauls', null)
             ->assertViewHas('cashSummary', null)
+            ->assertViewHas('financeReminders', null)
             ->assertDontSee('Bugünkü son taşımalar', false)
+            ->assertDontSee('Finans hatırlatıcıları', false)
             ->assertSee('Aktif şantiye', false);
+    }
+
+    public function test_finance_reminders_group_open_cheques_and_notes_by_due_window(): void
+    {
+        $this->travelTo('2026-10-30 12:00:00');
+        $party = Party::factory()->company()->withRole(PartyRole::Customer)->create(['name' => 'Vade Müşterisi']);
+
+        $overdue = $this->instrument($party, '2026-10-27', InstrumentDirection::Received, 1500);
+        $this->instrument($party, '2026-10-29', InstrumentDirection::Received, 900, InstrumentStatus::Collected);
+        $this->instrument($party, '2026-10-30', InstrumentDirection::Given, 2000);
+        $this->instrument($party, '2026-11-05', InstrumentDirection::Received, 300, InstrumentStatus::InCollection);
+        $this->instrument($party, '2026-11-06', InstrumentDirection::Received, 400);
+        $this->instrument($party, '2026-11-29', InstrumentDirection::Given, 700);
+        $this->instrument($party, '2026-11-30', InstrumentDirection::Given, 800);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('financeReminders', function (array $reminders) use ($overdue): bool {
+                $tabs = collect($reminders['tabs'])->keyBy('key');
+
+                $this->assertSame('overdue', $reminders['active']);
+                $this->assertSame(
+                    ['overdue' => [1, 1500.0, 0.0], 'week' => [2, 300.0, 2000.0], 'month' => [2, 400.0, 700.0]],
+                    $tabs->map(fn (array $tab): array => [$tab['count'], $tab['received'], $tab['given']])->all(),
+                );
+                $this->assertSame($overdue->id, $tabs['overdue']['items'][0]['id']);
+                $this->assertSame('3 gün geçti', $tabs['overdue']['items'][0]['when']);
+                $this->assertSame(['Bugün', '6 gün kaldı'], array_column($tabs['week']['items'], 'when'));
+                $this->assertSame(['due_from' => '2026-11-06', 'due_to' => '2026-11-29'], $tabs['month']['filters']);
+
+                return true;
+            })
+            ->assertSee('Finans hatırlatıcıları', false)
+            ->assertSee('Vade Müşterisi', false)
+            ->assertSee(route('admin.financial-instruments.show', $overdue), false);
+    }
+
+    public function test_collecting_a_cheque_drops_it_from_the_cached_finance_reminders(): void
+    {
+        $this->travelTo('2026-10-30 12:00:00');
+        $party = Party::factory()->company()->withRole(PartyRole::Customer)->create();
+        $cheque = $this->instrument($party, '2026-10-27', InstrumentDirection::Received, 1500);
+        $overdueCount = fn (array $reminders): int => collect($reminders['tabs'])->firstWhere('key', 'overdue')['count'];
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.dashboard'))
+            ->assertViewHas('financeReminders', fn (array $reminders): bool => $overdueCount($reminders) === 1);
+
+        $this->assertTrue(Cache::has(DashboardCache::PREFIX.DashboardCache::financeRemindersKey(today())));
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.financial-instruments.movements.store', $cheque), [
+                'type' => 'collect',
+                'occurred_on' => '2026-10-30',
+                'bank_id' => Bank::factory()->create(['type' => AccountType::Bank])->id,
+            ])
+            ->assertSessionHas('success');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.dashboard'))
+            ->assertViewHas('financeReminders', fn (array $reminders): bool => $overdueCount($reminders) === 0);
+    }
+
+    public function test_finance_reminders_are_shown_to_users_who_can_view_cheques_and_notes(): void
+    {
+        (new RolePermissionSeeder)->run();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(['view-dashboard', 'view-financial-instrument']);
+
+        $this->actingAs($user)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('financeReminders', fn (?array $reminders): bool => $reminders !== null)
+            ->assertSee('Finans hatırlatıcıları', false);
+    }
+
+    public function test_finance_reminders_open_on_the_upcoming_week_when_nothing_is_due(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('financeReminders', fn (array $reminders): bool => $reminders['active'] === 'week'
+                && collect($reminders['tabs'])->sum('count') === 0)
+            ->assertSee('Vadesi geçmiş açık çek / senet yok.', false);
     }
 
     public function test_dashboard_metrics_are_cached_per_key(): void
@@ -155,5 +252,20 @@ class DashboardTest extends TestCase
         $this->assertTrue(Cache::has(DashboardCache::PREFIX.'active-sites'));
         $this->assertTrue(Cache::has(DashboardCache::PREFIX.'hauls-day:'.today()->toDateString()));
         $this->assertTrue(Cache::has(DashboardCache::PREFIX.'recent-hauls:'.today()->toDateString()));
+    }
+
+    private function instrument(Party $party, string $dueOn, InstrumentDirection $direction, float $amount, ?InstrumentStatus $status = null): FinancialInstrument
+    {
+        return FinancialInstrument::query()->create([
+            'payment_method' => PaymentMethod::Cheque,
+            'direction' => $direction,
+            'status' => $status ?? $direction->initialStatus(),
+            'amount' => $amount,
+            'issued_on' => '2026-10-01',
+            'due_on' => $dueOn,
+            'party_id' => $party->id,
+            'source_type' => 'company_transaction',
+            'source_id' => (string) Str::uuid(),
+        ]);
     }
 }

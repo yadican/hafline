@@ -13,6 +13,8 @@
 
             @include('admin.dashboard.partials.stats')
 
+            @include('admin.dashboard.partials.finance-reminders')
+
             @if ($recentHauls !== null || $cashSummary !== null)
                 <div class="dash-panels">
                     @include('admin.dashboard.partials.recent-hauls')

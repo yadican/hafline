@@ -3,19 +3,27 @@
 namespace App\Services;
 
 use App\Cache\DashboardCache;
+use App\Enums\InstrumentDirection;
 use App\Models\Employee;
+use App\Models\FinancialInstrument;
 use App\Models\FuelReceipt;
 use App\Models\Haul;
 use App\Models\MachineWork;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Repositories\FinancialInstrumentRepository;
 use App\Services\Reports\CashMovementReportService;
 use Illuminate\Support\Carbon;
 
 class DashboardService extends Service
 {
-    public function __construct(private CashMovementReportService $cashReports) {}
+    private const REMINDER_LIMIT = 8;
+
+    public function __construct(
+        private CashMovementReportService $cashReports,
+        private FinancialInstrumentRepository $instruments,
+    ) {}
 
     /**
      * @return array{
@@ -41,6 +49,11 @@ class DashboardService extends Service
      *         closing: float,
      *         period_label: string,
      *         route: string
+     *     },
+     *     finance_reminders: ?array{
+     *         active: string,
+     *         tabs: list<array{key: string, label: string, empty: string, count: int, received: float, given: float, filters: array<string, string>, items: list<array{id: string, due_on: string, when: string, is_overdue: bool, method: string, method_icon: string, direction: string, direction_label: string, party: string, number: ?string, amount: float}>}>,
+     *         route: string
      *     }
      * }
      */
@@ -53,6 +66,7 @@ class DashboardService extends Service
             'shortcuts' => $this->shortcuts($user),
             'recent_hauls' => $this->recentHauls($user, $today),
             'cash_summary' => $this->cashSummary($user, $today),
+            'finance_reminders' => $this->financeReminders($user, $today),
         ];
     }
 
@@ -297,6 +311,113 @@ class DashboardService extends Service
         return [
             ...$summary,
             'route' => 'admin.reports.cash-movements',
+        ];
+    }
+
+    /**
+     * Open cheques and notes by due window. FinancialInstrumentService drops the cache on every
+     * change, so a collected or paid one leaves the reminder at once.
+     *
+     * @return ?array{
+     *     active: string,
+     *     tabs: list<array{key: string, label: string, empty: string, count: int, received: float, given: float, filters: array<string, string>, items: list<array{id: string, due_on: string, when: string, is_overdue: bool, method: string, method_icon: string, direction: string, direction_label: string, party: string, number: ?string, amount: float}>}>,
+     *     route: string
+     * }
+     */
+    private function financeReminders(User $user, Carbon $today): ?array
+    {
+        if (! $user->can('view-financial-instrument')) {
+            return null;
+        }
+
+        $windows = [
+            [
+                'key' => 'overdue',
+                'label' => 'Vadesi geçen',
+                'empty' => 'Vadesi geçmiş açık çek / senet yok.',
+                'from' => null,
+                'to' => $today->copy()->subDay(),
+                'filters' => ['overdue' => '1'],
+            ],
+            [
+                'key' => 'week',
+                'label' => '7 gün içinde',
+                'empty' => 'Önümüzdeki 7 günde vadesi gelen çek / senet yok.',
+                'from' => $today->copy(),
+                'to' => $today->copy()->addDays(6),
+            ],
+            [
+                'key' => 'month',
+                'label' => '30 gün içinde',
+                'empty' => 'Sonraki 30 günde vadesi gelen çek / senet yok.',
+                'from' => $today->copy()->addDays(7),
+                'to' => $today->copy()->addDays(30),
+            ],
+        ];
+
+        /** @var list<array{key: string, label: string, empty: string, count: int, received: float, given: float, filters: array<string, string>, items: list<array<string, mixed>>}> $tabs */
+        $tabs = DashboardCache::remember(
+            DashboardCache::financeRemindersKey($today),
+            function () use ($windows, $today): array {
+                $tabs = [];
+
+                foreach ($windows as $window) {
+                    $due = $this->instruments->openDueBetween($window['from'], $window['to'], self::REMINDER_LIMIT);
+
+                    $tabs[] = [
+                        'key' => $window['key'],
+                        'label' => $window['label'],
+                        'empty' => $window['empty'],
+                        'count' => $due['count'],
+                        'received' => $due['received'],
+                        'given' => $due['given'],
+                        'filters' => $window['filters'] ?? [
+                            'due_from' => $window['from']->toDateString(),
+                            'due_to' => $window['to']->toDateString(),
+                        ],
+                        'items' => $due['items']
+                            ->map(fn (FinancialInstrument $instrument): array => $this->reminderItem($instrument, $today))
+                            ->all(),
+                    ];
+                }
+
+                return $tabs;
+            },
+        );
+
+        $firstWithItems = collect($tabs)->first(fn (array $tab): bool => $tab['count'] > 0);
+
+        return [
+            'active' => $firstWithItems['key'] ?? 'week',
+            'tabs' => $tabs,
+            'route' => 'admin.financial-instruments.index',
+        ];
+    }
+
+    /**
+     * @return array{id: string, due_on: string, when: string, is_overdue: bool, method: string, method_icon: string, direction: string, direction_label: string, party: string, number: ?string, amount: float}
+     */
+    private function reminderItem(FinancialInstrument $instrument, Carbon $today): array
+    {
+        $days = (int) $today->diffInDays($instrument->due_on, false);
+
+        return [
+            'id' => $instrument->getKey(),
+            'due_on' => $instrument->due_on->format('d.m.Y'),
+            'when' => match (true) {
+                $days < 0 => abs($days).' gün geçti',
+                $days === 0 => 'Bugün',
+                $days === 1 => 'Yarın',
+                default => $days.' gün kaldı',
+            },
+            'is_overdue' => $days < 0,
+            'method' => $instrument->payment_method->label(),
+            'method_icon' => $instrument->payment_method->icon(),
+            'direction' => $instrument->direction->value,
+            'direction_label' => $instrument->direction === InstrumentDirection::Received ? 'Tahsil edilecek' : 'Ödenecek',
+            'party' => $instrument->party?->name ?? '—',
+            'number' => $instrument->number,
+            'amount' => (float) $instrument->amount,
         ];
     }
 

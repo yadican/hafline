@@ -2,6 +2,7 @@
 
 namespace App\Cache;
 
+use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Support\Facades\Cache;
 
@@ -20,5 +21,18 @@ final class DashboardCache
     public static function remember(string $key, Closure $callback): mixed
     {
         return Cache::remember(self::PREFIX.$key, self::TTL_SECONDS, $callback);
+    }
+
+    public static function financeRemindersKey(CarbonInterface $day): string
+    {
+        return 'finance-reminders:'.$day->toDateString();
+    }
+
+    /**
+     * A cheque or note was added, moved on or taken back: its due reminder must not wait for the TTL.
+     */
+    public static function forgetFinanceReminders(): void
+    {
+        Cache::forget(self::PREFIX.self::financeRemindersKey(today()));
     }
 }

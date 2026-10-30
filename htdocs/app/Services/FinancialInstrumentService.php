@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Cache\DashboardCache;
 use App\Enums\CariEntryKind;
 use App\Enums\InstrumentDirection;
 use App\Enums\InstrumentMovementType;
@@ -134,6 +135,7 @@ class FinancialInstrumentService extends Service
             if ($instrument) {
                 $this->assertUntouched($instrument);
                 $instrument->delete();
+                DashboardCache::forgetFinanceReminders();
             }
 
             return;
@@ -183,6 +185,7 @@ class FinancialInstrumentService extends Service
             $instrument->save();
         }
 
+        DashboardCache::forgetFinanceReminders();
         $this->storePhotos($instrument, $data['photos'] ?? [], $userId);
     }
 
@@ -220,6 +223,7 @@ class FinancialInstrumentService extends Service
         }
 
         $instrument->update(['party_id' => $partyId]);
+        DashboardCache::forgetFinanceReminders();
 
         foreach ($instrument->movements()->where('type', InstrumentMovementType::Bounce)->get() as $movement) {
             $this->ledger->sync($movement, $this->lines($instrument, $movement));
@@ -235,6 +239,7 @@ class FinancialInstrumentService extends Service
         if ($instrument = $this->forEntry($entry, lock: true)) {
             $this->assertUntouched($instrument);
             $instrument->delete();
+            DashboardCache::forgetFinanceReminders();
         }
     }
 
@@ -286,6 +291,7 @@ class FinancialInstrumentService extends Service
 
             $this->ledger->sync($movement, $this->lines($instrument, $movement));
             $instrument->update(['status' => $type->resultingStatus()]);
+            DashboardCache::forgetFinanceReminders();
 
             return $movement;
         });
@@ -308,6 +314,7 @@ class FinancialInstrumentService extends Service
             $instrument->update([
                 'status' => $movements->last()?->type->resultingStatus() ?? $instrument->direction->initialStatus(),
             ]);
+            DashboardCache::forgetFinanceReminders();
         });
     }
 

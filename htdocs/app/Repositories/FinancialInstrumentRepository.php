@@ -8,6 +8,7 @@ use App\Models\FinancialInstrument;
 use App\Support\Sort;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 class FinancialInstrumentRepository extends Repository
@@ -55,6 +56,37 @@ class FinancialInstrumentRepository extends Repository
                 ->whereIn('status', InstrumentStatus::open())
                 ->where('due_on', '<', Carbon::today()->toDateString())
                 ->count(),
+        ];
+    }
+
+    /**
+     * Open cheques and notes falling due up to $to (from $from on, or everything already waiting
+     * when $from is null), soonest first, with what is to be collected and paid in that window.
+     *
+     * @return array{items: Collection<int, FinancialInstrument>, count: int, received: float, given: float}
+     */
+    public function openDueBetween(?Carbon $from, Carbon $to, int $limit): array
+    {
+        $window = fn (): Builder => $this->query()
+            ->whereIn('status', InstrumentStatus::open())
+            ->when($from, fn (Builder $query, Carbon $from) => $query->where('due_on', '>=', $from->toDateString()))
+            ->where('due_on', '<', $to->copy()->addDay()->toDateString());
+
+        $rows = $window()
+            ->toBase()
+            ->groupBy('direction')
+            ->selectRaw('direction, COUNT(*) as total_count, COALESCE(SUM(amount), 0) as total_amount')
+            ->get()
+            ->keyBy('direction');
+
+        $received = $rows->get(InstrumentDirection::Received->value);
+        $given = $rows->get(InstrumentDirection::Given->value);
+
+        return [
+            'items' => $window()->with('party')->orderBy('due_on')->orderByDesc('amount')->limit($limit)->get(),
+            'count' => (int) ($received->total_count ?? 0) + (int) ($given->total_count ?? 0),
+            'received' => round((float) ($received->total_amount ?? 0), 2),
+            'given' => round((float) ($given->total_amount ?? 0), 2),
         ];
     }
 
