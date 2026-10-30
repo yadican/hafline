@@ -564,7 +564,7 @@ a.um-title.um-active {
  * Buton renk dili (semantik):
  * create  → yeşil     Yeni kayıt
  * edit    → mavi      Düzenle / Güncelle
- * search  → taş gri   Ara / filtre
+ * search  → beyaz, ochre ikon   Ara / filtre / rapor göster
  * primary → ochre     Marka vurgu (nadiren)
  * danger  → bordo     Sil
  * secondary/neutral → beyaz kenarlı  Temizle, yazdır, listeye dön
@@ -597,13 +597,19 @@ a.um-title.um-active {
 	border-color: var(--ui-edit-dark);
 }
 .panel-btn-search {
-	background: var(--ui-search);
-	border-color: var(--ui-search-dark);
-	color: #fff !important;
+	background: #fff;
+	border-color: var(--ui-border);
+	color: var(--ui-ink) !important;
+}
+.panel-btn-search i {
+	color: var(--ui-ochre);
+	font-size: 16px;
+	opacity: 1;
 }
 .panel-btn-search:hover {
-	background: var(--ui-search-hover);
-	border-color: var(--ui-search-dark);
+	background: var(--ui-ochre-soft);
+	border-color: var(--ui-ochre);
+	color: var(--ui-ochre-dark) !important;
 }
 .panel-btn-danger {
 	background: var(--ui-danger);
