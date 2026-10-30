@@ -10,6 +10,10 @@ use App\Models\Party;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Tests\TestCase;
 
 class CompanyLedgerReportTest extends TestCase
@@ -217,6 +221,7 @@ class CompanyLedgerReportTest extends TestCase
 
         $this->actingAs($this->admin)
             ->get(route('admin.reports.company-ledger.export', [
+                'format' => 'csv',
                 'period' => 'month',
                 'year' => 2026,
                 'month' => 9,
@@ -226,14 +231,91 @@ class CompanyLedgerReportTest extends TestCase
             ->assertSessionHasErrors(['party']);
 
         $csv = $this->actingAs($this->admin)
-            ->get(route('admin.reports.company-ledger.export', $this->filters(PartyRole::Supplier, $this->supplier->id)))
+            ->get(route('admin.reports.company-ledger.export', [
+                'format' => 'csv',
+                ...$this->filters(PartyRole::Supplier, $this->supplier->id),
+            ]))
             ->assertOk()
+            ->assertDownload('firma-cari-supplier-2026-09.csv')
             ->streamedContent();
 
-        $this->assertStringContainsString('Firma;Tarih;', $csv);
-        $this->assertStringContainsString('Borç;Alacak;Bakiye', $csv);
-        $this->assertStringContainsString('ALPHA TEDARİK', $csv);
-        $this->assertStringContainsString('175,00', $csv);
+        $this->assertStringContainsString('Tarih;"Belge No";Açıklama;Borç;Alacak;Bakiye', $csv);
+        $this->assertStringContainsString('05.09.2026;;Test;;175,00;-175,00', $csv);
+        $this->assertStringContainsString('"Toplam / Kapanış";;;0,00;175,00;-175,00', $csv);
+    }
+
+    public function test_excel_export_writes_numeric_amounts_and_running_balance(): void
+    {
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-08-20', debit: 500);
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-09-05', credit: 175);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.company-ledger.export', [
+                'format' => 'xlsx',
+                ...$this->filters(PartyRole::Supplier, $this->supplier->id),
+            ]))
+            ->assertOk()
+            ->assertDownload('firma-cari-supplier-2026-09.xlsx');
+
+        $sheet = $this->loadSpreadsheet($response->streamedContent());
+        $rows = collect($sheet->toArray(null, false, false, true));
+
+        $headerRow = $rows->search(fn (array $row): bool => $row['A'] === 'Tarih');
+        $this->assertSame(['Tarih', 'Belge No', 'Açıklama', 'Borç', 'Alacak', 'Bakiye'], array_values($rows[$headerRow]));
+
+        $openingRow = $rows->search(fn (array $row): bool => $row['C'] === 'Geçmiş Dönemler (Devir)');
+        $this->assertEquals(500, $rows[$openingRow]['D']);
+        $this->assertEquals(500, $rows[$openingRow]['F']);
+
+        $lineRow = $openingRow + 1;
+        $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell("A{$lineRow}")->getDataType());
+        $this->assertSame('2026-09-05', ExcelDate::excelToDateTimeObject($rows[$lineRow]['A'])->format('Y-m-d'));
+        $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell("E{$lineRow}")->getDataType());
+        $this->assertEquals(175, $rows[$lineRow]['E']);
+        $this->assertEquals(325, $rows[$lineRow]['F']);
+
+        $totalRow = $rows->search(fn (array $row): bool => $row['A'] === 'Toplam / Kapanış');
+        $this->assertEquals(0, $rows[$totalRow]['D']);
+        $this->assertEquals(175, $rows[$totalRow]['E']);
+        $this->assertEquals(325, $rows[$totalRow]['F']);
+    }
+
+    public function test_pdf_export_downloads_a_pdf_document(): void
+    {
+        $this->makeTx($this->supplier, PartyRole::Supplier, '2026-09-05', credit: 175);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.company-ledger.export', [
+                'format' => 'pdf',
+                ...$this->filters(PartyRole::Supplier, $this->supplier->id),
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertDownload('firma-cari-supplier-2026-09.pdf');
+
+        $this->assertStringStartsWith('%PDF-', (string) $response->getContent());
+    }
+
+    public function test_export_rejects_unknown_formats(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.reports.company-ledger.export', [
+                'format' => 'docx',
+                ...$this->filters(PartyRole::Supplier, $this->supplier->id),
+            ]))
+            ->assertNotFound();
+    }
+
+    private function loadSpreadsheet(string $contents): Worksheet
+    {
+        $path = tempnam(sys_get_temp_dir(), 'report-xlsx');
+        file_put_contents($path, $contents);
+
+        try {
+            return IOFactory::load($path)->getActiveSheet();
+        } finally {
+            unlink($path);
+        }
     }
 
     /**

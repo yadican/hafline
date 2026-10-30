@@ -237,7 +237,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('can:view-report-vehicle-monthly')->group(function () {
         Route::get('reports/vehicle-monthly', [VehicleMonthlyReportController::class, 'index'])->name('reports.vehicle-monthly');
-        Route::get('reports/vehicle-monthly/export', [VehicleMonthlyReportController::class, 'export'])->name('reports.vehicle-monthly.export');
+        Route::get('reports/vehicle-monthly/export/{format}', [VehicleMonthlyReportController::class, 'export'])->name('reports.vehicle-monthly.export');
     });
     Route::middleware('can:view-report-vehicle-periodic')->group(function () {
         Route::get('reports/vehicle-periodic', [VehiclePeriodicReportController::class, 'index'])->name('reports.vehicle-periodic');
@@ -277,7 +277,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('can:view-report-company-ledger')->group(function () {
         Route::get('reports/company-ledger', [CompanyLedgerReportController::class, 'index'])->name('reports.company-ledger');
-        Route::get('reports/company-ledger/export', [CompanyLedgerReportController::class, 'export'])->name('reports.company-ledger.export');
+        Route::get('reports/company-ledger/export/{format}', [CompanyLedgerReportController::class, 'export'])->name('reports.company-ledger.export');
     });
     Route::middleware('can:view-report-site-cari')->group(function () {
         Route::get('reports/site-cari', [SiteCariReportController::class, 'index'])->name('reports.site-cari');

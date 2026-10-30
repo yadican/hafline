@@ -3,9 +3,13 @@
 namespace App\Services\Reports;
 
 use App\Repositories\Reports\VehicleMonthlyReportRepository;
+use App\Services\Reports\Export\ReportCell;
+use App\Services\Reports\Export\ReportColumn;
+use App\Services\Reports\Export\ReportDocument;
+use App\Services\Reports\Export\ReportRow;
+use App\Services\Reports\Export\ReportSection;
 use App\Services\Service;
 use Illuminate\Support\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VehicleMonthlyReportService extends Service
 {
@@ -256,7 +260,7 @@ class VehicleMonthlyReportService extends Service
     /**
      * @param  array{vehicle: string, period: 'month'|'range', year?: int, month?: int, from?: string, to?: string}  $filters
      */
-    public function exportCsv(array $filters): ?StreamedResponse
+    public function exportDocument(array $filters): ?ReportDocument
     {
         $report = $this->report($filters);
 
@@ -264,97 +268,93 @@ class VehicleMonthlyReportService extends Service
             return null;
         }
 
+        $plateSlug = str($report['plate'])->slug('_');
         $filename = $report['period'] === 'month'
-            ? sprintf(
-                'plaka-aylik-%s-%04d-%02d.csv',
-                str($report['plate'])->slug('_'),
-                $report['year'],
-                $report['month'],
-            )
-            : sprintf(
-                'plaka-aylik-%s-%s_%s.csv',
-                str($report['plate'])->slug('_'),
-                $report['from'],
-                $report['to'],
-            );
+            ? sprintf('plaka-aylik-%s-%04d-%02d', $plateSlug, $report['year'], $report['month'])
+            : sprintf('plaka-aylik-%s-%s_%s', $plateSlug, $report['from'], $report['to']);
 
-        return response()->streamDownload(function () use ($report): void {
-            $handle = fopen('php://output', 'w');
+        $rows = [];
+        $index = 0;
+        $carryover = null;
 
-            fwrite($handle, "\xEF\xBB\xBF");
+        foreach ($report['rows'] as $row) {
+            if ($row['type'] === 'carryover') {
+                $carryover = $row;
 
-            fputcsv($handle, [
-                'Sıra',
-                'Tarih',
-                'Açıklama',
-                'Toplam',
-                'Dönem Ortalama Birim Fiyatı',
-                'Borç',
-                'Alacak',
-            ], ';');
-
-            $index = 0;
-
-            foreach ($report['rows'] as $row) {
-                if ($row['type'] === 'carryover') {
-                    continue;
-                }
-
-                $index++;
-                $quantity = '';
-
-                if ($row['quantity'] !== null) {
-                    $quantity = match ($row['quantity_unit']) {
-                        'lt', 'saat' => number_format($row['quantity'], 2, ',', '.').' '.$row['quantity_unit'],
-                        default => (string) (int) $row['quantity'],
-                    };
-                }
-
-                fputcsv($handle, [
-                    $index,
-                    $row['date'] ?? '',
-                    $row['description'],
-                    $quantity,
-                    $row['unit_price'] !== null ? number_format($row['unit_price'], 2, ',', '.') : '',
-                    $row['debit'] !== null ? number_format($row['debit'], 2, ',', '.') : '',
-                    $row['credit'] !== null ? number_format($row['credit'], 2, ',', '.') : '',
-                ], ';');
+                continue;
             }
 
-            $carryover = collect($report['rows'])->firstWhere('type', 'carryover');
+            $rows[] = ReportRow::data([
+                'index' => ++$index,
+                'date' => $row['date'],
+                'description' => $row['description'],
+                'quantity' => match (true) {
+                    $row['quantity'] === null => null,
+                    $row['quantity_unit'] === null => new ReportCell((int) $row['quantity'], 0),
+                    default => new ReportCell($row['quantity'], 2, $row['quantity_unit']),
+                },
+                'unit_price' => $row['unit_price'],
+                'debit' => $row['debit'],
+                'credit' => $row['credit'],
+            ]);
+        }
 
-            fputcsv($handle, [
-                '',
-                '',
-                'Geçmiş Dönemler',
-                '',
-                '',
-                $carryover['debit'] !== null ? number_format($carryover['debit'], 2, ',', '.') : '',
-                $carryover['credit'] !== null ? number_format($carryover['credit'], 2, ',', '.') : '',
-            ], ';');
+        if ($carryover !== null) {
+            $rows[] = ReportRow::opening([
+                'description' => $carryover['description'],
+                'debit' => $carryover['debit'],
+                'credit' => $carryover['credit'],
+            ]);
+        }
 
-            fputcsv($handle, []);
-            fputcsv($handle, [
-                'Sefer',
-                (string) $report['trips'],
-                'Mazot',
-                number_format($report['fuel_liters'], 2, ',', '.').' / '.$report['fuel_receipts'].' / '.$report['fuel_haul_tickets'],
-                'Makine',
-                number_format($report['machine_hours'], 2, ',', '.').' saat / '.$report['machine_tickets'].' fiş',
-            ], ';');
-            fputcsv($handle, [
-                'Alacak',
-                number_format($report['total_credit'], 2, ',', '.'),
-                'Borç',
-                number_format($report['total_debit'], 2, ',', '.'),
-                'Bakiye',
-                number_format($report['balance'], 2, ',', '.'),
-            ], ';');
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+        $rows[] = ReportRow::total('TOPLAM', [
+            'quantity' => new ReportCell($report['trips'], 0, 'sefer'),
+            'debit' => $report['total_debit'],
+            'credit' => $report['total_credit'],
         ]);
+
+        $summary = [
+            'Sefer' => new ReportCell($report['trips'], 0),
+            'Mazot' => sprintf(
+                '%s lt / %d fiş / %d',
+                number_format($report['fuel_liters'], 2, ',', '.'),
+                $report['fuel_receipts'],
+                $report['fuel_haul_tickets'],
+            ),
+        ];
+
+        if ($report['machine_tickets'] > 0) {
+            $summary['Makine'] = sprintf(
+                '%s saat / %d fiş',
+                number_format($report['machine_hours'], 2, ',', '.'),
+                $report['machine_tickets'],
+            );
+        }
+
+        $summary['Alacak'] = ReportCell::money($report['total_credit']);
+        $summary['Borç'] = ReportCell::money($report['total_debit']);
+        $summary['Bakiye'] = ReportCell::money($report['balance']);
+
+        return new ReportDocument(
+            title: $report['title'],
+            subtitle: $report['plate'].' · '.$report['period_label'],
+            filename: $filename,
+            columns: [
+                ReportColumn::number('index', 'Sıra', width: 6),
+                ReportColumn::date('date', 'Tarih'),
+                ReportColumn::text('description', 'Açıklama'),
+                ReportColumn::number('quantity', 'Toplam', width: 14),
+                ReportColumn::money('unit_price', 'Dönem Ort. Birim Fiyatı'),
+                ReportColumn::money('debit', 'Borç'),
+                ReportColumn::money('credit', 'Alacak'),
+            ],
+            sections: [new ReportSection($rows)],
+            details: [
+                'Plaka' => $report['plate'],
+                'Dönem' => $report['period_label'],
+            ],
+            summary: $summary,
+        );
     }
 
     /**

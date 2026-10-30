@@ -6,9 +6,12 @@ use App\Enums\CariEntryKind;
 use App\Enums\PartyRole;
 use App\Repositories\Reports\CompanyBalanceReportRepository;
 use App\Repositories\Reports\CompanyLedgerReportRepository;
+use App\Services\Reports\Export\ReportColumn;
+use App\Services\Reports\Export\ReportDocument;
+use App\Services\Reports\Export\ReportRow;
+use App\Services\Reports\Export\ReportSection;
 use App\Services\Service;
 use Illuminate\Support\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CompanyLedgerReportService extends Service
 {
@@ -184,84 +187,90 @@ class CompanyLedgerReportService extends Service
     /**
      * @param  array{period: 'month'|'range', year?: int, month?: int, from?: string, to?: string, role: string, party: string}  $filters
      */
-    public function exportCsv(array $filters): StreamedResponse
+    public function exportDocument(array $filters): ReportDocument
     {
         $report = $this->report($filters);
 
         $filename = $report['period'] === 'month'
-            ? sprintf('firma-cari-%s-%04d-%02d.csv', $report['role'], $report['year'], $report['month'])
-            : sprintf('firma-cari-%s-%s_%s.csv', $report['role'], $report['from'], $report['to']);
+            ? sprintf('firma-cari-%s-%04d-%02d', $report['role'], $report['year'], $report['month'])
+            : sprintf('firma-cari-%s-%s_%s', $report['role'], $report['from'], $report['to']);
 
-        return response()->streamDownload(function () use ($report): void {
-            $handle = fopen('php://output', 'w');
+        $columns = [
+            ReportColumn::date('occurred_on', 'Tarih'),
+            ReportColumn::text('document_no', 'Belge No'),
+            ReportColumn::text('description', 'Açıklama'),
+        ];
 
-            fwrite($handle, "\xEF\xBB\xBF");
+        if ($report['show_fuel']) {
+            $columns[] = ReportColumn::number('liters', 'Litre', 2, 'lt');
+            $columns[] = ReportColumn::money('unit_price', 'Birim Fiyat', 4);
+            $columns[] = ReportColumn::text('fuel_station_name', 'Yakıt Yeri');
+        }
 
-            $headers = ['Firma', 'Tarih', 'Belge No', 'Açıklama'];
-            if ($report['show_fuel']) {
-                $headers = array_merge($headers, ['Litre', 'Birim Fiyat', 'Yakıt Yeri']);
-            }
-            if ($report['show_market']) {
-                $headers = array_merge($headers, ['Plaka', 'Araç Sahibi']);
-            }
-            $headers = array_merge($headers, ['Borç', 'Alacak', 'Bakiye']);
+        if ($report['show_market']) {
+            $columns[] = ReportColumn::text('plate', 'Plaka', 12);
+            $columns[] = ReportColumn::text('owner_name', 'Araç Sahibi');
+        }
 
-            fputcsv($handle, $headers, ';');
+        $columns[] = ReportColumn::money('debit', 'Borç');
+        $columns[] = ReportColumn::money('credit', 'Alacak');
+        $columns[] = ReportColumn::balance('balance', 'Bakiye');
 
-            foreach ($report['groups'] as $group) {
-                fputcsv($handle, array_merge(
-                    [$group['party_name'], '', '', 'Geçmiş Dönemler (Devir)'],
-                    $report['show_fuel'] ? ['', '', ''] : [],
-                    $report['show_market'] ? ['', ''] : [],
-                    [
-                        $group['opening'] > 0 ? number_format($group['opening'], 2, ',', '.') : '',
-                        $group['opening'] < 0 ? number_format(abs($group['opening']), 2, ',', '.') : '',
-                        number_format($group['opening'], 2, ',', '.'),
-                    ],
-                ), ';');
+        $sections = [];
 
-                foreach ($group['lines'] as $line) {
-                    $row = [
-                        $group['party_name'],
-                        Carbon::parse($line['occurred_on'])->format('d.m.Y'),
-                        $line['document_no'] ?? '',
-                        $line['description'] ?? '',
-                    ];
+        foreach ($report['groups'] as $group) {
+            $rows = [
+                ReportRow::opening([
+                    'description' => 'Geçmiş Dönemler (Devir)',
+                    'debit' => $group['opening'] > 0 ? $group['opening'] : null,
+                    'credit' => $group['opening'] < 0 ? abs($group['opening']) : null,
+                    'balance' => $group['opening'],
+                ]),
+            ];
 
-                    if ($report['show_fuel']) {
-                        $row[] = $line['liters'] !== null ? number_format($line['liters'], 2, ',', '.') : '';
-                        $row[] = $line['unit_price'] !== null ? number_format($line['unit_price'], 4, ',', '.') : '';
-                        $row[] = $line['fuel_station_name'] ?? '';
-                    }
-
-                    if ($report['show_market']) {
-                        $row[] = $line['plate'] ?? '';
-                        $row[] = $line['owner_name'] ?? '';
-                    }
-
-                    $row[] = $line['debit'] > 0 ? number_format($line['debit'], 2, ',', '.') : '';
-                    $row[] = $line['credit'] > 0 ? number_format($line['credit'], 2, ',', '.') : '';
-                    $row[] = number_format($line['balance'], 2, ',', '.');
-
-                    fputcsv($handle, $row, ';');
-                }
-
-                fputcsv($handle, array_merge(
-                    [$group['party_name'], '', '', 'Toplam / Kapanış'],
-                    $report['show_fuel'] ? ['', '', ''] : [],
-                    $report['show_market'] ? ['', ''] : [],
-                    [
-                        number_format($group['total_debit'], 2, ',', '.'),
-                        number_format($group['total_credit'], 2, ',', '.'),
-                        number_format($group['closing'], 2, ',', '.'),
-                    ],
-                ), ';');
+            foreach ($group['lines'] as $line) {
+                $rows[] = ReportRow::data([
+                    'occurred_on' => $line['occurred_on'],
+                    'document_no' => $line['document_no'],
+                    'description' => $line['description'],
+                    'liters' => $line['liters'],
+                    'unit_price' => $line['unit_price'],
+                    'fuel_station_name' => $line['fuel_station_name'],
+                    'plate' => $line['plate'],
+                    'owner_name' => $line['owner_name'],
+                    'debit' => $line['debit'] > 0 ? $line['debit'] : null,
+                    'credit' => $line['credit'] > 0 ? $line['credit'] : null,
+                    'balance' => $line['balance'],
+                ]);
             }
 
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+            $rows[] = ReportRow::total('Toplam / Kapanış', [
+                'debit' => $group['total_debit'],
+                'credit' => $group['total_credit'],
+                'balance' => $group['closing'],
+            ]);
+
+            $sections[] = new ReportSection($rows, count($report['groups']) > 1 ? $group['party_name'] : null);
+        }
+
+        if ($sections === []) {
+            $sections[] = new ReportSection([]);
+        }
+
+        return new ReportDocument(
+            title: $report['title'],
+            subtitle: $report['subtitle'],
+            filename: $filename,
+            columns: $columns,
+            sections: $sections,
+            details: array_filter([
+                'Cari türü' => $report['role_label'],
+                'Firma' => $report['groups'][0]['party_name'] ?? null,
+                'Dönem' => $report['period_label'],
+            ], fn (?string $value): bool => $value !== null),
+            landscape: $report['show_fuel'] || $report['show_market'],
+            emptyMessage: 'Seçilen cari türü ve dönem için cari hareket bulunamadı.',
+        );
     }
 
     /**

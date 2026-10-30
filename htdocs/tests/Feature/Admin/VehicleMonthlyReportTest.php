@@ -20,6 +20,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Tests\TestCase;
 
 class VehicleMonthlyReportTest extends TestCase
@@ -368,27 +372,110 @@ class VehicleMonthlyReportTest extends TestCase
 
         $response = $this->actingAs($this->admin)
             ->get(route('admin.reports.vehicle-monthly.export', [
+                'format' => 'csv',
                 'plate' => '34 ABR 69',
                 'year' => 2026,
                 'month' => 9,
             ]));
 
-        $response->assertOk();
+        $response->assertOk()->assertDownload('plaka-aylik-34_abr_69-2026-09.csv');
         $this->assertStringContainsString('text/csv', (string) $response->headers->get('content-type'));
 
         $csv = $response->streamedContent();
 
-        $this->assertStringContainsString('Açıklama', $csv);
-        $this->assertStringContainsString('BAKIRKÖY GÜL İNŞ - 212', $csv);
-        $this->assertStringContainsString('ALTUR', $csv);
+        $this->assertStringContainsString('Sıra;Tarih;Açıklama;Toplam', $csv);
+        $this->assertStringContainsString('1;;"BAKIRKÖY GÜL İNŞ - 212";1;2.000,00;;2.000,00', $csv);
+        $this->assertStringContainsString(';;ALTUR;100,00;50,00;5.000,00;', $csv);
         $this->assertStringContainsString('Geçmiş Dönemler', $csv);
-        $this->assertStringContainsString('Bakiye', $csv);
+        $this->assertStringContainsString('Bakiye;-3.000,00', $csv);
+    }
+
+    public function test_excel_export_writes_numeric_cells_and_summary(): void
+    {
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-05 08:00:00', 2000);
+        $this->makeReceipt($this->vehicle, '2026-09-10', 100, 50);
+        $this->makePayment($this->vehicle, '2026-09-15', 1500);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-monthly.export', [
+                'format' => 'xlsx',
+                'plate' => '34 ABR 69',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertDownload('plaka-aylik-34_abr_69-2026-09.xlsx');
+
+        $sheet = $this->loadSpreadsheet($response->streamedContent());
+        $rows = collect($sheet->toArray(null, false, false, true));
+
+        $this->assertSame('Aylık Plaka Raporu', $rows[2]['A']);
+
+        $haulRow = $rows->search(fn (array $row): bool => $row['C'] === 'BAKIRKÖY GÜL İNŞ - 212');
+        $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell("G{$haulRow}")->getDataType());
+        $this->assertEquals(2000, $rows[$haulRow]['G']);
+        $this->assertSame('#,##0.00 "TL"', $sheet->getStyle("G{$haulRow}")->getNumberFormat()->getFormatCode());
+
+        $fuelRow = $rows->search(fn (array $row): bool => $row['C'] === 'ALTUR');
+        $this->assertEquals(100, $rows[$fuelRow]['D']);
+        $this->assertSame('#,##0.00 "lt"', $sheet->getStyle("D{$fuelRow}")->getNumberFormat()->getFormatCode());
+        $this->assertEquals(5000, $rows[$fuelRow]['F']);
+
+        $paymentRow = $rows->search(fn (array $row): bool => $row['C'] === 'Plaka ödeme');
+        $this->assertSame('2026-09-15', ExcelDate::excelToDateTimeObject($rows[$paymentRow]['B'])->format('Y-m-d'));
+
+        $totalRow = $rows->search(fn (array $row): bool => $row['A'] === 'TOPLAM');
+        $this->assertEquals(1, $rows[$totalRow]['D']);
+        $this->assertEquals(6500, $rows[$totalRow]['F']);
+        $this->assertEquals(2000, $rows[$totalRow]['G']);
+
+        $balanceRow = $rows->search(fn (array $row): bool => $row['E'] === 'Bakiye');
+        $this->assertEquals(-4500, $rows[$balanceRow]['F']);
+    }
+
+    public function test_pdf_export_downloads_a_pdf_document(): void
+    {
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-05 08:00:00', 2000);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-monthly.export', [
+                'format' => 'pdf',
+                'plate' => '34 ABR 69',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertDownload('plaka-aylik-34_abr_69-2026-09.pdf');
+
+        $this->assertStringStartsWith('%PDF-', (string) $response->getContent());
+    }
+
+    public function test_print_opens_the_pdf_inline_instead_of_downloading(): void
+    {
+        $this->makeHaul($this->vehicle, $this->routeA, '2026-09-05 08:00:00', 2000);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.reports.vehicle-monthly.export', [
+                'format' => 'pdf',
+                'print' => 1,
+                'plate' => '34 ABR 69',
+                'year' => 2026,
+                'month' => 9,
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringStartsWith('inline;', (string) $response->headers->get('content-disposition'));
+        $this->assertStringContainsString('plaka-aylik-34_abr_69-2026-09.pdf', (string) $response->headers->get('content-disposition'));
+        $this->assertStringStartsWith('%PDF-', (string) $response->getContent());
     }
 
     public function test_export_requires_a_plate(): void
     {
         $this->actingAs($this->admin)
             ->get(route('admin.reports.vehicle-monthly.export', [
+                'format' => 'xlsx',
                 'year' => 2026,
                 'month' => 9,
             ]))
@@ -406,6 +493,18 @@ class VehicleMonthlyReportTest extends TestCase
             ]))
             ->assertRedirect(route('admin.reports.vehicle-monthly'))
             ->assertSessionHasErrors('plate');
+    }
+
+    private function loadSpreadsheet(string $contents): Worksheet
+    {
+        $path = tempnam(sys_get_temp_dir(), 'report-xlsx');
+        file_put_contents($path, $contents);
+
+        try {
+            return IOFactory::load($path)->getActiveSheet();
+        } finally {
+            unlink($path);
+        }
     }
 
     private function makeHaul(Vehicle $vehicle, HaulRoute $route, string $hauledAt, float $price): Haul

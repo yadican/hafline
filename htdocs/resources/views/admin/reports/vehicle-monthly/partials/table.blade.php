@@ -140,12 +140,6 @@
     </x-table.list>
 
     <div class="panel-liste-bar report-actions">
-        <x-ui.button
-            icon="fa-solid fa-file-excel"
-            :href="route('admin.reports.vehicle-monthly.export', $exportQuery)"
-        >
-            Excel
-        </x-ui.button>
-        <x-ui.button icon="fa-solid fa-print" data-report-print>Yazdır</x-ui.button>
+        <x-ui.report-exports route="admin.reports.vehicle-monthly.export" :query="$exportQuery" />
     </div>
 </div>
