@@ -1191,6 +1191,19 @@ a.um-title.um-active {
 	white-space: nowrap;
 	text-align: center;
 }
+/* Fixed slot width so a missing delete (or edit) does not shift the other icons. */
+.panel-actions {
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 4px;
+	min-width: 104px; /* 3 × 32px + 2 × 4px gap */
+	vertical-align: middle;
+}
+.panel-actions-form {
+	display: inline-flex;
+	margin: 0;
+}
 .panel-act {
 	--act-color: var(--ui-steel);
 	--act-tint: #eef0f2;
@@ -1199,7 +1212,7 @@ a.um-title.um-active {
 	justify-content: center;
 	width: 32px;
 	height: 32px;
-	margin: 0 2px;
+	margin: 0;
 	border: 1px solid color-mix(in srgb, var(--act-color) 30%, transparent);
 	border-radius: 8px;
 	background: var(--act-tint);

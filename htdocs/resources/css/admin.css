@@ -946,6 +946,12 @@ input.panel-plate::placeholder {
     overflow: hidden;
 }
 
+.panel-form-group-body > .panel-field.is-full,
+.panel-detail-columns > .panel-field.is-full {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
 /* Çizgi alt kenarda: yarım kalan son satırın üstündeki hücreler de çizgi alır; son satırın çizgisi -1px ile taşıp kırpılır. */
 .panel-form-grid.is-detail .panel-detail-columns > .panel-field {
     margin-bottom: -1px;
@@ -1584,6 +1590,17 @@ input.panel-plate::placeholder {
     }
 }
 
+.permission-groups-full {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+.permission-groups-full > .permission-group {
+    width: 100%;
+}
+
 .permission-group {
     border: 1px solid color-mix(in srgb, var(--panel-border, #d1d5db) 100%, transparent);
     border-radius: 0.5rem;
@@ -1608,8 +1625,68 @@ input.panel-plate::placeholder {
 }
 
 @media (min-width: 640px) {
-    .permission-group-body {
+    .permission-group-body:not(.is-rows) {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .permission-group-body.is-inline {
+        grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    }
+}
+
+/* Detail satırları gibi: tek sütun, solda ad, sağda aksiyonlar, alt çizgi. */
+.permission-group-body.is-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    grid-template-columns: none;
+}
+
+.permission-group-body.is-bare {
+    padding: 0;
+    border: 0;
+}
+
+.permission-group-row {
+    display: grid;
+    grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    width: 100%;
+    margin-bottom: -1px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ui-border-soft);
+}
+
+.permission-group-row-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    color: var(--ui-ink);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.permission-group-row-label::after {
+    content: ":";
+}
+
+.permission-group-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 1rem;
+}
+
+@media (max-width: 639px) {
+    .permission-group-row {
+        grid-template-columns: 1fr;
+        row-gap: 6px;
+    }
+
+    .permission-group-row-label::after {
+        content: none;
     }
 }
 

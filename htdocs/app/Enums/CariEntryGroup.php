@@ -47,4 +47,37 @@ enum CariEntryGroup: string
     {
         return str_replace('_', '-', $this->value).'-cari-entry';
     }
+
+    /**
+     * Sidebar subheading under Cari işlemleri: Alacak, Ödeme, or Diğer.
+     *
+     * @return 'alacak'|'odeme'|'diger'
+     */
+    public function menuSection(): string
+    {
+        return match ($this) {
+            self::VehicleReceivable, self::SiteBill => 'alacak',
+            self::FirmPayment, self::VehiclePayment, self::OwnerPayment, self::DumpPayment => 'odeme',
+            default => 'diger',
+        };
+    }
+
+    public function menuSectionLabel(): string
+    {
+        return match ($this->menuSection()) {
+            'alacak' => 'Alacak',
+            'odeme' => 'Ödeme',
+            'diger' => 'Diğer',
+        };
+    }
+
+    /**
+     * Sidebar section order: Alacak → Ödeme → Diğer.
+     *
+     * @return list<'alacak'|'odeme'|'diger'>
+     */
+    public static function menuSectionOrder(): array
+    {
+        return ['alacak', 'odeme', 'diger'];
+    }
 }

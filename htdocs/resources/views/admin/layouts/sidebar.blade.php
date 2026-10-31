@@ -55,17 +55,31 @@
                 <span class="um-caret" aria-hidden="true"></span>
             </button>
             <div class="um-items">
-                @foreach ($cariEntryGroups as $cariEntryGroup)
-                    @can('view-'.$cariEntryGroup->permissionResource())
-                        <a
-                            href="{{ route('admin.cari-entries.index', ['group' => $cariEntryGroup->value]) }}"
-                            @class([
-                                'um-link',
-                                'um-active' => request()->routeIs('admin.cari-entries.*')
-                                    && $cariEntryActiveGroup === $cariEntryGroup->value,
-                            ])
-                        >{{ $cariEntryGroup->label() }}</a>
-                    @endcan
+                @foreach (\App\Enums\CariEntryGroup::menuSectionOrder() as $cariMenuSection)
+                    @php
+                        $cariSectionGroups = array_values(array_filter(
+                            $cariEntryGroups,
+                            fn (\App\Enums\CariEntryGroup $group) => $group->menuSection() === $cariMenuSection,
+                        ));
+                        $cariSectionVisible = collect($cariSectionGroups)->contains(
+                            fn (\App\Enums\CariEntryGroup $group) => auth()->user()?->can('view-'.$group->permissionResource()),
+                        );
+                    @endphp
+                    @if ($cariSectionVisible)
+                        <span class="um-subheading">{{ $cariSectionGroups[0]->menuSectionLabel() }}</span>
+                        @foreach ($cariSectionGroups as $cariEntryGroup)
+                            @can('view-'.$cariEntryGroup->permissionResource())
+                                <a
+                                    href="{{ route('admin.cari-entries.index', ['group' => $cariEntryGroup->value]) }}"
+                                    @class([
+                                        'um-link',
+                                        'um-active' => request()->routeIs('admin.cari-entries.*')
+                                            && $cariEntryActiveGroup === $cariEntryGroup->value,
+                                    ])
+                                >{{ $cariEntryGroup->label() }}</a>
+                            @endcan
+                        @endforeach
+                    @endif
                 @endforeach
             </div>
         </div>
@@ -351,8 +365,8 @@
         </div>
     @endcanany
 
-    @canany(['view-users', 'view-role', 'view-permission'])
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.users.*', 'admin.roles.*', 'admin.permissions.*')]) id="um-sec-authority">
+    @canany(['view-users', 'view-role'])
+        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.users.*', 'admin.roles.*')]) id="um-sec-authority">
             <button type="button" class="um-title" data-um-toggle="um-sec-authority">
                 <span class="um-title-text">
                     <i class="fa-solid fa-shield-halved um-title-icon" aria-hidden="true"></i>
@@ -367,25 +381,8 @@
                 @can('view-role')
                     <a href="{{ route('admin.roles.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.roles.*')])>Roller</a>
                 @endcan
-                @can('view-permission')
-                    <a href="{{ route('admin.permissions.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.permissions.*')])>İzinler</a>
-                @endcan
             </div>
         </div>
     @endcanany
 
-    @can('view-example')
-        <div @class(['um-section', 'um-collapsed' => ! request()->routeIs('admin.examples.*')]) id="um-sec-examples">
-            <button type="button" class="um-title" data-um-toggle="um-sec-examples">
-                <span class="um-title-text">
-                    <i class="fa-solid fa-layer-group um-title-icon" aria-hidden="true"></i>
-                    <span class="um-title-label">Örnek kayıtlar</span>
-                </span>
-                <span class="um-caret" aria-hidden="true"></span>
-            </button>
-            <div class="um-items">
-                <a href="{{ route('admin.examples.index') }}" @class(['um-link', 'um-active' => request()->routeIs('admin.examples.*')])>Kayıt listesi</a>
-            </div>
-        </div>
-    @endcan
 </div>

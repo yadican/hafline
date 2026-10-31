@@ -2,6 +2,8 @@
     use App\Support\PermissionGroups;
 
     $selectedPermissions = collect($selectedPermissions ?? [])->map(fn ($name) => (string) $name)->values()->all();
+    $mainGroups = $permissionGroups->reject(fn ($_, $key) => PermissionGroups::isFullWidthGroup($key));
+    $fullGroups = $permissionGroups->filter(fn ($_, $key) => PermissionGroups::isFullWidthGroup($key));
 @endphp
 
 <div
@@ -41,36 +43,25 @@
         <p class="panel-field-error">{{ $message }}</p>
     @enderror
 
-    <div class="permission-groups-grid">
-        @foreach ($permissionGroups as $groupKey => $permissions)
-            <div class="permission-group" x-data="{ open: true }">
-                <div class="permission-group-head">
-                    <label class="panel-choice">
-                        <input
-                            type="checkbox"
-                            :checked="isGroupChecked(@js($groupKey))"
-                            x-effect="$el.indeterminate = isGroupIndeterminate(@js($groupKey))"
-                            @click.prevent="toggleGroup(@js($groupKey))"
-                        >
-                        <span>{{ PermissionGroups::labelFor($groupKey) }}</span>
-                        <span class="panel-badge">{{ $permissions->count() }}</span>
-                    </label>
-                    <button type="button" class="btn-link" @click="open = !open" x-text="open ? 'Gizle' : 'Göster'"></button>
-                </div>
-                <div x-show="open" x-cloak class="permission-group-body">
-                    @foreach ($permissions as $permission)
-                        <label class="panel-choice">
-                            <input
-                                type="checkbox"
-                                name="permissions[]"
-                                value="{{ $permission->name }}"
-                                x-model="selected"
-                            >
-                            <span>{{ $permission->name }}</span>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
-        @endforeach
-    </div>
+    @if ($mainGroups->isNotEmpty())
+        <div class="permission-groups-grid">
+            @foreach ($mainGroups as $groupKey => $permissions)
+                @include('admin.roles.partials.permission-group-card', [
+                    'groupKey' => $groupKey,
+                    'permissions' => $permissions,
+                ])
+            @endforeach
+        </div>
+    @endif
+
+    @if ($fullGroups->isNotEmpty())
+        <div class="permission-groups-full">
+            @foreach ($fullGroups as $groupKey => $permissions)
+                @include('admin.roles.partials.permission-group-card', [
+                    'groupKey' => $groupKey,
+                    'permissions' => $permissions,
+                ])
+            @endforeach
+        </div>
+    @endif
 </div>

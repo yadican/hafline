@@ -35,4 +35,27 @@ class CariEntryKindTest extends TestCase
         $this->assertEqualsCanonicalizing(CariEntryKind::cases(), $partitioned);
         $this->assertCount(count(CariEntryKind::cases()), $partitioned);
     }
+
+    public function test_every_group_has_a_menu_section_and_sections_partition_groups(): void
+    {
+        $bySection = [];
+
+        foreach (CariEntryGroup::cases() as $group) {
+            $section = $group->menuSection();
+            $this->assertContains($section, CariEntryGroup::menuSectionOrder());
+            $this->assertNotSame('', $group->menuSectionLabel());
+            $bySection[$section][] = $group;
+        }
+
+        $this->assertEqualsCanonicalizing(CariEntryGroup::menuSectionOrder(), array_keys($bySection));
+
+        $partitioned = [];
+
+        foreach (CariEntryGroup::menuSectionOrder() as $section) {
+            $this->assertArrayHasKey($section, $bySection);
+            array_push($partitioned, ...$bySection[$section]);
+        }
+
+        $this->assertEqualsCanonicalizing(CariEntryGroup::cases(), $partitioned);
+    }
 }

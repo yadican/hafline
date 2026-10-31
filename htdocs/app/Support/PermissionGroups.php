@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\CariEntryGroup;
 use App\Models\Permission;
 use Illuminate\Support\Collection;
 
@@ -19,7 +20,6 @@ class PermissionGroups
             'machine-works' => 'Makine çalışma',
             'fuel-receipts' => 'Yakıt fişleri',
             'parties' => 'Cari kartlar',
-            'cari-entries' => 'Cari işlemleri',
             'invoices' => 'Faturalar',
             'financial-instruments' => 'Çek / senet',
             'cash-categories' => 'Kasa kategorileri',
@@ -39,12 +39,184 @@ class PermissionGroups
             'employee-salaries' => 'Maaş kartları',
             'employee-payments' => 'Personel ödemeleri',
             'employee-bonuses' => 'Personel primleri',
-            'reports' => 'Raporlar',
             'users' => 'Kullanıcılar',
             'roles' => 'Roller & İzinler',
-            'examples' => 'Örnek kayıtlar',
             'other' => 'Diğer',
+            // Full-width rows at the bottom of the role UI.
+            'cari-entries' => 'Cari işlemleri',
+            'reports' => 'Raporlar',
         ];
+    }
+
+    public static function isFullWidthGroup(string $key): bool
+    {
+        return in_array($key, ['cari-entries', 'reports'], true);
+    }
+
+    public static function actionLabel(string $action): string
+    {
+        return self::actionLabels()[$action] ?? $action;
+    }
+
+    public static function resourceLabel(string $resource): string
+    {
+        return self::resourceLabels()[$resource] ?? str_replace('-', ' ', $resource);
+    }
+
+    /**
+     * Group CRUD permissions by resource key for compact row layouts.
+     *
+     * @param  Collection<int, Permission>  $permissions
+     * @return Collection<string, Collection<string, Permission>>
+     */
+    public static function byResource(Collection $permissions): Collection
+    {
+        $order = [];
+        foreach (CariEntryGroup::cases() as $group) {
+            $order[$group->permissionResource()] = count($order);
+        }
+        $order['cari-entry'] = count($order);
+
+        return $permissions
+            ->mapToGroups(function (Permission $permission) {
+                if (preg_match('/^(view|create|edit|delete)-(.+)$/', $permission->name, $matches) !== 1) {
+                    return [$permission->name => $permission];
+                }
+
+                return [$matches[2] => $permission];
+            })
+            ->map(function (Collection $items) {
+                return $items->keyBy(function (Permission $permission) {
+                    if (preg_match('/^(view|create|edit|delete)-/', $permission->name, $matches) === 1) {
+                        return $matches[1];
+                    }
+
+                    return $permission->name;
+                });
+            })
+            ->sortBy(fn (Collection $items, string $key) => $order[$key] ?? 1000);
+    }
+
+    /**
+     * Human-readable Turkish label for a Spatie permission name (UI only).
+     */
+    public static function permissionLabel(string $name): string
+    {
+        $exact = self::exactPermissionLabels();
+        if (isset($exact[$name])) {
+            return $exact[$name];
+        }
+
+        if (preg_match('/^(view|create|edit|delete)-(.+)$/', $name, $matches) === 1) {
+            $action = self::actionLabels()[$matches[1]] ?? $matches[1];
+            $resource = self::resourceLabels()[$matches[2]] ?? str_replace('-', ' ', $matches[2]);
+
+            return "{$resource} — {$action}";
+        }
+
+        return $name;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function exactPermissionLabels(): array
+    {
+        return [
+            'view-dashboard' => 'Gösterge paneli',
+            'view-web-audit-log' => 'Web denetim kaydı',
+            'view-api-audit-log' => 'API denetim kaydı',
+            'view-users' => 'Kullanıcıları görüntüle',
+            'view-user' => 'Kullanıcı görüntüle',
+            'create-user' => 'Kullanıcı oluştur',
+            'edit-user' => 'Kullanıcı düzenle',
+            'delete-user' => 'Kullanıcı sil',
+            'view-role' => 'Rol görüntüle',
+            'create-role' => 'Rol oluştur',
+            'edit-role' => 'Rol düzenle',
+            'delete-role' => 'Rol sil',
+            'view-permission' => 'İzinleri görüntüle',
+            ApiPermissions::FIELD_HAUL_OPERATE => 'Saha taşıma işlemi',
+            'view-report-monthly-vouchers' => 'Rapor: Aylık koçanlar',
+            'view-report-site-exits' => 'Rapor: Şantiye çıkış',
+            'view-report-dump-sites' => 'Rapor: Döküm yerleri',
+            'view-report-dump-site-payments' => 'Rapor: Döküm yeri ödeme',
+            'view-report-fuel-stations' => 'Rapor: Yakıt yerleri',
+            'view-report-fuel-stations-monthly' => 'Rapor: Yakıt yeri aylık',
+            'view-report-ticket-control' => 'Rapor: Hareket fişi kontrol',
+            'view-report-vehicle-monthly' => 'Rapor: Plaka aylık döküm',
+            'view-report-vehicle-periodic' => 'Rapor: Plaka dönemsel',
+            'view-report-vehicle-site-monthly' => 'Rapor: Plaka şantiye döküm',
+            'view-report-vehicle-balance' => 'Rapor: Plaka bakiye',
+            'view-report-owner-monthly' => 'Rapor: Plaka sahibi aylık',
+            'view-report-owner-periodic' => 'Rapor: Plaka sahibi dönemsel',
+            'view-report-owner-balance' => 'Rapor: Plaka sahibi bakiye',
+            'view-report-vehicle-cost' => 'Rapor: Araç maliyet',
+            'view-report-vehicle-cost-owners' => 'Rapor: Plaka sahibi özet',
+            'view-report-company-balance' => 'Rapor: Firma bakiye',
+            'view-report-company-ledger' => 'Rapor: Firma cari',
+            'view-report-invoice-aging' => 'Rapor: Fatura yaşlandırma',
+            'view-report-site-cari' => 'Rapor: Şantiye cari',
+            'view-report-site-expense' => 'Rapor: Şantiye gider',
+            'view-report-cash-movements' => 'Rapor: Kasa hareketleri',
+            'view-report-employee-monthly' => 'Rapor: Personel aylık döküm',
+            'view-report-employee-annual' => 'Rapor: Personel yıllık döküm',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function actionLabels(): array
+    {
+        return [
+            'view' => 'Görüntüle',
+            'create' => 'Oluştur',
+            'edit' => 'Düzenle',
+            'delete' => 'Sil',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function resourceLabels(): array
+    {
+        $labels = [
+            'haul' => 'Taşıma fişi',
+            'machine-work' => 'Makine çalışma',
+            'fuel-receipt' => 'Yakıt fişi',
+            'party' => 'Cari kart',
+            'cari-entry' => 'Cari işlem',
+            'invoice' => 'Fatura',
+            'financial-instrument' => 'Çek / senet',
+            'cash-category' => 'Kasa kategorisi',
+            'stock-item' => 'Stok',
+            'stock-usage' => 'Stok kullanımı',
+            'stock-count' => 'Stok sayımı',
+            'bank' => 'Banka',
+            'vehicle' => 'Araç',
+            'vehicle-class' => 'Araç sınıfı',
+            'site' => 'Şantiye',
+            'dump-site' => 'Döküm yeri',
+            'haul-route' => 'Güzergah',
+            'fuel-station' => 'Yakıt yeri',
+            'fuel-tank' => 'Yakıt dolum / sayım',
+            'shipment' => 'Nakliye seferi',
+            'employee' => 'Personel',
+            'employee-salary' => 'Maaş kartı',
+            'employee-payment' => 'Personel ödemesi',
+            'employee-bonus' => 'Personel primi',
+            'user' => 'Kullanıcı',
+            'role' => 'Rol',
+            'permission' => 'İzin',
+        ];
+
+        foreach (CariEntryGroup::cases() as $group) {
+            $labels[$group->permissionResource()] = $group->label();
+        }
+
+        return $labels;
     }
 
     public static function groupKey(string $permissionName, ?string $guardName = null): string
@@ -84,7 +256,6 @@ class PermissionGroups
             str_contains($permissionName, 'employee') => 'employees',
             str_contains($permissionName, 'user') => 'users',
             str_contains($permissionName, 'role') || $permissionName === 'view-permission' => 'roles',
-            str_contains($permissionName, 'example') => 'examples',
             default => 'other',
         };
     }

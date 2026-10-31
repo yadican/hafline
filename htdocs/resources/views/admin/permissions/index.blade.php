@@ -16,8 +16,8 @@
                     </div>
                     <div class="permission-group-body">
                         @foreach ($permissions as $permission)
-                            <span class="panel-badge" title="guard: {{ $permission->guard_name }}">
-                                {{ $permission->name }}
+                            <span class="panel-badge" title="{{ $permission->name }} · guard: {{ $permission->guard_name }}">
+                                {{ \App\Support\PermissionGroups::permissionLabel($permission->name) }}
                                 <small class="text-muted">({{ $permission->guard_name }})</small>
                             </span>
                         @endforeach

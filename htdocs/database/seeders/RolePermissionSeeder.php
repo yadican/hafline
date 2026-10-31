@@ -45,7 +45,6 @@ class RolePermissionSeeder extends Seeder
             'employee-salary',
             'employee-payment',
             'employee-bonus',
-            'example',
         ];
 
         $permissions = [
@@ -152,6 +151,16 @@ class RolePermissionSeeder extends Seeder
         Permission::query()
             ->where('guard_name', 'web')
             ->where('name', 'view-reports')
+            ->delete();
+
+        Permission::query()
+            ->where('guard_name', 'web')
+            ->whereIn('name', [
+                'view-example',
+                'create-example',
+                'edit-example',
+                'delete-example',
+            ])
             ->delete();
 
         $this->expandLegacyCariEntryPermissions();

@@ -65,11 +65,23 @@ class RolePermissionTest extends TestCase
         }
 
         $this->assertSame('Cari işlemleri', PermissionGroups::labels()['cari-entries']);
+        $labelKeys = array_keys(PermissionGroups::labels());
+        $this->assertSame('cari-entries', $labelKeys[array_key_last($labelKeys) - 1] ?? null);
+        $this->assertSame('reports', $labelKeys[array_key_last($labelKeys)] ?? null);
+        $this->assertTrue(PermissionGroups::isFullWidthGroup('cari-entries'));
+        $this->assertTrue(PermissionGroups::isFullWidthGroup('reports'));
         $this->assertSame(
             'cari-entries',
             PermissionGroups::groupKey('view-party-transfer-cari-entry')
         );
         $this->assertSame('parties', PermissionGroups::groupKey('view-party'));
+        $this->assertSame('Cari kart — Görüntüle', PermissionGroups::permissionLabel('view-party'));
+        $this->assertSame('Rol oluştur', PermissionGroups::permissionLabel('create-role'));
+        $this->assertSame('Rapor: Aylık koçanlar', PermissionGroups::permissionLabel('view-report-monthly-vouchers'));
+        $this->assertSame(
+            CariEntryGroup::PartyTransfer->label().' — Görüntüle',
+            PermissionGroups::permissionLabel('view-party-transfer-cari-entry')
+        );
 
         $role = Role::create([
             'id' => (string) Str::uuid7(),
@@ -129,8 +141,8 @@ class RolePermissionTest extends TestCase
             ->get(route('admin.roles.show', $role))
             ->assertOk()
             ->assertSee('saha-ekibi')
-            ->assertSee('view-haul')
-            ->assertDontSee('view-users');
+            ->assertSee(PermissionGroups::permissionLabel('view-haul'))
+            ->assertDontSee(PermissionGroups::permissionLabel('view-users'));
 
         $this->actingAs($admin)
             ->get(route('admin.users.show', $admin))
